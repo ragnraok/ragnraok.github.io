@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom"><title>Ragnarok Note</title><link href="/" rel="alternate"></link><link href="/feeds/atom.xml" rel="self"></link><id>/</id><updated>2015-01-02T00:00:00+08:00</updated><entry><title>Re:Blog</title><link href="/re-blog.html" rel="alternate"></link><updated>2015-01-02T00:00:00+08:00</updated><author><name>Ragnarok Zhou</name></author><id>tag:,2015-01-02:re-blog.html</id><summary type="html">&lt;p&gt;大二的时候，曾经写过一段时间的博客。当时还记得刚学python不久，兴高采烈的使用Django写了一个非常简单的博客引擎，在42qu买了个服务器，然后在Godaddy那里买了个域名，于是就火速在上面搭建了人生的第一个博客。&lt;/p&gt;
+&lt;p&gt;一晃过去，已经是两年的时间了，原来的博客早已废弃，已经很久没有在博客上写过文字了。&lt;/p&gt;
+&lt;p&gt;一直到现在，已经工作半年了。越来越觉得缺少积累，而且慢慢地，也失去了当初在学校那种涉猎各种技术的激情，反而，作为Android开发者，在Android开发这里，进行了更加深入的研究。这让我想起了以前在学校有位老师跟我说过，在学校需要的时候更广的知识面，而到了工作，就需要更为深入的专研某个技术的实现，这或许是从BFS到DFS的转变吧。&lt;/p&gt;
+&lt;p&gt;今天已经是2015的第二天了，希望通过这个博客，能在这里更加有效的积累在工作和学习中所积累下的记录。&lt;/p&gt;
+&lt;p&gt;&lt;em&gt;注：此博客由&lt;a href="https://github.com/getpelican/pelican"&gt;pelican&lt;/a&gt;&lt;/em&gt;  搭建&lt;/p&gt;</summary></entry></feed>
