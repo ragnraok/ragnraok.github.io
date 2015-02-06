@@ -1,4 +1,4 @@
 This is My Blog
 ------
 
-Powered By [pelican](https://github.com/getpelican/pelican)
+Powered By [pelican](https://github.com/getpelican/pelican)  

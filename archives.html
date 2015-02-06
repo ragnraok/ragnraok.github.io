@@ -1,103 +1,41 @@
 <!DOCTYPE html>
-<html lang="zh">
-<head>
-	<meta charset="utf-8">
-	<title>Archive — Ragnarok Note</title>
-	<meta name="description" content="The archives page, find old stuff organized by date.">
-	<meta name="author" content="Ragnarok Zhou">
-	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<!-- Le HTML5 shim, for IE6-8 support of HTML elements -->
-	<!--[if lt IE 9]>
-		<script src="/theme/html5.js"></script>
-		<![endif]-->
-	<link href="/theme/css/ipython.css" rel="stylesheet">
-	<link href="//maxcdn.bootstrapcdn.com/bootstrap/3.2.0/css/bootstrap.min.css" rel="stylesheet">
-	<link href="//maxcdn.bootstrapcdn.com/font-awesome/4.1.0/css/font-awesome.min.css" rel="stylesheet">
-	<link href="//maxcdn.bootstrapcdn.com/bootswatch/3.2.0/simplex/bootstrap.min.css" rel="stylesheet">
-	<link href="/theme/css/local.css" rel="stylesheet">
-	<link href="/theme/css/pygments.css" rel="stylesheet">
-</head>
-<body>
-<div class="container">
-	<div class="page-header">
-		<h1><a href="/">Ragnarok Note</a>
-			<br>	</div>
-	<div class="row">
-		<div class="col-md-8 col-md-offset-2">
+<html>
+    <head>
+        <title>Archives</title>
+        <meta charset="utf-8" />
+        <link href="//netdna.bootstrapcdn.com/bootstrap/3.0.0/css/bootstrap.min.css" rel="stylesheet" />
+        <link href="/theme/static/css/style.css" rel="stylesheet" />
+        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+        <link href="/feeds/atom.xml" type="application/atom+xml" rel="alternate" title="Ragnarok Note Full Atom Feed" />
+    </head>
 
-<h1>Archives</h1>
+    <body id="index" class="archive">
+        <div class="container">
+            <div class="header">
+                <ul class="nav nav-pills pull-right">
+                    <li class=""><a href="">Home</a></li>
+                    <li class="active"><a href="/archives.html">Archives</a></li>
+                </ul>
+                <h3 class="text-muted"><a href="">Ragnarok Note</a></h3>
+				<h2 class="text-muted"></h2>
+             </div>
 
-<table class="table">
-    <tbody>
-        <tr>
-        <td>14  1 2015</td>
-        <td><a href='/android-emoji-font-method.html'>探索在Android中使用Emoji Font的方法</a></td>
-        </tr>
-        <tr>
-        <td>02  1 2015</td>
-        <td><a href='/re-blog.html'>Re:Blog</a></td>
-        </tr>
-    </tbody>
-</table>
-
-
-		</div>
-	</div> 	<!-- <hr> -->
-</div> <!-- /container -->
-<footer class="aw-footer bg-danger">
-	<div class="container"> <!-- footer -->
-		<div class="row">
-			<div class="col-md-10 col-md-offset-1">
-				<div class="row">
-					<div class="col-md-3">
-						<h4>Navigation</h4>
-						<ul class="list-unstyled my-list-style">
-							<li><a href="">Ragnarok Note</a></li>
-							<li><a href="/feeds/atom.xml" type="application/atom+xml"><i class="fa fa-rss "></i> atom</a></li>
-						</ul>
-					</div>
-					<div class="col-md-3">
-						<h4>Author</h4>
-						<ul class="list-unstyled my-list-style">
-							<li><a href="https://twitter.com/ragnarokstack">twitter</a></li>
-							<li><a href="https://github.com/ragnraok">github</a></li>
-						</ul>
-					</div>
-					<div class="col-md-3">
-						<h4>Categories</h4>
-						<ul class="list-unstyled my-list-style">
-							<li><a href="/category/Android.html">Android (1)</a></li>
-							<li><a href="/category/Living.html">Living (1)</a></li>
-						</ul>
-					</div>
-				</div>
-			</div>
-		</div>
-	</div>
-</footer>
-<div class="container">
-	<div class="row">
-		<div class="col-md-12 text-center center-block aw-bottom">
-			<p>&copy; Ragnarok Zhou 2014</p>
-			<p>Powered by Pelican</p>
-		</div>
-	</div>
-</div>
-<!-- JavaScript -->
-<script src="https://code.jquery.com/jquery-2.1.1.min.js"></script>
-<script src="//maxcdn.bootstrapcdn.com/bootstrap/3.2.0/js/bootstrap.min.js"></script>
-<script type="text/javascript">
-jQuery(document).ready(function($) {
-	$("div.collapseheader").click(function () {
-		$header = $(this).children("span").first();
-		$codearea = $(this).children(".input_area");
-		$codearea.slideToggle(500, function () {
-			$header.text(function () {
-				return $codearea.is(":visible") ? "Collapse Code" : "Expand Code";
-			});
-		});
-	});
-});
-</script>
-</body>
+<dl>
+  
+            <h3><a href="/2015"  class="text">Archive for 2015</a></h3>
+            <ul class="archive-list">
+                <li><span class="text-muted">三 14 一月 2015 &raquo; </span><a href="/android-emoji-font-method.html">探索在Android中使用Emoji Font的方法</a></li>   
+                <li><span class="text-muted">五 02 一月 2015 &raquo; </span><a href="/re-blog.html">Re:Blog</a></li>   
+     </ul>
+</dl>
+            <footer id="contentinfo" class="footer">
+                    <nav class="pull-right bottom-nav">
+                        <a href="/feeds/atom.xml">RSS</a>
+                    </nav>
+                    <address id="about" class="vcard body">
+                    &copy; <a href="">Ragnarok Note</a> Proudly powered by <a href="http://getpelican.com/">Pelican</a>
+                    </address><!-- /#about -->
+            </footer><!-- /#contentinfo -->
+        </div><!-- container -->
+    </body>
 </html>
