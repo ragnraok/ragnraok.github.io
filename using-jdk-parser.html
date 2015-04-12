@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>使用JDK的Parser来解析Java源代码 - Ragnarok Note</title>
+        <meta charset="utf-8" />
+        <link href="//netdna.bootstrapcdn.com/bootstrap/3.0.0/css/bootstrap.min.css" rel="stylesheet" />
+        <link href="http://ragnraok.github.io/theme/static/css/style.css" rel="stylesheet" />
+        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+        <link href="http://ragnraok.github.io/feeds/atom.xml" type="application/atom+xml" rel="alternate" title="Ragnarok Note Full Atom Feed" />
+    </head>
+
+    <body id="index" class="archive">
+        <div class="container">
+            <div class="header">
+                <ul class="nav nav-pills pull-right">
+                    <li class=""><a href="http://ragnraok.github.io">Home</a></li>
+                    <li><a href="http://ragnraok.github.io/archives.html">Archives</a></li>
+                </ul>
+                <h3 class="text-muted"><a href="http://ragnraok.github.io">Ragnarok Note</a></h3>
+				<h2 class="text-muted"></h2>
+             </div>
+<section id="content" class="article content">
+  <header>
+    <h2 class="entry-title">
+      <a href="http://ragnraok.github.io/using-jdk-parser.html" rel="bookmark"
+         title="Permalink to 使用JDK的Parser来解析Java源代码">使用JDK的Parser来解析Java源代码</a></h2>
+ 
+  </header>
+  
+     
+  <div class="entry-content">
+    <p>在JDK中，自带了一套相关的编译API，可以在Java中发起编译流程，解析Java源文件然后获取其语法树，在JDK的<code>tools.jar</code>（OSX下可以在/Library/Java/JavaVirtualMachines/jdk_version/Contents/Home/lib中找到）中包含着这整套API，但是这却不是Oracle和OpenJDK发布中的公开API，因此对于这套API，并没有官方的正式文档来进行说明。但是，也有不少项目利用了这套API来做了不少事情，例如大名鼎鼎的<a href="https://github.com/rzwitserloot/lombok.git">lombok</a>使用了这套API在Annotation Processing阶段修改了源代码中的语法树，最终结果相当于直接在源文件中插入了新的代码！</p>
+<p>由于这套API目前缺少相关文档，使用起来比较困难，例如，解析源代码中的所有变量，并打印出来：</p>
+<div class="highlight"><pre><span class="kr">public</span> <span class="kr">class</span> <span class="nx">JavaParser</span> <span class="p">{</span>
+
+    <span class="kr">private</span> <span class="kr">static</span> <span class="kr">final</span> <span class="nb">String</span> <span class="nx">path</span> <span class="o">=</span> <span class="s2">&quot;User.java&quot;</span><span class="p">;</span>
+
+    <span class="kr">private</span> <span class="nx">JavacFileManager</span> <span class="nx">fileManager</span><span class="p">;</span>
+    <span class="kr">private</span> <span class="nx">JavacTool</span> <span class="nx">javacTool</span><span class="p">;</span>
+
+    <span class="kr">public</span> <span class="nx">JavaParser</span><span class="p">()</span> <span class="p">{</span>
+        <span class="nx">Context</span> <span class="nx">context</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Context</span><span class="p">();</span>
+        <span class="nx">fileManager</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">JavacFileManager</span><span class="p">(</span><span class="nx">context</span><span class="p">,</span> <span class="kc">true</span><span class="p">,</span> <span class="nx">Charset</span><span class="p">.</span><span class="nx">defaultCharset</span><span class="p">());</span>
+        <span class="nx">javacTool</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">JavacTool</span><span class="p">();</span>
+    <span class="p">}</span>
+
+    <span class="kr">public</span> <span class="k">void</span> <span class="nx">parseJavaFiles</span><span class="p">()</span> <span class="p">{</span>
+        <span class="nx">Iterable</span><span class="cp">&lt;?</span> <span class="k">extends</span> <span class="nx">JavaFileObject</span><span class="o">&gt;</span> <span class="nx">files</span> <span class="o">=</span> <span class="nx">fileManager</span><span class="o">.</span><span class="nx">getJavaFileObjects</span><span class="p">(</span><span class="nx">path</span><span class="p">);</span>
+        <span class="nx">JavaCompiler</span><span class="o">.</span><span class="nx">CompilationTask</span> <span class="nx">compilationTask</span> <span class="o">=</span> <span class="nx">javacTool</span><span class="o">.</span><span class="nx">getTask</span><span class="p">(</span><span class="k">null</span><span class="p">,</span> <span class="nx">fileManager</span><span class="p">,</span> <span class="k">null</span><span class="p">,</span> <span class="k">null</span><span class="p">,</span> <span class="k">null</span><span class="p">,</span> <span class="nx">files</span><span class="p">);</span>
+        <span class="nx">JavacTask</span> <span class="nx">javacTask</span> <span class="o">=</span> <span class="p">(</span><span class="nx">JavacTask</span><span class="p">)</span> <span class="nx">compilationTask</span><span class="p">;</span>
+        <span class="k">try</span> <span class="p">{</span>
+            <span class="nx">Iterable</span><span class="o">&lt;?</span> <span class="k">extends</span> <span class="nx">CompilationUnitTree</span><span class="o">&gt;</span> <span class="nx">result</span> <span class="o">=</span> <span class="nx">javacTask</span><span class="o">.</span><span class="nx">parse</span><span class="p">();</span>
+            <span class="k">for</span> <span class="p">(</span><span class="nx">CompilationUnitTree</span> <span class="nx">tree</span> <span class="o">:</span> <span class="nx">result</span><span class="p">)</span> <span class="p">{</span>
+                <span class="nx">tree</span><span class="o">.</span><span class="nx">accept</span><span class="p">(</span><span class="k">new</span> <span class="nx">SourceVisitor</span><span class="p">(),</span> <span class="k">null</span><span class="p">);</span>
+
+            <span class="p">}</span>
+        <span class="p">}</span> <span class="k">catch</span> <span class="p">(</span><span class="nx">IOException</span> <span class="nx">e</span><span class="p">)</span> <span class="p">{</span>
+            <span class="nx">e</span><span class="o">.</span><span class="nx">printStackTrace</span><span class="p">();</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+
+    <span class="k">static</span> <span class="k">class</span> <span class="nc">SourceVisitor</span> <span class="k">extends</span> <span class="nx">TreeScanner</span><span class="o">&lt;</span><span class="nx">Void</span><span class="p">,</span> <span class="nx">Void</span><span class="o">&gt;</span> <span class="p">{</span>
+
+        <span class="k">private</span> <span class="nx">String</span> <span class="nx">currentPackageName</span> <span class="o">=</span> <span class="k">null</span><span class="p">;</span>
+
+        <span class="o">@</span><span class="nx">Override</span>
+        <span class="k">public</span> <span class="nx">Void</span> <span class="nx">visitCompilationUnit</span><span class="p">(</span><span class="nx">CompilationUnitTree</span> <span class="nx">node</span><span class="p">,</span> <span class="nx">Void</span> <span class="nx">aVoid</span><span class="p">)</span> <span class="p">{</span>        
+            <span class="k">return</span> <span class="nx">super</span><span class="o">.</span><span class="nx">visitCompilationUnit</span><span class="p">(</span><span class="nx">node</span><span class="p">,</span> <span class="nx">aVoid</span><span class="p">);</span>
+        <span class="p">}</span>
+
+        <span class="o">@</span><span class="nx">Override</span>
+        <span class="k">public</span> <span class="nx">Void</span> <span class="nx">visitVariable</span><span class="p">(</span><span class="nx">VariableTree</span> <span class="nx">node</span><span class="p">,</span> <span class="nx">Void</span> <span class="nx">aVoid</span><span class="p">)</span> <span class="p">{</span>
+            <span class="nx">formatPtrln</span><span class="p">(</span><span class="s2">&quot;variable name: %s, type: %s, kind: %s, package: %s&quot;</span><span class="p">,</span> 
+                    <span class="nx">node</span><span class="o">.</span><span class="nx">getName</span><span class="p">(),</span> <span class="nx">node</span><span class="o">.</span><span class="nx">getType</span><span class="p">(),</span> <span class="nx">node</span><span class="o">.</span><span class="nx">getKind</span><span class="p">(),</span> <span class="nx">currentPackageName</span><span class="p">);</span>
+            <span class="k">return</span> <span class="k">null</span><span class="p">;</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+
+    <span class="k">public</span> <span class="k">static</span> <span class="nx">void</span> <span class="nx">formatPtrln</span><span class="p">(</span><span class="nx">String</span> <span class="nx">format</span><span class="p">,</span> <span class="nx">Object</span><span class="o">...</span> <span class="nx">args</span><span class="p">)</span> <span class="p">{</span>
+        <span class="nx">System</span><span class="o">.</span><span class="nx">out</span><span class="o">.</span><span class="nx">println</span><span class="p">(</span><span class="nx">String</span><span class="o">.</span><span class="nx">format</span><span class="p">(</span><span class="nx">format</span><span class="p">,</span> <span class="nx">args</span><span class="p">));</span>
+    <span class="p">}</span>
+
+    <span class="k">public</span> <span class="k">static</span> <span class="nx">void</span> <span class="nx">main</span><span class="p">(</span><span class="nx">String</span><span class="p">[]</span> <span class="nx">args</span><span class="p">)</span> <span class="p">{</span>
+
+        <span class="k">new</span> <span class="nx">JavaParser</span><span class="p">()</span><span class="o">.</span><span class="nx">parseJavaFiles</span><span class="p">();</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+
+
+<p>其中 <code>User.java</code>的代码如下：</p>
+<div class="highlight"><pre><span class="n">package</span> <span class="n">com</span><span class="o">.</span><span class="n">ragnarok</span><span class="o">.</span><span class="n">javaparser</span><span class="p">;</span>
+
+<span class="kn">import</span> <span class="nn">com.sun.istack.internal.Nullable</span><span class="p">;</span>
+<span class="kn">import</span> <span class="nn">java.lang.Override</span><span class="p">;</span>
+
+<span class="n">public</span> <span class="k">class</span> <span class="nc">User</span> <span class="p">{</span>
+
+    <span class="nd">@Nullable</span>
+    <span class="n">private</span> <span class="n">String</span> <span class="n">foo</span> <span class="o">=</span> <span class="s">&quot;123123&quot;</span><span class="p">;</span>
+    <span class="n">private</span> <span class="n">Foo</span> <span class="n">a</span><span class="p">;</span>
+
+    <span class="n">public</span> <span class="n">void</span> <span class="n">UserMethod</span><span class="p">()</span> <span class="p">{}</span>
+
+    <span class="n">static</span> <span class="k">class</span> <span class="nc">Foo</span> <span class="p">{</span>
+        <span class="n">private</span> <span class="n">String</span> <span class="n">fooString</span> <span class="o">=</span> <span class="s">&quot;123123&quot;</span><span class="p">;</span>
+
+        <span class="n">public</span> <span class="n">void</span> <span class="n">FooMethod</span><span class="p">()</span> <span class="p">{}</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+
+
+<p>执行上面的<code>JavaParser</code>结果如下：</p>
+<div class="highlight"><pre><span class="n">variable</span><span class="o">:</span> <span class="n">foo</span><span class="o">,</span> <span class="n">annotaion</span><span class="o">:</span> <span class="n">Nullable</span>
+<span class="n">variable</span> <span class="n">name</span><span class="o">:</span> <span class="n">foo</span><span class="o">,</span> <span class="n">type</span><span class="o">:</span> <span class="n">String</span><span class="o">,</span> <span class="n">kind</span><span class="o">:</span> <span class="n">VARIABLE</span><span class="o">,</span> <span class="kd">package</span><span class="o">:</span> <span class="n">com</span><span class="o">.</span><span class="na">ragnarok</span><span class="o">.</span><span class="na">javaparser</span>
+<span class="n">variable</span> <span class="n">name</span><span class="o">:</span> <span class="n">a</span><span class="o">,</span> <span class="n">type</span><span class="o">:</span> <span class="n">Foo</span><span class="o">,</span> <span class="n">kind</span><span class="o">:</span> <span class="n">VARIABLE</span><span class="o">,</span> <span class="kd">package</span><span class="o">:</span> <span class="n">com</span><span class="o">.</span><span class="na">ragnarok</span><span class="o">.</span><span class="na">javaparser</span>
+</pre></div>
+
+
+<p>这里我们是首先通过<code>JavaCompiler.CompilationTask</code>解析了源文件之后，再使用自定义的<code>SourceVisitor</code>（继承自<code>TreeScanner</code>）来对源代码的结构进行访问，在<code>SourceVisitor</code>类中，通过重载<code>visitVariable</code>来对一个编译单元（单个源代码文件）进行解析，访问其中的所有的变量，这里可以看出，我们没有办法拿到这个变量类型的全限定名（包含包名），只能拿到的对应的简单名字，因此，类型的确定需要外部实现<strong>自行确定</strong>，例如可以通过记录类所在的包名，递归的搜索整个源代码目录来跟踪所有类的全限定名，查找import中是否包含对应的类型等。</p>
+<p><code>TreeScanner</code>中除了<code>visitVariable</code>方法外，还包含了大量其他的<code>visitXYZ</code>方法，例如，可以遍历所有的import，方法定义，Annotation等，更具体可以查看OpenJDK中关于这个的源代码</p>
+<p>这里再来看下另外一个例子，重载<code>visitClass</code>方法，访问所有的内部类以及类本身：</p>
+<div class="highlight"><pre><span class="err">@</span><span class="nx">Override</span>
+<span class="kr">public</span> <span class="nx">Void</span> <span class="nx">visitClass</span><span class="p">(</span><span class="nx">ClassTree</span> <span class="nx">node</span><span class="p">,</span> <span class="nx">Void</span> <span class="nx">aVoid</span><span class="p">)</span> <span class="p">{</span>
+    <span class="nx">formatPtrln</span><span class="p">(</span><span class="s2">&quot;class name: %s&quot;</span><span class="p">,</span> <span class="nx">node</span><span class="p">.</span><span class="nx">getSimpleName</span><span class="p">());</span>
+    <span class="k">for</span> <span class="p">(</span><span class="nx">Tree</span> <span class="nx">member</span> <span class="o">:</span> <span class="nx">node</span><span class="p">.</span><span class="nx">getMembers</span><span class="p">())</span> <span class="p">{</span>
+        <span class="k">if</span> <span class="p">(</span><span class="nx">member</span> <span class="k">instanceof</span> <span class="nx">VariableTree</span><span class="p">)</span> <span class="p">{</span>
+            <span class="nx">VariableTree</span> <span class="nx">variable</span> <span class="o">=</span> <span class="p">(</span><span class="nx">VariableTree</span><span class="p">)</span> <span class="nx">member</span><span class="p">;</span>
+            <span class="nx">List</span><span class="cp">&lt;?</span> <span class="k">extends</span> <span class="nx">AnnotationTree</span><span class="o">&gt;</span> <span class="nx">annotations</span> <span class="o">=</span> <span class="nx">variable</span><span class="o">.</span><span class="nx">getModifiers</span><span class="p">()</span><span class="o">.</span><span class="nx">getAnnotations</span><span class="p">();</span>
+            <span class="k">if</span> <span class="p">(</span><span class="nx">annotations</span><span class="o">.</span><span class="nx">size</span><span class="p">()</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
+                <span class="nx">formatPtrln</span><span class="p">(</span><span class="s2">&quot;variable: %s, annotaion: %s&quot;</span><span class="p">,</span> <span class="nx">variable</span><span class="o">.</span><span class="nx">getName</span><span class="p">(),</span> <span class="nx">annotations</span><span class="o">.</span><span class="nx">get</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="nx">getAnnotationType</span><span class="p">());</span>
+            <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+                <span class="nx">formatPtrln</span><span class="p">(</span><span class="s2">&quot;variable: %s&quot;</span><span class="p">,</span> <span class="nx">variable</span><span class="o">.</span><span class="nx">getName</span><span class="p">());</span>
+            <span class="p">}</span>                
+        <span class="p">}</span>
+    <span class="p">}</span>
+    <span class="k">return</span> <span class="nx">super</span><span class="o">.</span><span class="nx">visitClass</span><span class="p">(</span><span class="nx">node</span><span class="p">,</span> <span class="nx">aVoid</span><span class="p">);</span>
+ <span class="p">}</span>
+</pre></div>
+
+
+<p>这里简单的打印了类名以及变量的名称，类型，annotation类型，执行上面的代码，结果如下：</p>
+<div class="highlight"><pre><span class="k">class</span> <span class="n">name:</span> <span class="n">User</span>
+<span class="n">variable:</span> <span class="n">foo</span>, <span class="n">annotaion:</span> <span class="n">Nullable</span>
+<span class="n">variable:</span> <span class="n">a</span>
+<span class="k">class</span> <span class="n">name:</span> <span class="n">Foo</span>
+<span class="n">variable:</span> <span class="n">fooString</span>
+</pre></div>
+
+
+<p>可以看出我们把类名以及类中的变量都打印了出来。而在<code>visitClass</code>方法中，我们可以通过<code>getMembers</code>方法拿到类中所有的成员，包括变量，方法，annotation等，分别对应着不同的类型，例如变量就对应着<code>VariableTree</code>类型，方法就对应的<code>MethodTree</code>类型。</p>
+<hr />
+<p>总得来说，虽然实际上使用并不算特别复杂，但是由于缺少文档，对使用造成了很大的障碍，而且目前所介绍的只是这套API的一少部分，后续我将会继续研究这套API的相关函数。</p>
+  </div><!-- /.entry-content -->
+   <footer class="post-info text-muted">
+    Posted on <abbr class="published" title="2015-04-12T00:00:00+08:00">
+      日 12 四月 2015
+    </abbr>
+    <address class="vcard author">
+      by <a class="url fn" href="http://ragnraok.github.io/author/ragnarok-zhou.html">Ragnarok Zhou</a>
+    </address> in <a href="http://ragnraok.github.io/category/hack.html">Hack</a> Tagged   </footer><!-- /.post-info -->
+</section>
+    <div class="comment">
+        <div id="disqus_thread"></div> <!-- comment app container -->
+    </div>
+	<!-- Comment BEGIN -->
+    <script type="text/javascript">
+        var disqus_shortname = 'ragnaroknote'; // required: replace example with your forum shortname
+
+        /* * * DON'T EDIT BELOW THIS LINE * * */
+        (function() {
+            var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+            dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+            (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+        })();
+    </script>
+    <noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+     <!-- Comment END -->
+            <footer id="contentinfo" class="footer">
+                    <nav class="pull-right bottom-nav">
+                        <a href="http://ragnraok.github.io/feeds/atom.xml">RSS</a>
+                    </nav>
+                    <address id="about" class="vcard body">
+                    &copy; <a href="http://ragnraok.github.io">Ragnarok Note</a> Proudly powered by <a href="http://getpelican.com/">Pelican</a>
+                    </address><!-- /#about -->
+            </footer><!-- /#contentinfo -->
+        </div><!-- container -->
+    </body>
+</html>
