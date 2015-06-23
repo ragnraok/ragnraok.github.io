@@ -22,6 +22,29 @@
 <section id="content" class="content">
 
         <article class="hentry">
+                <header> <h2 class="entry-title"><a href="http://ragnraok.github.io/using-kotlin-to-write-android-app.html" rel="bookmark" title="Permalink to 使用Kotlin进行Android开发">使用Kotlin进行Android开发</a></h2> </header>
+                <div class="entry-content"> <h3>What is Kotlin</h3>
+<p>Kotlin，原意是在俄罗斯的一个<a href="https://zh.wikipedia.org/wiki/%E7%A7%91%E7%89%B9%E6%9E%97%E5%B3%B6">小岛</a>，JetBrain在2011年推出了已这个来命名的一个运行在JVM上的语言， 看上去有点类似C#和Scala的结合，并且同为静态类型，作为一门JVM上的语言，可以轻松兼容Java，并且整个语言设计的非常轻量。目前的版本为<code>0.12.200</code>，尚未发布正式版。</p>
+<hr />
+<p>Kotlin的下载和配置在其<a href="http://kotlinlang.org/docs/tutorials/getting-started.html">官网</a>上有，在这里就不再赘述了，值得一提的是，作为JetBrains家出品的语言，自家的IDEA当然全力支持！</p>
+<h3>基本语法介绍</h3>
+<p>Kotlin的语法非常简洁，熟悉Java或者Scala的人都可以快速上手：</p>
+<h4>函数声明：</h4>
+<div class="highlight"><pre>fun foo(va: Int): Int {
+    return 1
+}
+</pre></div>
+
+
+<p>也可以单行声明：</p>
+<div class="highlight"><pre>fun foo(va: Int): Int = 1
+</pre></div>
+
+
+<p>lambda当然也是支持的：</p>
+<div class="highlight"><pre>var c = {foo: Int -&gt; println(foo ...</pre></div> </div><!-- entry-content -->
+        </article>
+        <article class="hentry">
                 <header> <h2 class="entry-title"><a href="http://ragnraok.github.io/using-jdk-parser.html" rel="bookmark" title="Permalink to 使用JDK的Parser来解析Java源代码">使用JDK的Parser来解析Java源代码</a></h2> </header>
                 <div class="entry-content"> <p>在JDK中，自带了一套相关的编译API，可以在Java中发起编译流程，解析Java源文件然后获取其语法树，在JDK的<code>tools.jar</code>（OSX下可以在/Library/Java/JavaVirtualMachines/jdk_version/Contents/Home/lib中找到）中包含着这整套API，但是这却不是Oracle和OpenJDK发布中的公开API，因此对于这套API，并没有官方的正式文档来进行说明。但是，也有不少项目利用了这套API来做了不少事情，例如大名鼎鼎的<a href="https://github.com/rzwitserloot/lombok.git">lombok</a>使用了这套API在Annotation Processing阶段修改了源代码中的语法树，最终结果相当于直接在源文件中插入了新的代码！</p>
 <p>由于这套API目前缺少相关文档，使用起来比较困难，例如，解析源代码中的所有变量，并打印出来：</p>

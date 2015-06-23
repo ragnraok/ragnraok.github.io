@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>使用Kotlin进行Android开发 - Ragnarok Note</title>
+        <meta charset="utf-8" />
+        <link href="//netdna.bootstrapcdn.com/bootstrap/3.0.0/css/bootstrap.min.css" rel="stylesheet" />
+        <link href="http://ragnraok.github.io/theme/static/css/style.css" rel="stylesheet" />
+        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+        <link href="http://ragnraok.github.io/feeds/atom.xml" type="application/atom+xml" rel="alternate" title="Ragnarok Note Full Atom Feed" />
+    </head>
+
+    <body id="index" class="archive">
+        <div class="container">
+            <div class="header">
+                <ul class="nav nav-pills pull-right">
+                    <li class=""><a href="http://ragnraok.github.io">Home</a></li>
+                    <li><a href="http://ragnraok.github.io/archives.html">Archives</a></li>
+                </ul>
+                <h3 class="text-muted"><a href="http://ragnraok.github.io">Ragnarok Note</a></h3>
+				<h2 class="text-muted"></h2>
+             </div>
+<section id="content" class="article content">
+  <header>
+    <h2 class="entry-title">
+      <a href="http://ragnraok.github.io/using-kotlin-to-write-android-app.html" rel="bookmark"
+         title="Permalink to 使用Kotlin进行Android开发">使用Kotlin进行Android开发</a></h2>
+ 
+  </header>
+  
+     
+  <div class="entry-content">
+    <h3>What is Kotlin</h3>
+<p>Kotlin，原意是在俄罗斯的一个<a href="https://zh.wikipedia.org/wiki/%E7%A7%91%E7%89%B9%E6%9E%97%E5%B3%B6">小岛</a>，JetBrain在2011年推出了已这个来命名的一个运行在JVM上的语言， 看上去有点类似C#和Scala的结合，并且同为静态类型，作为一门JVM上的语言，可以轻松兼容Java，并且整个语言设计的非常轻量。目前的版本为<code>0.12.200</code>，尚未发布正式版。</p>
+<hr />
+<p>Kotlin的下载和配置在其<a href="http://kotlinlang.org/docs/tutorials/getting-started.html">官网</a>上有，在这里就不再赘述了，值得一提的是，作为JetBrains家出品的语言，自家的IDEA当然全力支持！</p>
+<h3>基本语法介绍</h3>
+<p>Kotlin的语法非常简洁，熟悉Java或者Scala的人都可以快速上手：</p>
+<h4>函数声明：</h4>
+<div class="highlight"><pre>fun foo(va: Int): Int {
+    return 1
+}
+</pre></div>
+
+
+<p>也可以单行声明：</p>
+<div class="highlight"><pre>fun foo(va: Int): Int = 1
+</pre></div>
+
+
+<p>lambda当然也是支持的：</p>
+<div class="highlight"><pre>var c = {foo: Int -&gt; println(foo)}
+</pre></div>
+
+
+<p>Kotlin中的函数是一等对象，自然支持高阶函数：</p>
+<div class="highlight"><pre>var c = {foo: Int -&gt; println(foo)}
+fun fooTest(func: (Int)-&gt;()) = println(&quot;I&#39;m Groot&quot;)    
+fooTest(c)
+</pre></div>
+
+
+<h4>类与接口</h4>
+<p>类可以这样进行声明：</p>
+<div class="highlight"><pre><span class="k">class</span> <span class="n">Bar</span>(<span class="n">var</span> <span class="n">b:</span> <span class="nb">Int</span>): <span class="n">Foo</span>() {
+    <span class="n">var</span> <span class="n">c</span> = <span class="mi">1</span>
+    <span class="n">init</span> {
+        <span class="n">println</span>(<span class="s">&quot;class initializer&quot;</span>)
+    }
+
+    <span class="n">constructor</span>(): <span class="n">this</span>(<span class="mi">1</span>) {
+        <span class="n">println</span>(<span class="s">&quot;secondary constructor&quot;</span>)
+    }
+}
+</pre></div>
+
+
+<p>Bar类在这里继承了Foo类，Bar类有两个构造函数，直接在Bar类头的是primary constructor，另外一个构造函数使用<code>constructor</code>关键字定义，注意必须要先调用primary constructor，另外，<code>init</code>标明的是class initializer，每个构造函数都会首先调用class initializer里面的代码，再调用构造函数</p>
+<h5>Inner class:</h5>
+<div class="highlight"><pre><span class="k">class</span> <span class="n">Outer</span> {
+    <span class="k">class</span> <span class="n">Inner</span> {      
+    }
+}
+</pre></div>
+
+
+<p>Kotlin同样支持嵌套的内部类，不过和Java不一样的是，Kotlin的内部类不会默认包含一个指向外部类对象的引用，也就是说，Kotlin中所有的内部类默认就是<strong>静态</strong>的，这样可以减少很多内存泄露的问题。另外，如果需要在内部类中引用外部类对象，可以在Inner类的声明前加上<code>inner</code>关键字，然后在Inner类中使用标记的<code>this</code>：<code>this@Outer</code>来指向外部类对象</p>
+<h5>Singleton:</h5>
+<div class="highlight"><pre>object Single {
+    var c = 1
+
+    fun foo() = println(&quot;foo&quot;)
+}
+</pre></div>
+
+
+<p>Kotlin中使用<code>object</code>关键字声明一个singleton对象，后面这里的方法就可以直接使用<code>Single.foo()</code>来调用了</p>
+<h5>Interface:</h5>
+<div class="highlight"><pre>interface Interface {
+    fun foo() {
+        println(1)
+    }
+    fun bar()
+}
+</pre></div>
+
+
+<p>Kotlin中的interface，跟其他语言的<code>trait</code>非常像，而且也可以带有默认的实现方法，并且不允许通过属性来维护状态。事实上，在上个版本中，interface的原来名称是<code>trait</code>，而在M12现在这个版本中又改成了interface而已</p>
+<h4>Null safe and Smart type cast</h4>
+<h5>Null safe:</h5>
+<p>在Kotlin中，严格区分了nullable和非nullable对象，甚至在编译期解决了不少潜在的空指针问题:</p>
+<p>我们先来看下普通的变量声明</p>
+<div class="highlight"><pre>var c: String = &quot;12123&quot;
+</pre></div>
+
+
+<p>这里声明了一个String对象，其值为"12123"，我们可以正常的使用这个对象的成员方法：<code>c.length()</code></p>
+<p>但是，如果在初始化的时候，变量c为空的话，这样声明就是错误的，会编译不过：</p>
+<div class="highlight"><pre>var c: String = null
+</pre></div>
+
+
+<p>正确的声明应该是这样：</p>
+<div class="highlight"><pre>var c: String? = null
+</pre></div>
+
+
+<p>这里在<code>String</code>后面加多了一个问号，表明这里是一个<strong>Nullable</strong>的对象，说明这个变量在使用的过程中<strong>可能为空</strong>，而且，在调用这个变量的成员的时候，必须要使用这种语法：<code>c?.length()</code>，在调用的时候添加了一个问号，表明，如果<code>c</code>为空的时候，<code>length()</code>这个方法就不会调用。coffe-script也有类似的，这种语法糖减少了很多平时用到的Null-checked，简化了代码，而且从编译器开始介入null-checked，大大减少了潜在的<code>NullPointerException</code>，而事实上，null的确也是一个<strong><a href="http://www.infoq.com/presentations/Null-References-The-Billion-Dollar-Mistake-Tony-Hoare">billion dollar mistake</a></strong></p>
+<p>常年进行如此的调用语法常常会很恼人，因此在你进行显示的Null-checked的时候，Kotlin的编译器会认为后续的调用已经无需进行Null-checked，可以直接调用了：</p>
+<div class="highlight"><pre>if (c != null) {
+    c.length()
+}
+</pre></div>
+
+
+<h5>Smart type cast</h5>
+<p>在Kotlin中，进行强制类型转换可以使用<code>as</code>关键字，但有可能会抛出异常，因此，Kotlin引入了smart type cast:</p>
+<div class="highlight"><pre>if (c is String) {
+    c.length()
+}
+</pre></div>
+
+
+<p>在上面的例子中，如果<code>c</code>是一个String对象，则在if块中，可以直接使用String的方法，编译器会智能的帮你识别出c在if-blcok里面是一个String对象</p>
+<h4>Pattern Matching</h4>
+<p>Kotlin在一定程度上支持了一些FP的特性，包括强大的Pattern Matching，在Kotlin中可以使用<code>when</code>关键字：</p>
+<div class="highlight"><pre>var x = 3
+    when (x) {
+      1 -&gt; print(&quot;x == 1&quot;)
+      2 -&gt; print(&quot;x == 2&quot;)
+      in 1..10 -&gt; print(&quot;x is in the range&quot;)
+      !in 10..20 -&gt; print(&quot;x is outside the range&quot;)
+      is Int -&gt; println(&quot;is int&quot;)
+      else -&gt; { // Note the block
+        print(&quot;x is neither 1 nor 2&quot;)
+      }
+}
+</pre></div>
+
+
+<h4>Function Extension</h4>
+<p>在Java中我们经常需要给系统的类添加一些实用的方法，但苦于不能直接扩展，于是就有了各种的xxxUtils类，导致代码非常恶心，但是在Kotlin中，我们可以直接扩展库里面类的方法，通过function extension:</p>
+<div class="highlight"><pre>fun String.fucker() {
+    println(&quot;a fucker&quot;)
+}
+</pre></div>
+
+
+<p>上面给<code>String</code>类添加了一个fucker方法，我们可以直接使用：</p>
+<div class="highlight"><pre>&quot;123123&quot;.fucker()
+</pre></div>
+
+
+<p>这大大的减少了我们写xxxUtils类的必要性</p>
+<hr />
+<h3>使用Kotlin进行Android开发</h3>
+<p>TODO</p>
+<hr />
+<h3>对于包大小以及dex方法数目的影响</h3>
+<p>TODO</p>
+<hr />
+<h3>Project Anko</h3>
+<p>TODO</p>
+  </div><!-- /.entry-content -->
+   <footer class="post-info text-muted">
+    Posted on <abbr class="published" title="2015-06-24T00:00:00+08:00">
+      三 24 六月 2015
+    </abbr>
+    <address class="vcard author">
+      by <a class="url fn" href="http://ragnraok.github.io/author/ragnarok-zhou.html">Ragnarok Zhou</a>
+    </address> in <a href="http://ragnraok.github.io/category/android.html">Android</a> Tagged   </footer><!-- /.post-info -->
+</section>
+    <div class="comment">
+        <div id="disqus_thread"></div> <!-- comment app container -->
+    </div>
+	<!-- Comment BEGIN -->
+    <script type="text/javascript">
+        var disqus_shortname = 'ragnaroknote'; // required: replace example with your forum shortname
+
+        /* * * DON'T EDIT BELOW THIS LINE * * */
+        (function() {
+            var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+            dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+            (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+        })();
+    </script>
+    <noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+     <!-- Comment END -->
+            <footer id="contentinfo" class="footer">
+                    <nav class="pull-right bottom-nav">
+                        <a href="http://ragnraok.github.io/feeds/atom.xml">RSS</a>
+                    </nav>
+                    <address id="about" class="vcard body">
+                    &copy; <a href="http://ragnraok.github.io">Ragnarok Note</a> Proudly powered by <a href="http://getpelican.com/">Pelican</a>
+                    </address><!-- /#about -->
+            </footer><!-- /#contentinfo -->
+        </div><!-- container -->
+    </body>
+</html>
