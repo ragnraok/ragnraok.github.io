@@ -95,7 +95,7 @@ fooTest(c)
 
 
 &lt;p&gt;这里在&lt;code&gt;String&lt;/code&gt;后面加多了一个问号，表明这里是一个&lt;strong&gt;Nullable&lt;/strong&gt;的对象，说明这个变量在使用的过程中&lt;strong&gt;可能为空&lt;/strong&gt;，而且，在调用这个变量的成员的时候，必须要使用这种语法：&lt;code&gt;c?.length()&lt;/code&gt;，在调用的时候添加了一个问号，表明，如果&lt;code&gt;c&lt;/code&gt;为空的时候，&lt;code&gt;length()&lt;/code&gt;这个方法就不会调用。coffe-script也有类似的，这种语法糖减少了很多平时用到的Null-checked，简化了代码，而且从编译器开始介入null-checked，大大减少了潜在的&lt;code&gt;NullPointerException&lt;/code&gt;，而事实上，null的确也是一个&lt;strong&gt;&lt;a href="http://www.infoq.com/presentations/Null-References-The-Billion-Dollar-Mistake-Tony-Hoare"&gt;billion dollar mistake&lt;/a&gt;&lt;/strong&gt;&lt;/p&gt;
-&lt;p&gt;常年进行如此的调用语法常常会很恼人，因此在你进行显示的Null-checked的时候，Kotlin的编译器会认为后续的调用已经无需进行Null-checked，可以直接调用了：&lt;/p&gt;
+&lt;p&gt;常年进行如此的调用语法常常会很恼人，因此在你进行显式的Null-checked的时候，Kotlin的编译器会认为后续的调用已经无需进行Null-checked，可以直接调用了：&lt;/p&gt;
 &lt;div class="highlight"&gt;&lt;pre&gt;if (c != null) {
     c.length()
 }
