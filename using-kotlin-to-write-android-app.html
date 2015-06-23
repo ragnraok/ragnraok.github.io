@@ -144,15 +144,15 @@ fooTest(c)
 <h4>Pattern Matching</h4>
 <p>Kotlin在一定程度上支持了一些FP的特性，包括强大的Pattern Matching，在Kotlin中可以使用<code>when</code>关键字：</p>
 <div class="highlight"><pre>var x = 3
-    when (x) {
-      1 -&gt; print(&quot;x == 1&quot;)
-      2 -&gt; print(&quot;x == 2&quot;)
-      in 1..10 -&gt; print(&quot;x is in the range&quot;)
-      !in 10..20 -&gt; print(&quot;x is outside the range&quot;)
-      is Int -&gt; println(&quot;is int&quot;)
-      else -&gt; { // Note the block
-        print(&quot;x is neither 1 nor 2&quot;)
-      }
+when (x) {
+    1 -&gt; print(&quot;x == 1&quot;)
+    2 -&gt; print(&quot;x == 2&quot;)
+    in 1..10 -&gt; print(&quot;x is in the range&quot;)
+    !in 10..20 -&gt; print(&quot;x is outside the range&quot;)
+    is Int -&gt; println(&quot;is int&quot;)
+    else -&gt; { // Note the block
+      print(&quot;x is neither 1 nor 2&quot;)
+    }
 }
 </pre></div>
 
