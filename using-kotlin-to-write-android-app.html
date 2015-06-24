@@ -30,7 +30,7 @@
      
   <div class="entry-content">
     <h3>What is Kotlin</h3>
-<p>Kotlin，原意是在俄罗斯的一个<a href="https://zh.wikipedia.org/wiki/%E7%A7%91%E7%89%B9%E6%9E%97%E5%B3%B6">小岛</a>，JetBrain在2011年推出了已这个来命名的一个运行在JVM上的语言， 看上去有点类似C#和Scala的结合，并且同为静态类型，作为一门JVM上的语言，可以轻松兼容Java，并且整个语言设计的非常轻量。目前的版本为<code>0.12.200</code>，尚未发布正式版。</p>
+<p>Kotlin，原意是在俄罗斯的一个<a href="https://zh.wikipedia.org/wiki/%E7%A7%91%E7%89%B9%E6%9E%97%E5%B3%B6">小岛</a>，JetBrain在2011年推出了以这个来命名的一个运行在JVM上的语言， 看上去有点类似C#和Scala的结合，并且同为静态类型，作为一门JVM上的语言，可以轻松兼容Java，并且整个语言设计的非常轻量。目前的版本为<code>0.12.200</code>，尚未发布正式版。</p>
 <hr />
 <p>Kotlin的下载和配置在其<a href="http://kotlinlang.org/docs/tutorials/getting-started.html">官网</a>上有，在这里就不再赘述了，值得一提的是，作为JetBrains家出品的语言，自家的IDEA当然全力支持！</p>
 <h3>基本语法介绍</h3>
@@ -59,6 +59,7 @@ fooTest(c)
 </pre></div>
 
 
+<p><br /></p>
 <h4>类与接口</h4>
 <p>类可以这样进行声明：</p>
 <div class="highlight"><pre><span class="k">class</span> <span class="n">Bar</span>(<span class="n">var</span> <span class="n">b:</span> <span class="nb">Int</span>): <span class="n">Foo</span>() {
@@ -75,6 +76,7 @@ fooTest(c)
 
 
 <p>Bar类在这里继承了Foo类，Bar类有两个构造函数，直接在Bar类头的是primary constructor，另外一个构造函数使用<code>constructor</code>关键字定义，注意必须要先调用primary constructor，另外，<code>init</code>标明的是class initializer，每个构造函数都会首先调用class initializer里面的代码，再调用构造函数</p>
+<p><br /></p>
 <h5>Inner class:</h5>
 <div class="highlight"><pre><span class="k">class</span> <span class="n">Outer</span> {
     <span class="k">class</span> <span class="n">Inner</span> {      
@@ -84,6 +86,7 @@ fooTest(c)
 
 
 <p>Kotlin同样支持嵌套的内部类，不过和Java不一样的是，Kotlin的内部类不会默认包含一个指向外部类对象的引用，也就是说，Kotlin中所有的内部类默认就是<strong>静态</strong>的，这样可以减少很多内存泄露的问题。另外，如果需要在内部类中引用外部类对象，可以在Inner类的声明前加上<code>inner</code>关键字，然后在Inner类中使用标记的<code>this</code>：<code>this@Outer</code>来指向外部类对象</p>
+<p><br /></p>
 <h5>Singleton:</h5>
 <div class="highlight"><pre>object Single {
     var c = 1
@@ -94,6 +97,7 @@ fooTest(c)
 
 
 <p>Kotlin中使用<code>object</code>关键字声明一个singleton对象，后面这里的方法就可以直接使用<code>Single.foo()</code>来调用了</p>
+<p><br /></p>
 <h5>Interface:</h5>
 <div class="highlight"><pre>interface Interface {
     fun foo() {
@@ -105,6 +109,7 @@ fooTest(c)
 
 
 <p>Kotlin中的interface，跟其他语言的<code>trait</code>非常像，而且也可以带有默认的实现方法，并且不允许通过属性来维护状态。事实上，在上个版本中，interface的原来名称是<code>trait</code>，而在M12现在这个版本中又改成了interface而已</p>
+<p><br /></p>
 <h4>Null safe and Smart type cast</h4>
 <h5>Null safe:</h5>
 <p>在Kotlin中，严格区分了nullable和非nullable对象，甚至在编译期解决了不少潜在的空指针问题:</p>
@@ -132,6 +137,7 @@ fooTest(c)
 </pre></div>
 
 
+<p><br /></p>
 <h5>Smart type cast</h5>
 <p>在Kotlin中，进行强制类型转换可以使用<code>as</code>关键字，但有可能会抛出异常，因此，Kotlin引入了smart type cast:</p>
 <div class="highlight"><pre>if (c is String) {
@@ -141,6 +147,7 @@ fooTest(c)
 
 
 <p>在上面的例子中，如果<code>c</code>是一个String对象，则在if块中，可以直接使用String的方法，编译器会智能的帮你识别出c在if-blcok里面是一个String对象</p>
+<p><br /></p>
 <h4>Pattern Matching</h4>
 <p>Kotlin在一定程度上支持了一些FP的特性，包括强大的Pattern Matching，在Kotlin中可以使用<code>when</code>关键字：</p>
 <div class="highlight"><pre>var x = 3
@@ -157,6 +164,7 @@ when (x) {
 </pre></div>
 
 
+<p><br /></p>
 <h4>Function Extension</h4>
 <p>在Java中我们经常需要给系统的类添加一些实用的方法，但苦于不能直接扩展，于是就有了各种的xxxUtils类，导致代码非常恶心，但是在Kotlin中，我们可以直接扩展库里面类的方法，通过function extension:</p>
 <div class="highlight"><pre>fun String.fucker() {
@@ -187,8 +195,31 @@ when (x) {
 <code>Tools-&gt;Kotlin-&gt;Configure Kotlin in Project</code>，就可以自动进行上述的配置，一步到位</p>
 <p>我写了一个简单的Demo app放到了Github上，有兴趣可以看下使用Kotlin开发android app具体是怎样的：<a href="https://github.com/ragnraok/MovieCamera">Demo地址</a></p>
 <hr />
-<h3>对于包大小以及dex方法数目的影响</h3>
-<p>TODO</p>
+<h3>对于dex方法数目的影响</h3>
+<p>dex有个65535方法数的限制，这对Android开发造成了很大的影响，在使用Kotlin进行android app开发的时候，需要将Kotlin的标准库打包进入apk中，这意味着如果标准库过大，对分包会造成很大的限制（因为这必须得打包在主dex中），所幸的是，Kotlin的哲学是“Java中有的，就尽量复用，不再自行创造一套”，使得整个Kotlin的标准库非常小，我们可以简单将Kotlin的标准库和其他比较常用库进行一下对比：</p>
+<table border="1" cellpadding="5">
+    <tr>
+        <td> 包名</td>
+        <td>android-support-v13.jar</td>
+        <td>android-support-v4.jar</td>
+        <td>android-support-v7-appcompat.jar</td>
+        <td>guava-18.0.jar</td>
+        <td>scala-library-2.12.0-M1.jar</td>
+        <td>kotlin-stdlib-0.12.213.jar</td>
+    </tr>
+    <tr>
+        <td>方法数</td>
+        <td>8219</td>
+        <td>8118</td>
+        <td>4624</td>
+        <td>14833</td>
+        <td>51248</td>
+        <td>7228</td>
+    </tr>
+</table>
+
+<p><br />
+可以看出来Kotlin的标准库相当小，只有7000多个方法，比support-v13和support-v4还小，这体现了Kotlin的设计哲学之一："100% interoperable with Java"，基本上Java已经有的，Kotlin会尽量复用。而对比来看，同样是JVM上的语言，我们也可以选择使用Scala来进行Android开发，但Scala标准库有5万多个方法，全部打包进主dex中，很容易就导致app爆主dex了。所以综合来看，轻量形的Kotlin还是相当适合进行Android开发的。</p>
 <hr />
 <h3>Project Anko</h3>
 <p>TODO</p>

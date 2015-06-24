@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <feed xmlns="http://www.w3.org/2005/Atom"><title>Ragnarok Note</title><link href="http://ragnraok.github.io/" rel="alternate"></link><link href="http://ragnraok.github.io/feeds/atom.xml" rel="self"></link><id>http://ragnraok.github.io/</id><updated>2015-06-24T00:00:00+08:00</updated><entry><title>使用Kotlin进行Android开发</title><link href="http://ragnraok.github.io/using-kotlin-to-write-android-app.html" rel="alternate"></link><updated>2015-06-24T00:00:00+08:00</updated><author><name>Ragnarok Zhou</name></author><id>tag:ragnraok.github.io,2015-06-24:using-kotlin-to-write-android-app.html</id><summary type="html">&lt;h3&gt;What is Kotlin&lt;/h3&gt;
-&lt;p&gt;Kotlin，原意是在俄罗斯的一个&lt;a href="https://zh.wikipedia.org/wiki/%E7%A7%91%E7%89%B9%E6%9E%97%E5%B3%B6"&gt;小岛&lt;/a&gt;，JetBrain在2011年推出了已这个来命名的一个运行在JVM上的语言， 看上去有点类似C#和Scala的结合，并且同为静态类型，作为一门JVM上的语言，可以轻松兼容Java，并且整个语言设计的非常轻量。目前的版本为&lt;code&gt;0.12.200&lt;/code&gt;，尚未发布正式版。&lt;/p&gt;
+&lt;p&gt;Kotlin，原意是在俄罗斯的一个&lt;a href="https://zh.wikipedia.org/wiki/%E7%A7%91%E7%89%B9%E6%9E%97%E5%B3%B6"&gt;小岛&lt;/a&gt;，JetBrain在2011年推出了以这个来命名的一个运行在JVM上的语言， 看上去有点类似C#和Scala的结合，并且同为静态类型，作为一门JVM上的语言，可以轻松兼容Java，并且整个语言设计的非常轻量。目前的版本为&lt;code&gt;0.12.200&lt;/code&gt;，尚未发布正式版。&lt;/p&gt;
 &lt;hr /&gt;
 &lt;p&gt;Kotlin的下载和配置在其&lt;a href="http://kotlinlang.org/docs/tutorials/getting-started.html"&gt;官网&lt;/a&gt;上有，在这里就不再赘述了，值得一提的是，作为JetBrains家出品的语言，自家的IDEA当然全力支持！&lt;/p&gt;
 &lt;h3&gt;基本语法介绍&lt;/h3&gt;
@@ -29,6 +29,7 @@ fooTest(c)
 &lt;/pre&gt;&lt;/div&gt;
 
 
+&lt;p&gt;&lt;br /&gt;&lt;/p&gt;
 &lt;h4&gt;类与接口&lt;/h4&gt;
 &lt;p&gt;类可以这样进行声明：&lt;/p&gt;
 &lt;div class="highlight"&gt;&lt;pre&gt;&lt;span class="k"&gt;class&lt;/span&gt; &lt;span class="n"&gt;Bar&lt;/span&gt;(&lt;span class="n"&gt;var&lt;/span&gt; &lt;span class="n"&gt;b:&lt;/span&gt; &lt;span class="nb"&gt;Int&lt;/span&gt;): &lt;span class="n"&gt;Foo&lt;/span&gt;() {
@@ -45,6 +46,7 @@ fooTest(c)
 
 
 &lt;p&gt;Bar类在这里继承了Foo类，Bar类有两个构造函数，直接在Bar类头的是primary constructor，另外一个构造函数使用&lt;code&gt;constructor&lt;/code&gt;关键字定义，注意必须要先调用primary constructor，另外，&lt;code&gt;init&lt;/code&gt;标明的是class initializer，每个构造函数都会首先调用class initializer里面的代码，再调用构造函数&lt;/p&gt;
+&lt;p&gt;&lt;br /&gt;&lt;/p&gt;
 &lt;h5&gt;Inner class:&lt;/h5&gt;
 &lt;div class="highlight"&gt;&lt;pre&gt;&lt;span class="k"&gt;class&lt;/span&gt; &lt;span class="n"&gt;Outer&lt;/span&gt; {
     &lt;span class="k"&gt;class&lt;/span&gt; &lt;span class="n"&gt;Inner&lt;/span&gt; {      
@@ -54,6 +56,7 @@ fooTest(c)
 
 
 &lt;p&gt;Kotlin同样支持嵌套的内部类，不过和Java不一样的是，Kotlin的内部类不会默认包含一个指向外部类对象的引用，也就是说，Kotlin中所有的内部类默认就是&lt;strong&gt;静态&lt;/strong&gt;的，这样可以减少很多内存泄露的问题。另外，如果需要在内部类中引用外部类对象，可以在Inner类的声明前加上&lt;code&gt;inner&lt;/code&gt;关键字，然后在Inner类中使用标记的&lt;code&gt;this&lt;/code&gt;：&lt;code&gt;this@Outer&lt;/code&gt;来指向外部类对象&lt;/p&gt;
+&lt;p&gt;&lt;br /&gt;&lt;/p&gt;
 &lt;h5&gt;Singleton:&lt;/h5&gt;
 &lt;div class="highlight"&gt;&lt;pre&gt;object Single {
     var c = 1
@@ -64,6 +67,7 @@ fooTest(c)
 
 
 &lt;p&gt;Kotlin中使用&lt;code&gt;object&lt;/code&gt;关键字声明一个singleton对象，后面这里的方法就可以直接使用&lt;code&gt;Single.foo()&lt;/code&gt;来调用了&lt;/p&gt;
+&lt;p&gt;&lt;br /&gt;&lt;/p&gt;
 &lt;h5&gt;Interface:&lt;/h5&gt;
 &lt;div class="highlight"&gt;&lt;pre&gt;interface Interface {
     fun foo() {
@@ -75,6 +79,7 @@ fooTest(c)
 
 
 &lt;p&gt;Kotlin中的interface，跟其他语言的&lt;code&gt;trait&lt;/code&gt;非常像，而且也可以带有默认的实现方法，并且不允许通过属性来维护状态。事实上，在上个版本中，interface的原来名称是&lt;code&gt;trait&lt;/code&gt;，而在M12现在这个版本中又改成了interface而已&lt;/p&gt;
+&lt;p&gt;&lt;br /&gt;&lt;/p&gt;
 &lt;h4&gt;Null safe and Smart type cast&lt;/h4&gt;
 &lt;h5&gt;Null safe:&lt;/h5&gt;
 &lt;p&gt;在Kotlin中，严格区分了nullable和非nullable对象，甚至在编译期解决了不少潜在的空指针问题:&lt;/p&gt;
@@ -102,6 +107,7 @@ fooTest(c)
 &lt;/pre&gt;&lt;/div&gt;
 
 
+&lt;p&gt;&lt;br /&gt;&lt;/p&gt;
 &lt;h5&gt;Smart type cast&lt;/h5&gt;
 &lt;p&gt;在Kotlin中，进行强制类型转换可以使用&lt;code&gt;as&lt;/code&gt;关键字，但有可能会抛出异常，因此，Kotlin引入了smart type cast:&lt;/p&gt;
 &lt;div class="highlight"&gt;&lt;pre&gt;if (c is String) {
@@ -111,6 +117,7 @@ fooTest(c)
 
 
 &lt;p&gt;在上面的例子中，如果&lt;code&gt;c&lt;/code&gt;是一个String对象，则在if块中，可以直接使用String的方法，编译器会智能的帮你识别出c在if-blcok里面是一个String对象&lt;/p&gt;
+&lt;p&gt;&lt;br /&gt;&lt;/p&gt;
 &lt;h4&gt;Pattern Matching&lt;/h4&gt;
 &lt;p&gt;Kotlin在一定程度上支持了一些FP的特性，包括强大的Pattern Matching，在Kotlin中可以使用&lt;code&gt;when&lt;/code&gt;关键字：&lt;/p&gt;
 &lt;div class="highlight"&gt;&lt;pre&gt;var x = 3
@@ -127,6 +134,7 @@ when (x) {
 &lt;/pre&gt;&lt;/div&gt;
 
 
+&lt;p&gt;&lt;br /&gt;&lt;/p&gt;
 &lt;h4&gt;Function Extension&lt;/h4&gt;
 &lt;p&gt;在Java中我们经常需要给系统的类添加一些实用的方法，但苦于不能直接扩展，于是就有了各种的xxxUtils类，导致代码非常恶心，但是在Kotlin中，我们可以直接扩展库里面类的方法，通过function extension:&lt;/p&gt;
 &lt;div class="highlight"&gt;&lt;pre&gt;fun String.fucker() {
@@ -157,8 +165,31 @@ when (x) {
 &lt;code&gt;Tools-&amp;gt;Kotlin-&amp;gt;Configure Kotlin in Project&lt;/code&gt;，就可以自动进行上述的配置，一步到位&lt;/p&gt;
 &lt;p&gt;我写了一个简单的Demo app放到了Github上，有兴趣可以看下使用Kotlin开发android app具体是怎样的：&lt;a href="https://github.com/ragnraok/MovieCamera"&gt;Demo地址&lt;/a&gt;&lt;/p&gt;
 &lt;hr /&gt;
-&lt;h3&gt;对于包大小以及dex方法数目的影响&lt;/h3&gt;
-&lt;p&gt;TODO&lt;/p&gt;
+&lt;h3&gt;对于dex方法数目的影响&lt;/h3&gt;
+&lt;p&gt;dex有个65535方法数的限制，这对Android开发造成了很大的影响，在使用Kotlin进行android app开发的时候，需要将Kotlin的标准库打包进入apk中，这意味着如果标准库过大，对分包会造成很大的限制（因为这必须得打包在主dex中），所幸的是，Kotlin的哲学是“Java中有的，就尽量复用，不再自行创造一套”，使得整个Kotlin的标准库非常小，我们可以简单将Kotlin的标准库和其他比较常用库进行一下对比：&lt;/p&gt;
+&lt;table border="1" cellpadding="5"&gt;
+    &lt;tr&gt;
+        &lt;td&gt; 包名&lt;/td&gt;
+        &lt;td&gt;android-support-v13.jar&lt;/td&gt;
+        &lt;td&gt;android-support-v4.jar&lt;/td&gt;
+        &lt;td&gt;android-support-v7-appcompat.jar&lt;/td&gt;
+        &lt;td&gt;guava-18.0.jar&lt;/td&gt;
+        &lt;td&gt;scala-library-2.12.0-M1.jar&lt;/td&gt;
+        &lt;td&gt;kotlin-stdlib-0.12.213.jar&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;方法数&lt;/td&gt;
+        &lt;td&gt;8219&lt;/td&gt;
+        &lt;td&gt;8118&lt;/td&gt;
+        &lt;td&gt;4624&lt;/td&gt;
+        &lt;td&gt;14833&lt;/td&gt;
+        &lt;td&gt;51248&lt;/td&gt;
+        &lt;td&gt;7228&lt;/td&gt;
+    &lt;/tr&gt;
+&lt;/table&gt;
+
+&lt;p&gt;&lt;br /&gt;
+可以看出来Kotlin的标准库相当小，只有7000多个方法，比support-v13和support-v4还小，这体现了Kotlin的设计哲学之一："100% interoperable with Java"，基本上Java已经有的，Kotlin会尽量复用。而对比来看，同样是JVM上的语言，我们也可以选择使用Scala来进行Android开发，但Scala标准库有5万多个方法，全部打包进主dex中，很容易就导致app爆主dex了。所以综合来看，轻量形的Kotlin还是相当适合进行Android开发的。&lt;/p&gt;
 &lt;hr /&gt;
 &lt;h3&gt;Project Anko&lt;/h3&gt;
 &lt;p&gt;TODO&lt;/p&gt;</summary></entry><entry><title>使用JDK的Parser来解析Java源代码</title><link href="http://ragnraok.github.io/using-jdk-parser.html" rel="alternate"></link><updated>2015-04-12T00:00:00+08:00</updated><author><name>Ragnarok Zhou</name></author><id>tag:ragnraok.github.io,2015-04-12:using-jdk-parser.html</id><summary type="html">&lt;p&gt;在JDK中，自带了一套相关的编译API，可以在Java中发起编译流程，解析Java源文件然后获取其语法树，在JDK的&lt;code&gt;tools.jar&lt;/code&gt;（OSX下可以在/Library/Java/JavaVirtualMachines/jdk_version/Contents/Home/lib中找到）中包含着这整套API，但是这却不是Oracle和OpenJDK发布中的公开API，因此对于这套API，并没有官方的正式文档来进行说明。但是，也有不少项目利用了这套API来做了不少事情，例如大名鼎鼎的&lt;a href="https://github.com/rzwitserloot/lombok.git"&gt;lombok&lt;/a&gt;使用了这套API在Annotation Processing阶段修改了源代码中的语法树，最终结果相当于直接在源文件中插入了新的代码！&lt;/p&gt;
