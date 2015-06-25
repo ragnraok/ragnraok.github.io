@@ -222,7 +222,60 @@ when (x) {
 可以看出来Kotlin的标准库相当小，只有7000多个方法，比support-v13和support-v4还小，这体现了Kotlin的设计哲学之一："100% interoperable with Java"，基本上Java已经有的，Kotlin会尽量复用。而对比来看，同样是JVM上的语言，我们也可以选择使用Scala来进行Android开发，但Scala标准库有5万多个方法，全部打包进主dex中，很容易就导致app爆主dex了。所以综合来看，轻量形的Kotlin还是相当适合进行Android开发的。</p>
 <hr />
 <h3>Project Anko</h3>
-<p>TODO</p>
+<p><a href="https://github.com/JetBrains/anko">Anko</a> 是JetBrains推出的一个简化Android开发的库，同样由Kotlin来编写，主要的革命在于，声明UI的方式，完全抛弃了xml的使用，使用Anko，声明UI是这样做的：</p>
+<div class="highlight"><pre>override fun onCreate(savedInstanceState: Bundle?) {
+    super.onCreate(savedInstanceState)
+    val customStyle = { v: Any -&gt;
+        when (v) {
+            is Button -&gt; v.textSize = 26f
+            is EditText -&gt; v.textSize = 24f
+        }
+    }
+
+    verticalLayout {
+
+        padding = dip(34)
+        imageView(android.R.drawable.ic_menu_manage).layoutParams {
+            margin = dip(16)
+            gravity = Gravity.CENTER
+        }
+
+         val name = editText {
+             hintResource = R.string.name
+        }
+        val password = editText {
+            hintResource = R.string.password
+            inputType = TYPE_CLASS_TEXT or TYPE_TEXT_VARIATION_PASSWORD
+        }
+
+        button(&quot;Log in&quot;) {
+            onClick {
+                tryLogin(name.text, password.text)
+            }
+        }
+    }.style(customStyle)
+}
+</pre></div>
+
+
+<p>你没看错，的确是在Activity类的onCreate方法中直接声明UI的布局。</p>
+<p>Anko看起来像是使用了一种类似DSL的方式声明了界面的UI，这里主要是使用了Kotlin的其中两个特性：</p>
+<ul>
+<li>Function Extension，Anko扩展了Activity类，提供了额外的方法和属性</li>
+<li>Kotlin在调用函数的时候，如果最后一个参数为函数的话，则可以直接使用Lambda，并省略括号</li>
+</ul>
+<p>因此这里声明布局的方式，其实全是Kotlin的原生代码，鹅妹子嘤！这样做有显然的好处：</p>
+<ul>
+<li>由于实际上全是由代码来布局，省去了解析xml的时间</li>
+<li>xml本身有许多缺点，例如不可重用，非类型安全等，使用代码布局的话，我们可以很容易的就解决这个问题了</li>
+</ul>
+<hr />
+<h3>Other References:</h3>
+<p>这里列出一些国外的关于Kotlin的介绍文章：</p>
+<ul>
+<li><a href="https://docs.google.com/document/d/1ReS3ep-hjxWA8kZi0YqDbEhCqTt29hG8P44aA9W0DM8/edit?hl=zh-CN&amp;forcehl=1">Using Project Kotlin for Android</a> Square的JakeWharton曾经考察过几种不同的语言来进行Android开发，最后还是认为Kotlin比较优秀</li>
+<li><a href="http://blog.gouline.net/2014/08/31/kotlin-the-swift-of-android/">Kotlin, the Swift of Android</a> 这篇文章把Kotlin比喻为Android上的swift，虽然比较老，但是也可以看做Kotlin的介绍性文章</li>
+</ul>
   </div><!-- /.entry-content -->
    <footer class="post-info text-muted">
     Posted on <abbr class="published" title="2015-06-24T00:00:00+08:00">
