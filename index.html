@@ -23,7 +23,7 @@
 
         <article class="hentry">
                 <header> <h2 class="entry-title"><a href="http://ragnraok.github.io/textview-pre-render-research.html" rel="bookmark" title="Permalink to TextView预渲染研究">TextView预渲染研究</a></h2> </header>
-                <div class="entry-content"> <p>Android中的TextView是整个framework中最复杂的控件之一，负责Android中显示文本的大部分工作，framwork中的许多控件也直接或者间接的继承于TextView，例如Button，EditText等。其内部实现也相当复杂，单论代码行数来说，android-22中TextView有足足9509行，另外，TextView中许多操作都非常繁重，例如setText操作，需要设置SpanWatcher，或者需要重现创建一个SpannableString，还需要根据情况重新创建Text Layout，这些操作加起来之后令一次setText操作非常耗时。为了提升TextView的渲染效率，最近研究了一下预渲染的方法，接下来给大家讲解一下原理。</p>
+                <div class="entry-content"> <p>Android中的TextView是整个framework中最复杂的控件之一，负责Android中显示文本的大部分工作，framwork中的许多控件也直接或者间接的继承于TextView，例如Button，EditText等。其内部实现也相当复杂，单论代码行数来说，android-22中TextView有足足9509行，另外，TextView中许多操作都非常繁重，例如<code>setText</code>操作，需要设置SpanWatcher，或者需要重现创建一个SpannableString，还需要根据情况重新创建Text Layout，这些操作加起来之后令一次setText操作非常耗时。为了提升TextView的渲染效率，最近研究了一下预渲染的方法，接下来给大家讲解一下原理。</p>
 <h3>TextView渲染基本原理</h3>
 <p>首先来介绍下TextView的基本渲染原理，总的来说，TextView中负责渲染文字的主要是这三个类：</p>
 <ol>
@@ -40,7 +40,7 @@
     当文本为非单行文本，且非Spannable的时候，就会使用StaticLayout，内部并不会监听span的变化，因此效率上会比DynamicLayout高，只需一次布局的创建即可，但其实内部也能显示SpannableString，只是不能在span变化之后重新进行布局而已。</p>
 </li>
 </ol>
-<p>另外，以上三个类都继承于<a href="http://developer.android.com/intl/zh-cn/reference/android/text/Layout.html">Layout</a>类，在此类中统一负责文本的具体绘制，在Layout.draw方法中，会对文本一行一行的进行渲染 ...</p> </div><!-- entry-content -->
+<p>另外，以上三个类都继承于<a href="http://developer.android.com/intl/zh-cn/reference/android/text/Layout.html">Layout</a>类，在此类中统一负责文本的具体绘制，在Layout ...</p> </div><!-- entry-content -->
         </article>
         <article class="hentry">
                 <header> <h2 class="entry-title"><a href="http://ragnraok.github.io/using-kotlin-to-write-android-app.html" rel="bookmark" title="Permalink to 使用Kotlin进行Android开发">使用Kotlin进行Android开发</a></h2> </header>
