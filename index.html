@@ -4,25 +4,46 @@
         <title>Ragnarok Note</title>
         <meta charset="utf-8" />
         <link href="//netdna.bootstrapcdn.com/bootstrap/3.0.0/css/bootstrap.min.css" rel="stylesheet" />
-        <link href="http://ragnraok.github.io/theme/static/css/style.css" rel="stylesheet" />
+        <link href="/theme/static/css/style.css" rel="stylesheet" />
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-        <link href="http://ragnraok.github.io/feeds/atom.xml" type="application/atom+xml" rel="alternate" title="Ragnarok Note Full Atom Feed" />
+        <link href="/feeds/atom.xml" type="application/atom+xml" rel="alternate" title="Ragnarok Note Full Atom Feed" />
     </head>
 
     <body id="index" class="archive">
         <div class="container">
             <div class="header">
                 <ul class="nav nav-pills pull-right">
-                    <li class="active"><a href="http://ragnraok.github.io">Home</a></li>
-                    <li><a href="http://ragnraok.github.io/archives.html">Archives</a></li>
+                    <li class="active"><a href="">Home</a></li>
+                    <li><a href="/archives.html">Archives</a></li>
                 </ul>
-                <h3 class="text-muted"><a href="http://ragnraok.github.io">Ragnarok Note</a></h3>
+                <h3 class="text-muted"><a href="">Ragnarok Note</a></h3>
 				<h2 class="text-muted"></h2>
              </div>
 <section id="content" class="content">
 
         <article class="hentry">
-                <header> <h2 class="entry-title"><a href="http://ragnraok.github.io/using-kotlin-to-write-android-app.html" rel="bookmark" title="Permalink to 使用Kotlin进行Android开发">使用Kotlin进行Android开发</a></h2> </header>
+                <header> <h2 class="entry-title"><a href="/textview-pre-render-search.html" rel="bookmark" title="Permalink to TextView预渲染研究">TextView预渲染研究</a></h2> </header>
+                <div class="entry-content"> <p>Android中的TextView是整个framework中最复杂的控件之一，负责Android中显示文本的大部分工作，framwork中的许多控件也直接或者间接的继承于TextView，例如Button，EditText等。其内部实现也相当复杂，单论代码行数来说，android-22中TextView有足足9509行，另外，TextView中许多操作都非常繁重，例如setText操作，需要设置SpanWatcher，或者需要重现创建一个SpannableString，还需要根据情况重新创建Text Layout，这些操作加起来之后令一次setText操作非常耗时。为了提升TextView的渲染效率，最近研究了一下预渲染的方法，接下来给大家讲解一下原理。</p>
+<h3>TextView渲染基本原理</h3>
+<p>首先来介绍下TextView的基本渲染原理，总的来说，TextView中负责渲染文字的主要是这三个类：</p>
+<ol>
+<li>
+<p><a href="http://developer.android.com/intl/zh-cn/reference/android/text/BoringLayout.html">BoringLayout</a> <br />
+    主要负责显示单行文本，并提供了isBoring方法来判断是否满足单行文本的条件。</p>
+</li>
+<li>
+<p><a href="http://developer.android.com/intl/zh-cn/reference/android/text/DynamicLayout.html">DynamicLayout</a> <br />
+    当文本为Spannable的时候，TextView就会使用它来负责文本的显示，在内部设置了SpanWatcher，当检测到span改变的时候，会进行reflow，重新计算布局。</p>
+</li>
+<li>
+<p><a href="http://developer.android.com/intl/zh-cn/reference/android/text/StaticLayout.html">StaticLayout</a> <br />
+    当文本为非单行文本，且非Spannable的时候，就会使用StaticLayout，内部并不会监听span的变化，因此效率上会比DynamicLayout高，只需一次布局的创建即可，但其实内部也能显示SpannableString，只是不能在span变化之后重新进行布局而已。</p>
+</li>
+</ol>
+<p>另外，以上三个类都继承于<a href="http://developer.android.com/intl/zh-cn/reference/android/text/Layout.html">Layout</a>类，在此类中统一负责文本的具体绘制，在Layout.draw方法中，会对文本一行一行的进行渲染 ...</p> </div><!-- entry-content -->
+        </article>
+        <article class="hentry">
+                <header> <h2 class="entry-title"><a href="/using-kotlin-to-write-android-app.html" rel="bookmark" title="Permalink to 使用Kotlin进行Android开发">使用Kotlin进行Android开发</a></h2> </header>
                 <div class="entry-content"> <h3>What is Kotlin</h3>
 <p>Kotlin，原意是在俄罗斯的一个<a href="https://zh.wikipedia.org/wiki/%E7%A7%91%E7%89%B9%E6%9E%97%E5%B3%B6">小岛</a>，JetBrain在2011年推出了以这个来命名的一个运行在JVM上的语言， 看上去有点类似C#和Scala的结合，并且同为静态类型，作为一门JVM上的语言，可以轻松兼容Java，并且整个语言设计的非常轻量。目前的版本为<code>0.12.200</code>，尚未发布正式版。</p>
 <hr />
@@ -45,7 +66,7 @@
 <div class="highlight"><pre>var c = {foo: Int -&gt; println(foo ...</pre></div> </div><!-- entry-content -->
         </article>
         <article class="hentry">
-                <header> <h2 class="entry-title"><a href="http://ragnraok.github.io/using-jdk-parser.html" rel="bookmark" title="Permalink to 使用JDK的Parser来解析Java源代码">使用JDK的Parser来解析Java源代码</a></h2> </header>
+                <header> <h2 class="entry-title"><a href="/using-jdk-parser.html" rel="bookmark" title="Permalink to 使用JDK的Parser来解析Java源代码">使用JDK的Parser来解析Java源代码</a></h2> </header>
                 <div class="entry-content"> <p>在JDK中，自带了一套相关的编译API，可以在Java中发起编译流程，解析Java源文件然后获取其语法树，在JDK的<code>tools.jar</code>（OSX下可以在/Library/Java/JavaVirtualMachines/jdk_version/Contents/Home/lib中找到）中包含着这整套API，但是这却不是Oracle和OpenJDK发布中的公开API，因此对于这套API，并没有官方的正式文档来进行说明。但是，也有不少项目利用了这套API来做了不少事情，例如大名鼎鼎的<a href="https://github.com/rzwitserloot/lombok.git">lombok</a>使用了这套API在Annotation Processing阶段修改了源代码中的语法树，最终结果相当于直接在源文件中插入了新的代码！</p>
 <p>由于这套API目前缺少相关文档，使用起来比较困难，例如，解析源代码中的所有变量，并打印出来：</p>
 <div class="highlight"><pre><span class="kr">public</span> <span class="kr">class</span> <span class="nx">JavaParser</span> <span class="p">{</span>
@@ -59,14 +80,14 @@
         <span class="nx">Context ...</span></pre></div> </div><!-- entry-content -->
         </article>
         <article class="hentry">
-                <header> <h2 class="entry-title"><a href="http://ragnraok.github.io/android-emoji-font-method.html" rel="bookmark" title="Permalink to 探索在Android中使用Emoji Font的方法">探索在Android中使用Emoji Font的方法</a></h2> </header>
+                <header> <h2 class="entry-title"><a href="/android-emoji-font-method.html" rel="bookmark" title="Permalink to 探索在Android中使用Emoji Font的方法">探索在Android中使用Emoji Font的方法</a></h2> </header>
                 <div class="entry-content"> <p>先说结论，在android4.4以前，无法使用像苹果那样的emoji字体样式，最简单的解决方案是使用ImageSpan配合SpannableString，而在4.4及之后的版本，则可以直接采用类似iOS/OSX的方案进行快速渲染。</p>
 <h3>Apple Color Emoji</h3>
 <p><a href="http://zh.wikipedia.org/wiki/%E7%B9%AA%E6%96%87%E5%AD%97">Emoji</a>表情，最初是从日本的“绘文字”演化过来，在没有正式定下规范之前，日本的三大电信运营商，NTT DoCoMo，au/KDDI，Softbank都各自有一套关于Emoji的编码规范，而且在这个时候，每个Emoji表情对应的表情图片也是没有统一规范的。这时候，应用最广泛的是应该的属于日本软银（Softbank）的Softbank编码了，在iOS系统的早期的版本上，采用的也是这个编码规范。</p>
 <p>后来，在2010年10月，随着Unicode6.0的发布，Emoji的编码以及对应的表情图片正式被规范化，核心Emoji表情包含722个Emoji编码。而到了Unicode 7.0（2014年6月发行）之后，更多的Emoji表情被加入了进来，包括一些其他比较偏门的Emoji表情组，例如<a href="http://en.wikipedia.org/wiki/Webdings">Webdings</a>，<a href="http://en.wikipedia.org/wiki/Wingdings">Wingdings</a>，也被编入了Unicode 7 ...</p> </div><!-- entry-content -->
         </article>
         <article class="hentry">
-                <header> <h2 class="entry-title"><a href="http://ragnraok.github.io/re-blog.html" rel="bookmark" title="Permalink to Re:Blog">Re:Blog</a></h2> </header>
+                <header> <h2 class="entry-title"><a href="/re-blog.html" rel="bookmark" title="Permalink to Re:Blog">Re:Blog</a></h2> </header>
                 <div class="entry-content"> <p>大二的时候，曾经写过一段时间的博客。当时还记得刚学python不久，兴高采烈的使用Django写了一个非常简单的博客引擎，在42qu买了个服务器，然后在Godaddy那里买了个域名，于是就火速在上面搭建了人生的第一个博客。</p>
 <p>一晃过去，已经是两年的时间了，原来的博客早已废弃，已经很久没有在博客上写过文字了。</p>
 <p>工作半年，这半年工作真的非常忙。越来越觉得缺少积累，而且慢慢地，也失去了当初在学校那种涉猎各种技术的激情，反而，作为Android开发者，在Android开发这里，进行了更加深入的研究。这让我想起了以前在学校有位老师跟我说过，在学校需要的时候更广的知识面，而到了工作，就需要更为深入的专研某个技术的实现，而对于Android以外的技术，已经没有那么多时间再去涉猎了，这或许是从BFS到DFS的转变吧。</p>
@@ -84,10 +105,10 @@
 </section><!-- content -->
             <footer id="contentinfo" class="footer">
                     <nav class="pull-right bottom-nav">
-                        <a href="http://ragnraok.github.io/feeds/atom.xml">RSS</a>
+                        <a href="/feeds/atom.xml">RSS</a>
                     </nav>
                     <address id="about" class="vcard body">
-                    &copy; <a href="http://ragnraok.github.io">Ragnarok Note</a> Proudly powered by <a href="http://getpelican.com/">Pelican</a>
+                    &copy; <a href="">Ragnarok Note</a> Proudly powered by <a href="http://getpelican.com/">Pelican</a>
                     </address><!-- /#about -->
             </footer><!-- /#contentinfo -->
         </div><!-- container -->

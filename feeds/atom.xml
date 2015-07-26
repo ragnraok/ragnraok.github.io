@@ -1,5 +1,84 @@
 <?xml version="1.0" encoding="utf-8"?>
-<feed xmlns="http://www.w3.org/2005/Atom"><title>Ragnarok Note</title><link href="http://ragnraok.github.io/" rel="alternate"></link><link href="http://ragnraok.github.io/feeds/atom.xml" rel="self"></link><id>http://ragnraok.github.io/</id><updated>2015-06-24T00:00:00+08:00</updated><entry><title>使用Kotlin进行Android开发</title><link href="http://ragnraok.github.io/using-kotlin-to-write-android-app.html" rel="alternate"></link><updated>2015-06-24T00:00:00+08:00</updated><author><name>Ragnarok Zhou</name></author><id>tag:ragnraok.github.io,2015-06-24:using-kotlin-to-write-android-app.html</id><summary type="html">&lt;h3&gt;What is Kotlin&lt;/h3&gt;
+<feed xmlns="http://www.w3.org/2005/Atom"><title>Ragnarok Note</title><link href="/" rel="alternate"></link><link href="/feeds/atom.xml" rel="self"></link><id>/</id><updated>2015-07-26T00:00:00+08:00</updated><entry><title>TextView预渲染研究</title><link href="/textview-pre-render-search.html" rel="alternate"></link><updated>2015-07-26T00:00:00+08:00</updated><author><name>Ragnarok Zhou</name></author><id>tag:,2015-07-26:textview-pre-render-search.html</id><summary type="html">&lt;p&gt;Android中的TextView是整个framework中最复杂的控件之一，负责Android中显示文本的大部分工作，framwork中的许多控件也直接或者间接的继承于TextView，例如Button，EditText等。其内部实现也相当复杂，单论代码行数来说，android-22中TextView有足足9509行，另外，TextView中许多操作都非常繁重，例如setText操作，需要设置SpanWatcher，或者需要重现创建一个SpannableString，还需要根据情况重新创建Text Layout，这些操作加起来之后令一次setText操作非常耗时。为了提升TextView的渲染效率，最近研究了一下预渲染的方法，接下来给大家讲解一下原理。&lt;/p&gt;
+&lt;h3&gt;TextView渲染基本原理&lt;/h3&gt;
+&lt;p&gt;首先来介绍下TextView的基本渲染原理，总的来说，TextView中负责渲染文字的主要是这三个类：&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;a href="http://developer.android.com/intl/zh-cn/reference/android/text/BoringLayout.html"&gt;BoringLayout&lt;/a&gt; &lt;br /&gt;
+    主要负责显示单行文本，并提供了isBoring方法来判断是否满足单行文本的条件。&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;a href="http://developer.android.com/intl/zh-cn/reference/android/text/DynamicLayout.html"&gt;DynamicLayout&lt;/a&gt; &lt;br /&gt;
+    当文本为Spannable的时候，TextView就会使用它来负责文本的显示，在内部设置了SpanWatcher，当检测到span改变的时候，会进行reflow，重新计算布局。&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;a href="http://developer.android.com/intl/zh-cn/reference/android/text/StaticLayout.html"&gt;StaticLayout&lt;/a&gt; &lt;br /&gt;
+    当文本为非单行文本，且非Spannable的时候，就会使用StaticLayout，内部并不会监听span的变化，因此效率上会比DynamicLayout高，只需一次布局的创建即可，但其实内部也能显示SpannableString，只是不能在span变化之后重新进行布局而已。&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;另外，以上三个类都继承于&lt;a href="http://developer.android.com/intl/zh-cn/reference/android/text/Layout.html"&gt;Layout&lt;/a&gt;类，在此类中统一负责文本的具体绘制，在Layout.draw方法中，会对文本一行一行的进行渲染：&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span class="n"&gt;TextLine&lt;/span&gt; &lt;span class="n"&gt;tl&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;TextLine&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="na"&gt;obtain&lt;/span&gt;&lt;span class="o"&gt;();&lt;/span&gt;
+
+ &lt;span class="c1"&gt;// Draw the lines, one at a time.&lt;/span&gt;
+ &lt;span class="c1"&gt;// The baseline is the top of the following line minus the current line&amp;#39;s descent.&lt;/span&gt;
+ &lt;span class="k"&gt;for&lt;/span&gt; &lt;span class="o"&gt;(&lt;/span&gt;&lt;span class="kt"&gt;int&lt;/span&gt; &lt;span class="n"&gt;i&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;firstLine&lt;/span&gt;&lt;span class="o"&gt;;&lt;/span&gt; &lt;span class="n"&gt;i&lt;/span&gt; &lt;span class="o"&gt;&amp;lt;=&lt;/span&gt; &lt;span class="n"&gt;lastLine&lt;/span&gt;&lt;span class="o"&gt;;&lt;/span&gt; &lt;span class="n"&gt;i&lt;/span&gt;&lt;span class="o"&gt;++)&lt;/span&gt; &lt;span class="o"&gt;{&lt;/span&gt;
+        &lt;span class="o"&gt;....&lt;/span&gt;
+        &lt;span class="n"&gt;Directions&lt;/span&gt; &lt;span class="n"&gt;directions&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;getLineDirections&lt;/span&gt;&lt;span class="o"&gt;(&lt;/span&gt;&lt;span class="n"&gt;i&lt;/span&gt;&lt;span class="o"&gt;);&lt;/span&gt;
+        &lt;span class="k"&gt;if&lt;/span&gt; &lt;span class="o"&gt;(&lt;/span&gt;&lt;span class="n"&gt;directions&lt;/span&gt; &lt;span class="o"&gt;==&lt;/span&gt; &lt;span class="n"&gt;DIRS_ALL_LEFT_TO_RIGHT&lt;/span&gt; &lt;span class="o"&gt;&amp;amp;&amp;amp;&lt;/span&gt; &lt;span class="o"&gt;!&lt;/span&gt;&lt;span class="n"&gt;mSpannedText&lt;/span&gt; &lt;span class="o"&gt;&amp;amp;&amp;amp;&lt;/span&gt; &lt;span class="o"&gt;!&lt;/span&gt;&lt;span class="n"&gt;hasTabOrEmoji&lt;/span&gt;&lt;span class="o"&gt;)&lt;/span&gt; &lt;span class="o"&gt;{&lt;/span&gt;
+            &lt;span class="c1"&gt;// XXX: assumes there&amp;#39;s nothing additional to be done&lt;/span&gt;
+            &lt;span class="n"&gt;canvas&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="na"&gt;drawText&lt;/span&gt;&lt;span class="o"&gt;(&lt;/span&gt;&lt;span class="n"&gt;buf&lt;/span&gt;&lt;span class="o"&gt;,&lt;/span&gt; &lt;span class="n"&gt;start&lt;/span&gt;&lt;span class="o"&gt;,&lt;/span&gt; &lt;span class="n"&gt;end&lt;/span&gt;&lt;span class="o"&gt;,&lt;/span&gt; &lt;span class="n"&gt;x&lt;/span&gt;&lt;span class="o"&gt;,&lt;/span&gt; &lt;span class="n"&gt;lbaseline&lt;/span&gt;&lt;span class="o"&gt;,&lt;/span&gt; &lt;span class="n"&gt;paint&lt;/span&gt;&lt;span class="o"&gt;);&lt;/span&gt;
+        &lt;span class="o"&gt;}&lt;/span&gt; &lt;span class="k"&gt;else&lt;/span&gt; &lt;span class="o"&gt;{&lt;/span&gt;
+            &lt;span class="n"&gt;tl&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="na"&gt;set&lt;/span&gt;&lt;span class="o"&gt;(&lt;/span&gt;&lt;span class="n"&gt;paint&lt;/span&gt;&lt;span class="o"&gt;,&lt;/span&gt; &lt;span class="n"&gt;buf&lt;/span&gt;&lt;span class="o"&gt;,&lt;/span&gt; &lt;span class="n"&gt;start&lt;/span&gt;&lt;span class="o"&gt;,&lt;/span&gt; &lt;span class="n"&gt;end&lt;/span&gt;&lt;span class="o"&gt;,&lt;/span&gt; &lt;span class="n"&gt;dir&lt;/span&gt;&lt;span class="o"&gt;,&lt;/span&gt; &lt;span class="n"&gt;directions&lt;/span&gt;&lt;span class="o"&gt;,&lt;/span&gt; &lt;span class="n"&gt;hasTabOrEmoji&lt;/span&gt;&lt;span class="o"&gt;,&lt;/span&gt; &lt;span class="n"&gt;tabStops&lt;/span&gt;&lt;span class="o"&gt;);&lt;/span&gt;
+            &lt;span class="n"&gt;tl&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="na"&gt;draw&lt;/span&gt;&lt;span class="o"&gt;(&lt;/span&gt;&lt;span class="n"&gt;canvas&lt;/span&gt;&lt;span class="o"&gt;,&lt;/span&gt; &lt;span class="n"&gt;x&lt;/span&gt;&lt;span class="o"&gt;,&lt;/span&gt; &lt;span class="n"&gt;ltop&lt;/span&gt;&lt;span class="o"&gt;,&lt;/span&gt; &lt;span class="n"&gt;lbaseline&lt;/span&gt;&lt;span class="o"&gt;,&lt;/span&gt; &lt;span class="n"&gt;lbottom&lt;/span&gt;&lt;span class="o"&gt;);&lt;/span&gt;
+        &lt;span class="o"&gt;}&lt;/span&gt;
+    &lt;span class="o"&gt;}&lt;/span&gt;
+&lt;span class="n"&gt;TextLine&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="na"&gt;recycle&lt;/span&gt;&lt;span class="o"&gt;(&lt;/span&gt;&lt;span class="n"&gt;tl&lt;/span&gt;&lt;span class="o"&gt;);&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;p&gt;可以看出来对于Spannble，或者包含emoji的文本的话，实际渲染操作是交给了TextLine去绘制，否则直接使用canvas.drawText，TextLine负责单行复杂文本的绘制，其中Spannable, Emoji之类的绘制逻辑都包含在里面，TextLine的绘制逻辑也并非十分高效，这里后续将会继续说明其应该如何优化。&lt;/p&gt;
+&lt;h3&gt;TextLayoutCache&lt;/h3&gt;
+&lt;p&gt;Canvas在drawText的时候，如果需要每次都计算字体的大小，边距等之类的话，就会非常耗时，导致drawText时间会拉的很长，为了提高效率，android在4.0之后引入了TextLayoutCache，使用LRU Cache缓存了字形，边距等数据，提升了drawText的速度，在4.4中，这个cache的大小是0.5M，全局使用，并且会在Activity的configurationChanged, onResume, lowMemory, updateVisibility等时机，会调用Canvas.freeTextLayoutCache来释放这部分内存。由于这部分的cache是系统底层控制的，我们无法做具体的控制。&lt;/p&gt;
+&lt;h3&gt;TextView的预渲染优化&lt;/h3&gt;
+&lt;p&gt;从TextView的渲染原理来看，如果只是单纯的显示文本，我们根本不需要另外设置SpanWatcher来监听span的变化，因此我们可以直接使用BoringLayout或者StaticLayout来直接显示文本内容，但是BoringLayout只能显示单行文本，因此这里最好的选择是直接用StaticLayout&lt;/p&gt;
+&lt;p&gt;我们选择了自定义View，并希望最终有这样的一个接口：&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span class="kd"&gt;public&lt;/span&gt; &lt;span class="kd"&gt;class&lt;/span&gt; &lt;span class="nc"&gt;StaticLayoutView&lt;/span&gt; &lt;span class="kd"&gt;extends&lt;/span&gt; &lt;span class="n"&gt;View&lt;/span&gt; &lt;span class="o"&gt;{&lt;/span&gt;
+    &lt;span class="kd"&gt;private&lt;/span&gt; &lt;span class="n"&gt;Layout&lt;/span&gt; &lt;span class="n"&gt;layout&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="kc"&gt;null&lt;/span&gt;&lt;span class="o"&gt;;&lt;/span&gt;
+    &lt;span class="kd"&gt;public&lt;/span&gt; &lt;span class="kt"&gt;void&lt;/span&gt; &lt;span class="nf"&gt;setLayout&lt;/span&gt;&lt;span class="o"&gt;(&lt;/span&gt;&lt;span class="n"&gt;Layout&lt;/span&gt; &lt;span class="n"&gt;layout&lt;/span&gt;&lt;span class="o"&gt;)&lt;/span&gt; &lt;span class="o"&gt;{&lt;/span&gt;
+        &lt;span class="k"&gt;this&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="na"&gt;layout&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;layout&lt;/span&gt;&lt;span class="o"&gt;;&lt;/span&gt;
+        &lt;span class="n"&gt;requestLayout&lt;/span&gt;&lt;span class="o"&gt;();&lt;/span&gt;
+    &lt;span class="o"&gt;}&lt;/span&gt; 
+    &lt;span class="nd"&gt;@Override&lt;/span&gt;
+    &lt;span class="kd"&gt;protected&lt;/span&gt; &lt;span class="kt"&gt;void&lt;/span&gt; &lt;span class="nf"&gt;onDraw&lt;/span&gt;&lt;span class="o"&gt;(&lt;/span&gt;&lt;span class="n"&gt;Canvas&lt;/span&gt; &lt;span class="n"&gt;canvas&lt;/span&gt;&lt;span class="o"&gt;)&lt;/span&gt; &lt;span class="o"&gt;{&lt;/span&gt;
+        &lt;span class="kd"&gt;super&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="na"&gt;onDraw&lt;/span&gt;&lt;span class="o"&gt;(&lt;/span&gt;&lt;span class="n"&gt;canvas&lt;/span&gt;&lt;span class="o"&gt;);&lt;/span&gt;
+
+        &lt;span class="n"&gt;canvas&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="na"&gt;save&lt;/span&gt;&lt;span class="o"&gt;();&lt;/span&gt;
+        &lt;span class="k"&gt;if&lt;/span&gt; &lt;span class="o"&gt;(&lt;/span&gt;&lt;span class="n"&gt;layout&lt;/span&gt; &lt;span class="o"&gt;!=&lt;/span&gt; &lt;span class="kc"&gt;null&lt;/span&gt;&lt;span class="o"&gt;)&lt;/span&gt; &lt;span class="o"&gt;{&lt;/span&gt;
+            &lt;span class="n"&gt;layout&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="na"&gt;draw&lt;/span&gt;&lt;span class="o"&gt;(&lt;/span&gt;&lt;span class="n"&gt;canvas&lt;/span&gt;&lt;span class="o"&gt;,&lt;/span&gt; &lt;span class="kc"&gt;null&lt;/span&gt;&lt;span class="o"&gt;,&lt;/span&gt; &lt;span class="kc"&gt;null&lt;/span&gt;&lt;span class="o"&gt;,&lt;/span&gt; &lt;span class="mi"&gt;0&lt;/span&gt;&lt;span class="o"&gt;);&lt;/span&gt;
+        &lt;span class="o"&gt;}&lt;/span&gt;
+        &lt;span class="n"&gt;canvas&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="na"&gt;restore&lt;/span&gt;&lt;span class="o"&gt;();&lt;/span&gt;
+    &lt;span class="o"&gt;}&lt;/span&gt;
+&lt;span class="o"&gt;}&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;p&gt;我们可以直接通过设置这个view的Layout来绘制文本，并在&lt;code&gt;onDraw&lt;/code&gt;方法中直接使用这个Layout对象来绘制文本。在这里我们摒弃了setText方法，直接通过Layout来绘制文本，而这里的Layout对象，我们可以通过预先创建之后才设置进去（这里可以放到单独的一个线程中创建），这样对比起普通TextView的setText方法，我们减少了setText中的许多消耗，可以大幅度的提升效率。&lt;/p&gt;
+&lt;p&gt;StaticLayout的创建非常简单，只需要给定文本，宽度等就能直接创建。另外，为了预先填充TextLayoutCache，我们也可以在创建完StaticLayout对象之后，预先在一个dummy canvas中draw出来：&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span class="n"&gt;StaticLayout&lt;/span&gt; &lt;span class="n"&gt;layout&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="k"&gt;new&lt;/span&gt; &lt;span class="n"&gt;StaticLayout&lt;/span&gt;&lt;span class="o"&gt;(&lt;/span&gt;&lt;span class="n"&gt;TestSpan&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="na"&gt;getSpanString&lt;/span&gt;&lt;span class="o"&gt;(&lt;/span&gt;&lt;span class="n"&gt;i&lt;/span&gt;&lt;span class="o"&gt;),&lt;/span&gt; &lt;span class="n"&gt;textPaint&lt;/span&gt;&lt;span class="o"&gt;,&lt;/span&gt; &lt;span class="n"&gt;hardCodeWidth&lt;/span&gt;&lt;span class="o"&gt;,&lt;/span&gt; &lt;span class="n"&gt;alignment&lt;/span&gt;&lt;span class="o"&gt;,&lt;/span&gt; &lt;span class="mf"&gt;1.0f&lt;/span&gt;&lt;span class="o"&gt;,&lt;/span&gt; &lt;span class="mi"&gt;0&lt;/span&gt;&lt;span class="n"&gt;f&lt;/span&gt;&lt;span class="o"&gt;,&lt;/span&gt; &lt;span class="kc"&gt;true&lt;/span&gt;&lt;span class="o"&gt;);&lt;/span&gt;
+&lt;span class="n"&gt;layout&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="na"&gt;draw&lt;/span&gt;&lt;span class="o"&gt;(&lt;/span&gt;&lt;span class="n"&gt;dummyCanvas&lt;/span&gt;&lt;span class="o"&gt;);&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;h3&gt;性能对比&lt;/h3&gt;
+&lt;p&gt;接下来我们测试一下具体的性能，这里的testcase放到了Github上：&lt;a href="https://github.com/ragnraok/StaticLayoutView"&gt;StaticLayoutView&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;testcase的内容为，在一个ListView中，显示300个Item，每个item都是一段纯文本，里面全都是包含有大量ImageSpan的SpannableString，进行两边的对比，一边是直接使用StaticLayout，一边是使用普通的TextView，并且这300段文本不全相同，长度不同，随机生成，在StaticLayout的testcase中，StaticLayout都是预先在另外一个线程创建好之后才设置进去的，另外SpannableString也是预先生成好的。&lt;/p&gt;
+&lt;p&gt;另外，在这里为了模拟真实app繁重的后台工作，另外创建了3个线程，不停在做浮点预算以尝试抢占CPU资源。&lt;/p&gt;
+&lt;p&gt;测量性能的指标为，ListView连续向下滚动，测量其平均帧率为多少，分别测量五次，计算其平均值，最终性能测试结果如下：&lt;/p&gt;
+&lt;p&gt;&lt;img alt="" src="static/images/staticLayoutPerformance.png" /&gt;&lt;/p&gt;
+&lt;p&gt;这里测试的机器是MX3，左侧是直接使用StaticLayout的方案，右侧是系统的默认方案，Y轴是FPS，可以看出来，使用优化之后的方案，帧率提升了许多。&lt;/p&gt;
+&lt;h3&gt;References&lt;/h3&gt;
+&lt;p&gt;&lt;a href="http://instagram-engineering.tumblr.com/post/114508858967/improving-comment-rendering-on-android"&gt;Improving Comment Rendering on Android&lt;/a&gt;   &lt;br /&gt;
+这篇文章介绍了Instagram如何优化他们的TextView渲染的效率，这也是这里优化方法的来源，Instagram也是直接使用StaticLayout并通过预先创建Layout的方法来减少了ListView滚动过程中的掉帧率，并且效果非常显著。这篇文章算是给出了这里的原理解析以及一个简单的实现&lt;/p&gt;</summary></entry><entry><title>使用Kotlin进行Android开发</title><link href="/using-kotlin-to-write-android-app.html" rel="alternate"></link><updated>2015-06-24T00:00:00+08:00</updated><author><name>Ragnarok Zhou</name></author><id>tag:,2015-06-24:using-kotlin-to-write-android-app.html</id><summary type="html">&lt;h3&gt;What is Kotlin&lt;/h3&gt;
 &lt;p&gt;Kotlin，原意是在俄罗斯的一个&lt;a href="https://zh.wikipedia.org/wiki/%E7%A7%91%E7%89%B9%E6%9E%97%E5%B3%B6"&gt;小岛&lt;/a&gt;，JetBrain在2011年推出了以这个来命名的一个运行在JVM上的语言， 看上去有点类似C#和Scala的结合，并且同为静态类型，作为一门JVM上的语言，可以轻松兼容Java，并且整个语言设计的非常轻量。目前的版本为&lt;code&gt;0.12.200&lt;/code&gt;，尚未发布正式版。&lt;/p&gt;
 &lt;hr /&gt;
 &lt;p&gt;Kotlin的下载和配置在其&lt;a href="http://kotlinlang.org/docs/tutorials/getting-started.html"&gt;官网&lt;/a&gt;上有，在这里就不再赘述了，值得一提的是，作为JetBrains家出品的语言，自家的IDEA当然全力支持！&lt;/p&gt;
@@ -245,7 +324,7 @@ when (x) {
 &lt;ul&gt;
 &lt;li&gt;&lt;a href="https://docs.google.com/document/d/1ReS3ep-hjxWA8kZi0YqDbEhCqTt29hG8P44aA9W0DM8/edit?hl=zh-CN&amp;amp;forcehl=1"&gt;Using Project Kotlin for Android&lt;/a&gt; Square的JakeWharton曾经考察过几种不同的语言来进行Android开发，最后还是认为Kotlin比较优秀&lt;/li&gt;
 &lt;li&gt;&lt;a href="http://blog.gouline.net/2014/08/31/kotlin-the-swift-of-android/"&gt;Kotlin, the Swift of Android&lt;/a&gt; 这篇文章把Kotlin比喻为Android上的swift，虽然比较老，但是也可以看做Kotlin的介绍性文章&lt;/li&gt;
-&lt;/ul&gt;</summary></entry><entry><title>使用JDK的Parser来解析Java源代码</title><link href="http://ragnraok.github.io/using-jdk-parser.html" rel="alternate"></link><updated>2015-04-12T00:00:00+08:00</updated><author><name>Ragnarok Zhou</name></author><id>tag:ragnraok.github.io,2015-04-12:using-jdk-parser.html</id><summary type="html">&lt;p&gt;在JDK中，自带了一套相关的编译API，可以在Java中发起编译流程，解析Java源文件然后获取其语法树，在JDK的&lt;code&gt;tools.jar&lt;/code&gt;（OSX下可以在/Library/Java/JavaVirtualMachines/jdk_version/Contents/Home/lib中找到）中包含着这整套API，但是这却不是Oracle和OpenJDK发布中的公开API，因此对于这套API，并没有官方的正式文档来进行说明。但是，也有不少项目利用了这套API来做了不少事情，例如大名鼎鼎的&lt;a href="https://github.com/rzwitserloot/lombok.git"&gt;lombok&lt;/a&gt;使用了这套API在Annotation Processing阶段修改了源代码中的语法树，最终结果相当于直接在源文件中插入了新的代码！&lt;/p&gt;
+&lt;/ul&gt;</summary></entry><entry><title>使用JDK的Parser来解析Java源代码</title><link href="/using-jdk-parser.html" rel="alternate"></link><updated>2015-04-12T00:00:00+08:00</updated><author><name>Ragnarok Zhou</name></author><id>tag:,2015-04-12:using-jdk-parser.html</id><summary type="html">&lt;p&gt;在JDK中，自带了一套相关的编译API，可以在Java中发起编译流程，解析Java源文件然后获取其语法树，在JDK的&lt;code&gt;tools.jar&lt;/code&gt;（OSX下可以在/Library/Java/JavaVirtualMachines/jdk_version/Contents/Home/lib中找到）中包含着这整套API，但是这却不是Oracle和OpenJDK发布中的公开API，因此对于这套API，并没有官方的正式文档来进行说明。但是，也有不少项目利用了这套API来做了不少事情，例如大名鼎鼎的&lt;a href="https://github.com/rzwitserloot/lombok.git"&gt;lombok&lt;/a&gt;使用了这套API在Annotation Processing阶段修改了源代码中的语法树，最终结果相当于直接在源文件中插入了新的代码！&lt;/p&gt;
 &lt;p&gt;由于这套API目前缺少相关文档，使用起来比较困难，例如，解析源代码中的所有变量，并打印出来：&lt;/p&gt;
 &lt;div class="highlight"&gt;&lt;pre&gt;&lt;span class="kr"&gt;public&lt;/span&gt; &lt;span class="kr"&gt;class&lt;/span&gt; &lt;span class="nx"&gt;JavaParser&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
 
@@ -367,7 +446,7 @@ when (x) {
 
 &lt;p&gt;可以看出我们把类名以及类中的变量都打印了出来。而在&lt;code&gt;visitClass&lt;/code&gt;方法中，我们可以通过&lt;code&gt;getMembers&lt;/code&gt;方法拿到类中所有的成员，包括变量，方法，annotation等，分别对应着不同的类型，例如变量就对应着&lt;code&gt;VariableTree&lt;/code&gt;类型，方法就对应的&lt;code&gt;MethodTree&lt;/code&gt;类型。&lt;/p&gt;
 &lt;hr /&gt;
-&lt;p&gt;总得来说，虽然实际上使用并不算特别复杂，但是由于缺少文档，对使用造成了很大的障碍，而且目前所介绍的只是这套API的一少部分，后续我将会继续研究这套API的相关函数。&lt;/p&gt;</summary></entry><entry><title>探索在Android中使用Emoji Font的方法</title><link href="http://ragnraok.github.io/android-emoji-font-method.html" rel="alternate"></link><updated>2015-01-14T00:00:00+08:00</updated><author><name>Ragnarok Zhou</name></author><id>tag:ragnraok.github.io,2015-01-14:android-emoji-font-method.html</id><summary type="html">&lt;p&gt;先说结论，在android4.4以前，无法使用像苹果那样的emoji字体样式，最简单的解决方案是使用ImageSpan配合SpannableString，而在4.4及之后的版本，则可以直接采用类似iOS/OSX的方案进行快速渲染。&lt;/p&gt;
+&lt;p&gt;总得来说，虽然实际上使用并不算特别复杂，但是由于缺少文档，对使用造成了很大的障碍，而且目前所介绍的只是这套API的一少部分，后续我将会继续研究这套API的相关函数。&lt;/p&gt;</summary></entry><entry><title>探索在Android中使用Emoji Font的方法</title><link href="/android-emoji-font-method.html" rel="alternate"></link><updated>2015-01-14T00:00:00+08:00</updated><author><name>Ragnarok Zhou</name></author><id>tag:,2015-01-14:android-emoji-font-method.html</id><summary type="html">&lt;p&gt;先说结论，在android4.4以前，无法使用像苹果那样的emoji字体样式，最简单的解决方案是使用ImageSpan配合SpannableString，而在4.4及之后的版本，则可以直接采用类似iOS/OSX的方案进行快速渲染。&lt;/p&gt;
 &lt;h3&gt;Apple Color Emoji&lt;/h3&gt;
 &lt;p&gt;&lt;a href="http://zh.wikipedia.org/wiki/%E7%B9%AA%E6%96%87%E5%AD%97"&gt;Emoji&lt;/a&gt;表情，最初是从日本的“绘文字”演化过来，在没有正式定下规范之前，日本的三大电信运营商，NTT DoCoMo，au/KDDI，Softbank都各自有一套关于Emoji的编码规范，而且在这个时候，每个Emoji表情对应的表情图片也是没有统一规范的。这时候，应用最广泛的是应该的属于日本软银（Softbank）的Softbank编码了，在iOS系统的早期的版本上，采用的也是这个编码规范。&lt;/p&gt;
 &lt;p&gt;后来，在2010年10月，随着Unicode6.0的发布，Emoji的编码以及对应的表情图片正式被规范化，核心Emoji表情包含722个Emoji编码。而到了Unicode 7.0（2014年6月发行）之后，更多的Emoji表情被加入了进来，包括一些其他比较偏门的Emoji表情组，例如&lt;a href="http://en.wikipedia.org/wiki/Webdings"&gt;Webdings&lt;/a&gt;，&lt;a href="http://en.wikipedia.org/wiki/Wingdings"&gt;Wingdings&lt;/a&gt;，也被编入了Unicode 7.0规范，此时，整个Emoji编码集合已经有大概1000个左右，而在表情图片的规范上，除了我们常见的ios style之外，还有Android Style，Twitter Style等，在&lt;a href="http://apps.timwhitlock.info/emoji/tables/unicode"&gt;这里&lt;/a&gt;，有一份比较详细的Emoji表情列表，包含了不同的表情样式以及对应的编码。&lt;/p&gt;
@@ -463,7 +542,7 @@ when (x) {
 &lt;/ul&gt;
 &lt;p&gt;因此，最终的结论仍然是开头中所说的，在android4.4以前，无法使用像iOS/OSX那样的Emoji Font，最简单的解决方案是使用ImageSpan配合SpannableString，而在4.4及之后的版本，则可以直接采用类似iOS/OSX的方案进行快速渲染。&lt;/p&gt;
 &lt;hr /&gt;
-&lt;p&gt;最后，祝愿Lollipop的光芒能够早日照亮天朝。&lt;/p&gt;</summary></entry><entry><title>Re:Blog</title><link href="http://ragnraok.github.io/re-blog.html" rel="alternate"></link><updated>2015-01-02T00:00:00+08:00</updated><author><name>Ragnarok Zhou</name></author><id>tag:ragnraok.github.io,2015-01-02:re-blog.html</id><summary type="html">&lt;p&gt;大二的时候，曾经写过一段时间的博客。当时还记得刚学python不久，兴高采烈的使用Django写了一个非常简单的博客引擎，在42qu买了个服务器，然后在Godaddy那里买了个域名，于是就火速在上面搭建了人生的第一个博客。&lt;/p&gt;
+&lt;p&gt;最后，祝愿Lollipop的光芒能够早日照亮天朝。&lt;/p&gt;</summary></entry><entry><title>Re:Blog</title><link href="/re-blog.html" rel="alternate"></link><updated>2015-01-02T00:00:00+08:00</updated><author><name>Ragnarok Zhou</name></author><id>tag:,2015-01-02:re-blog.html</id><summary type="html">&lt;p&gt;大二的时候，曾经写过一段时间的博客。当时还记得刚学python不久，兴高采烈的使用Django写了一个非常简单的博客引擎，在42qu买了个服务器，然后在Godaddy那里买了个域名，于是就火速在上面搭建了人生的第一个博客。&lt;/p&gt;
 &lt;p&gt;一晃过去，已经是两年的时间了，原来的博客早已废弃，已经很久没有在博客上写过文字了。&lt;/p&gt;
 &lt;p&gt;工作半年，这半年工作真的非常忙。越来越觉得缺少积累，而且慢慢地，也失去了当初在学校那种涉猎各种技术的激情，反而，作为Android开发者，在Android开发这里，进行了更加深入的研究。这让我想起了以前在学校有位老师跟我说过，在学校需要的时候更广的知识面，而到了工作，就需要更为深入的专研某个技术的实现，而对于Android以外的技术，已经没有那么多时间再去涉猎了，这或许是从BFS到DFS的转变吧。&lt;/p&gt;
 &lt;p&gt;在以前的博客，即使我成功地实现了某个函数也会记录下来，在这里，除了技术，或许我会在这里记录一些生活的细节吧。&lt;/p&gt;
