@@ -4,9 +4,9 @@
 &lt;p&gt;&lt;img alt="" src="static/images/javac-flow.png" /&gt;&lt;/p&gt;
 &lt;p&gt;于是，后续我就逐渐开始想方法实现有一个类似Annotation Processor的API的工具，但并不需要拉起Javac进行编译，只需要输入源码即可，然后由开发者自行定义生成代码的规则，即可完成APT的功能。&lt;/p&gt;
 &lt;h3&gt;Research&lt;/h3&gt;
-&lt;p&gt;要实现这样的一个工具，最先迫切的就是需要一个语法解析器，这样子才能从源码中提取出所需要的信息。当时候的想法是自己来实现Tokenizer和Parser（真庆幸大学的时候教编译原理的灭绝大法师的训练，我还记得怎么写哈哈哈哈），但很快我就找到了&lt;a href="https://javacc.java.net/"&gt;JavaCC&lt;/a&gt;这个工具，这玩意可以说是Java编译器的生成工具，实际上Javac的前端也是这个东西来生成的。但是JavaCC生成的代码非常乱并且其API并不是很好用。当时候我想当JDK中一定是有单独Javac前端独立出来的，于是我又找到了JDK中的&lt;code&gt;tools.jar&lt;/code&gt;（OSX下这文件在&lt;code&gt;/Library/Java/JavaVirtualMachines/jdk_version/Contents/Home/lib&lt;/code&gt;可以找到），这玩意就是JDK的编译器前端，实现了Tokenizer和Parser，另外还实现了一套visitor模式的API，让使用者可以很方便的遍历整棵抽象语法树。这个库是在是太棒了，当时候就写了一篇&lt;a href="http://ragnraok.github.io/using-jdk-parser.html"&gt;文章&lt;/a&gt;来介绍这个库的使用。&lt;/p&gt;
+&lt;p&gt;要实现这样的一个工具，最先迫切的就是需要一个语法解析器，这样子才能从源码中提取出所需要的信息。当时候的想法是自己来实现Tokenizer和Parser（真庆幸大学的时候教编译原理的灭绝大法师的训练，我还记得怎么写哈哈哈哈），但很快我就找到了&lt;a href="https://javacc.java.net/"&gt;JavaCC&lt;/a&gt;这个工具，这玩意可以说是Java编译器的生成工具，实际上Javac的前端也是这个东西来生成的。但是JavaCC生成的代码非常乱并且其API并不是很好用。当时候我想当JDK中一定是有单独Javac前端独立出来的，于是我又找到了JDK中的&lt;code&gt;tools.jar&lt;/code&gt;（OSX下这文件在&lt;code&gt;/Library/Java/JavaVirtualMachines/jdk_version/Contents/Home/lib&lt;/code&gt;可以找到），这玩意就是JDK的编译器前端，实现了Tokenizer和Parser，另外还实现了一套visitor模式的API，让使用者可以很方便的遍历整棵抽象语法树。这个库实在是太棒了，当时候就写了一篇&lt;a href="http://ragnraok.github.io/using-jdk-parser.html"&gt;文章&lt;/a&gt;来介绍这个库的使用。&lt;/p&gt;
 &lt;h3&gt;Development&lt;/h3&gt;
-&lt;p&gt;在了解了&lt;code&gt;tools.jar&lt;/code&gt;之后，我遍开始了&lt;a href="https://github.com/ragnraok/JParserUtil"&gt;JParserUtil&lt;/a&gt;这个项目的开发，主要的目的在于利用&lt;code&gt;tools.jar&lt;/code&gt;，重新实现一套简单易用的API来获取源码的信息，例如类的名称，实现的接口信息，继承的类，包含了哪些方法，这些方法的名字，返回值，参数列表及其对应类型，类中变量的信息，名字，变量值的解析，变量的类型等。目前经过几个月的开发，基本上支持了以下的特性：&lt;/p&gt;
+&lt;p&gt;在了解了&lt;code&gt;tools.jar&lt;/code&gt;之后，我便开始了&lt;a href="https://github.com/ragnraok/JParserUtil"&gt;JParserUtil&lt;/a&gt;这个项目的开发，主要的目的在于利用&lt;code&gt;tools.jar&lt;/code&gt;，重新实现一套简单易用的API来获取源码的信息，例如类的名称，实现的接口信息，继承的类，包含了哪些方法，这些方法的名字，返回值，参数列表及其对应类型，类中变量的信息，名字，变量值的解析，变量的类型等。目前经过几个月的开发，基本上支持了以下的特性：&lt;/p&gt;
 &lt;ol&gt;
 &lt;li&gt;提供了一套API来提取源码库的信息，只需要输入源码的根目录，就会遍历递归解析&lt;/li&gt;
 &lt;li&gt;提取代码中所声明类、Annotation、接口、枚举的信息，名称，修饰符，实现的接口，继承的类等&lt;/li&gt;
