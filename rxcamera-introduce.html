@@ -50,8 +50,7 @@ dependencies {
 <li>
 <p>配置camera的参数</p>
 <p>android的原生camera api提供了不少的选项来配置打开摄像头时候的参数，例如预览的帧率，预览的分辨率，自动对焦等，在RxCamera中主要是通过一个<code>RxCameraConfig</code>对象来管理这些对象，并通过<code>RxCameraConfigChooser</code>来配置对应参数：</p>
-<p><code>Java
-RxCameraConfig config = RxCameraConfigChooser.obtain().
+<p><code>RxCameraConfig config = RxCameraConfigChooser.obtain().
     useBackCamera().
     setAutoFocus(true).
     setPreferPreviewFrameRate(15, 30).
@@ -62,8 +61,7 @@ RxCameraConfig config = RxCameraConfigChooser.obtain().
 <li>
 <p>打开摄像头并获取数据</p>
 <p>在设置好参数之后，就可以直接打开摄像头了：</p>
-<p><code>Java
-RxCamera.open(this, config).flatMap(new Func1&lt;RxCamera, Observable&lt;RxCamera&gt;&gt;() {
+<p><code>RxCamera.open(this, config).flatMap(new Func1&lt;RxCamera, Observable&lt;RxCamera&gt;&gt;() {
   @Override
   public Observable&lt;RxCamera&gt; call(RxCamera rxCamera) {
       return rxCamera.bindTexture(textureView);
@@ -78,14 +76,13 @@ RxCamera.open(this, config).flatMap(new Func1&lt;RxCamera, Observable&lt;RxCamer
 });</code></p>
 <p>这里包括了设置用于预览的Surface(这里是使用<code>TextureView</code>进行预览)，然后正式开始预览。</p>
 <p>只有预览之后才能开始获取摄像头的数据：</p>
-<p><code>Java
-camera.request().periodicDataRequest(1000).subscribe(new Action1&lt;RxCameraData&gt;() {
+<p><code>camera.request().periodicDataRequest(1000).subscribe(new Action1&lt;RxCameraData&gt;() {
         @Override
         public void call(RxCameraData rxCameraData) {
             showLog("periodic request, cameraData.length: " + rxCameraData.cameraData.length);
         }
-});</code>
-获取摄像头的数据都通过<code>request</code>来获取， RxCamera中封装了几种不同风格的cameraRequest，例如上面的是定时获取摄像头数据，每隔1000毫秒返回一次，另外还有连续返回数据，只返回一次数据等的request。这些request返回的Observable对象都会给订阅者返回<code>RxCameraData</code>对象，其中包含两个字段</p>
+});</code></p>
+<p>获取摄像头的数据都通过<code>request</code>来获取， RxCamera中封装了几种不同风格的cameraRequest，例如上面的是定时获取摄像头数据，每隔1000毫秒返回一次，另外还有连续返回数据，只返回一次数据等的request。这些request返回的Observable对象都会给订阅者返回<code>RxCameraData</code>对象，其中包含两个字段</p>
 <ul>
 <li>
 <p><code>byte[] cameraData</code>，就是原生的摄像头数据，具体的数据格式，如果是从预览数据中获取，则是设置的previewFormat格式，没有设置则默认为YUV12。如果是takePictureRequest的话，则是返回JPEG格式的数据</p>
