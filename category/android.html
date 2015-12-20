@@ -23,6 +23,30 @@
 <h2>Articles in the Android category</h2>
 
         <article class="hentry">
+                <header> <h2 class="entry-title"><a href="http://ragnraok.github.io/rxcamera-introduce.html" rel="bookmark" title="Permalink to RxCamera, 一个RxJava风格的android camera封装">RxCamera,  一个RxJava风格的android camera封装</a></h2> </header>
+                <div class="entry-content"> <p>事实上这个库写了已经有一段时间了，由于最近工作上比较忙，所以现在才写一篇文章来总结</p>
+<h3>What's this</h3>
+<p>正如标题所说，<a href="https://github.com/ragnraok/RxCamera">RxCamera</a>是一个基于RxJava而构建的一套<a href="http://developer.android.com/intl/es/reference/android/hardware/Camera.html">android.hardware.camera</a>封装的库。最初写这个库的目的是为了熟悉RxJava，并且而且也看到虽然在android开发已经有不少基于RxJava的库，但是关于音视频相关却少之又少，于是就动手实现了一下。目前这个库还处于非常早期的状态，API比较简陋，并且关于camera的设置还有很多没有做</p>
+<h3>How to use</h3>
+<p>在<a href="https://github.com/ragnraok/RxCamera">RxCamera</a>的README中已经有关于这个库使用的比较详细介绍了，我在这里再说明一下：</p>
+<h4>加入依赖</h4>
+<p>首先你需要在项目中加入对RxCamera项目的依赖:</p>
+<div class="highlight"><pre>repositories {
+        jcenter()
+}
+dependencies {
+    compile &#39;com.ragnarok.rxcamera:lib:0.0.1&#39;
+}
+</pre></div>
+
+
+<h4>基本的使用</h4>
+<ol>
+<li>
+<p>配置camera的参数</p>
+<p>android的原生camera api提供了不少的选项来配置打开摄像头时候的参数，例如预览的帧率，预览的分辨率，自动对焦等，在RxCamera中主要是通过一个<code>RxCameraConfig</code>对象来管理这些对象 ...</p></li></ol> </div><!-- entry-content -->
+        </article>
+        <article class="hentry">
                 <header> <h2 class="entry-title"><a href="http://ragnraok.github.io/textview-pre-render-research.html" rel="bookmark" title="Permalink to TextView预渲染研究">TextView预渲染研究</a></h2> </header>
                 <div class="entry-content"> <p>Android中的TextView是整个framework中最复杂的控件之一，负责Android中显示文本的大部分工作，framwork中的许多控件也直接或者间接的继承于TextView，例如Button，EditText等。其内部实现也相当复杂，单论代码行数来说，android-22中TextView有足足9509行，另外，TextView中许多操作都非常繁重，例如<code>setText</code>操作，需要设置SpanWatcher，或者需要重现创建一个SpannableString，还需要根据情况重新创建Text Layout，这些操作加起来之后令一次setText操作非常耗时。为了提升TextView的渲染效率，最近研究了一下预渲染的方法，接下来给大家讲解一下原理。</p>
 <h3>TextView渲染基本原理</h3>
