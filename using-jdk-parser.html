@@ -89,23 +89,23 @@
 
 
 <p>其中 <code>User.java</code>的代码如下：</p>
-<div class="highlight"><pre><span class="n">package</span> <span class="n">com</span><span class="o">.</span><span class="n">ragnarok</span><span class="o">.</span><span class="n">javaparser</span><span class="p">;</span>
+<div class="highlight"><pre><span class="n">package</span> <span class="n">com</span><span class="p">.</span><span class="n">ragnarok</span><span class="p">.</span><span class="n">javaparser</span><span class="p">;</span>
 
-<span class="kn">import</span> <span class="nn">com.sun.istack.internal.Nullable</span><span class="p">;</span>
-<span class="kn">import</span> <span class="nn">java.lang.Override</span><span class="p">;</span>
+<span class="n">import</span> <span class="n">com</span><span class="p">.</span><span class="n">sun</span><span class="p">.</span><span class="n">istack</span><span class="p">.</span><span class="n">internal</span><span class="p">.</span><span class="n">Nullable</span><span class="p">;</span>
+<span class="n">import</span> <span class="n">java</span><span class="p">.</span><span class="n">lang</span><span class="p">.</span><span class="n">Override</span><span class="p">;</span>
 
-<span class="n">public</span> <span class="k">class</span> <span class="nc">User</span> <span class="p">{</span>
+<span class="n">public</span> <span class="n">class</span> <span class="n">User</span> <span class="p">{</span>
 
-    <span class="nd">@Nullable</span>
+    <span class="err">@</span><span class="n">Nullable</span>
     <span class="n">private</span> <span class="n">String</span> <span class="n">foo</span> <span class="o">=</span> <span class="s">&quot;123123&quot;</span><span class="p">;</span>
     <span class="n">private</span> <span class="n">Foo</span> <span class="n">a</span><span class="p">;</span>
 
-    <span class="n">public</span> <span class="n">void</span> <span class="n">UserMethod</span><span class="p">()</span> <span class="p">{}</span>
+    <span class="n">public</span> <span class="kt">void</span> <span class="nf">UserMethod</span><span class="p">()</span> <span class="p">{}</span>
 
-    <span class="n">static</span> <span class="k">class</span> <span class="nc">Foo</span> <span class="p">{</span>
+    <span class="k">static</span> <span class="n">class</span> <span class="n">Foo</span> <span class="p">{</span>
         <span class="n">private</span> <span class="n">String</span> <span class="n">fooString</span> <span class="o">=</span> <span class="s">&quot;123123&quot;</span><span class="p">;</span>
 
-        <span class="n">public</span> <span class="n">void</span> <span class="n">FooMethod</span><span class="p">()</span> <span class="p">{}</span>
+        <span class="n">public</span> <span class="kt">void</span> <span class="nf">FooMethod</span><span class="p">()</span> <span class="p">{}</span>
     <span class="p">}</span>
 <span class="p">}</span>
 </pre></div>
@@ -141,11 +141,11 @@
 
 
 <p>这里简单的打印了类名以及变量的名称，类型，annotation类型，执行上面的代码，结果如下：</p>
-<div class="highlight"><pre><span class="k">class</span> <span class="n">name:</span> <span class="n">User</span>
-<span class="n">variable:</span> <span class="n">foo</span>, <span class="n">annotaion:</span> <span class="n">Nullable</span>
-<span class="n">variable:</span> <span class="n">a</span>
-<span class="k">class</span> <span class="n">name:</span> <span class="n">Foo</span>
-<span class="n">variable:</span> <span class="n">fooString</span>
+<div class="highlight"><pre><span class="n">class</span> <span class="n">name</span><span class="o">:</span> <span class="n">User</span>
+<span class="nl">variable:</span> <span class="n">foo</span><span class="p">,</span> <span class="n">annotaion</span><span class="o">:</span> <span class="n">Nullable</span>
+<span class="nl">variable:</span> <span class="n">a</span>
+<span class="n">class</span> <span class="n">name</span><span class="o">:</span> <span class="n">Foo</span>
+<span class="nl">variable:</span> <span class="n">fooString</span>
 </pre></div>
 
 

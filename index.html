@@ -22,14 +22,29 @@
 <section id="content" class="content">
 
         <article class="hentry">
+                <header> <h2 class="entry-title"><a href="http://ragnraok.github.io/get_android_alloc_object_info.html" rel="bookmark" title="Permalink to 如何获取Android系统中申请对象的信息">如何获取Android系统中申请对象的信息</a></h2> </header>
+                <div class="entry-content"> <p>最近一直在做有关内存方面的优化工作，在做优化的过程，除了关注内存的申请量以及GC的情况之外，我们经常需要想方法找出是那些对象占用了大量内存，以及他们是如何导致GC的，这意味着我们需要获取对象申请的信息（大小，类型，堆栈等），我们这篇文章来介绍下几种获取对象申请信息的方法</p>
+<h3>Allocation Trakcer</h3>
+<p>Allocation Tracker是android studio自带的一个功能，我们可以在MemoryMonitor中打开使用：</p>
+<p><img alt="" src="static/images/memorymonitor_1.jpeg" /></p>
+<p>如上图，点击红框按钮，然后操作app，开始allocation tracking，当认为需要结束的时候，再次点击按钮，稍等片刻，即可以在android studio中dump出在 <strong>这段时间</strong> 内 <strong>新申请</strong> 对象的信息：</p>
+<p><img alt="" src="static/images/memorymonitor_2.png" /></p>
+<p>这种使用方式相当直观，可以看到申请对象大小，数量，还有堆栈等，通过这些信息，我们可以作为我们接下来进行内存优化的参考</p>
+<p>但是，对于这种获取申请对象信息的方法，会存在几个问题：</p>
+<ol>
+<li>获取的信息过于分散，中间夹杂着不少其他的信息，不完全是app申请的，可能需要进行不少查找才能定位到具体的问题</li>
+<li>跟TraceView一样，无法做到自动化分析，每次都需要开发者手工开始/结束，对于某些问题的分析可能会造成不便，而且对于批量分析来说也比较困难</li>
+<li>虽然在allocation ...</li></ol> </div><!-- entry-content -->
+        </article>
+        <article class="hentry">
                 <header> <h2 class="entry-title"><a href="http://ragnraok.github.io/tricking-android-memoryfile.html" rel="bookmark" title="Permalink to Tricking Android MemoryFile">Tricking Android MemoryFile</a></h2> </header>
                 <div class="entry-content"> <p>之前在做一个内存优化的时候，使用到了MemoryFile，由此发现了MemoryFile的一些特性以及一个非常trickly的使用方法，因此在这里记录一下</p>
 <h3>What is it</h3>
 <p>MemoryFile是android在最开始就引入的一套框架，其内部实际上是封装了android特有的内存共享机制<a href="http://elinux.org/Android_Kernel_Features#ashmem">Ashmem</a>匿名共享内存，简单来说，Ashmem在Android内核中是被注册成一个特殊的字符设备，Ashmem驱动通过在内核的一个自定义<a href="https://en.wikipedia.org/wiki/Slab_allocation">slab</a>缓冲区中初始化一段内存区域，然后通过mmap把申请的内存映射到用户的进程空间中（通过<a href="https://en.wikipedia.org/wiki/Tmpfs">tmpfs</a>），这样子就可以在用户进程中使用这里申请的内存了，另外，Ashmem的一个特性就是可以在系统内存不足的时候，回收掉被标记为"unpin"的内存，这个后面会讲到，另外，MemoryFile也可以通过Binder跨进程调用来让两个进程共享一段内存区域。由于整个申请内存的过程并不再Java层上，可以很明显的看出使用MemoryFile申请的内存实际上是<strong>并不会</strong>占用Java堆内存的。</p>
 <p>MemoryFile暴露出来的用户接口可以说跟他的名字一样，基本上跟我们平时的文件的读写基本一致，也可以使用InputStream和OutputStream来对其进行读写等操作：</p>
-<div class="highlight"><pre><span class="n">MemoryFile</span> <span class="n">memoryFile</span> <span class="o">=</span> <span class="k">new</span> <span class="n">MemoryFile</span><span class="o">(</span><span class="kc">null</span><span class="o">,</span> <span class="n">inputStream</span><span class="o">.</span><span class="na">available</span><span class="o">());</span>
-<span class="n">memoryFile</span><span class="o">.</span><span class="na">allowPurging</span><span class="o">(</span><span class="kc">false</span><span class="o">);</span>
-<span class="n">OutputStream</span> <span class="n">outputStream</span> <span class="o">=</span> <span class="n">memoryFile</span><span class="o">.</span><span class="na">getOutputStream</span><span class="o">();</span>
+<div class="highlight"><pre><span class="n">MemoryFile</span> <span class="n">memoryFile</span> <span class="o">=</span> <span class="n">new</span> <span class="n">MemoryFile</span><span class="p">(</span><span class="n">null</span><span class="p">,</span> <span class="n">inputStream</span><span class="p">.</span><span class="n">available</span><span class="p">());</span>
+<span class="n">memoryFile</span><span class="p">.</span><span class="n">allowPurging</span><span class="p">(</span><span class="nb">false</span><span class="p">);</span>
+<span class="n">OutputStream</span> <span class="n">outputStream</span> <span class="o">=</span> <span class="n">memoryFile</span><span class="p">.</span><span class="n">getOutputStream</span><span class="p">();</span>
 <span class="n">outputStream ...</span></pre></div> </div><!-- entry-content -->
         </article>
         <article class="hentry">
@@ -41,12 +56,12 @@
 <p>在<a href="https://github.com/ragnraok/RxCamera">RxCamera</a>的README中已经有关于这个库使用的比较详细介绍了，我在这里再说明一下：</p>
 <h4>加入依赖</h4>
 <p>首先你需要在项目中加入对RxCamera项目的依赖:</p>
-<div class="highlight"><pre>repositories {
-        jcenter()
-}
-dependencies {
-    compile &#39;com.ragnarok.rxcamera:lib:0.0.1&#39;
-}
+<div class="highlight"><pre><span class="n">repositories</span> <span class="p">{</span>
+        <span class="n">jcenter</span><span class="p">()</span>
+<span class="p">}</span>
+<span class="n">dependencies</span> <span class="p">{</span>
+    <span class="n">compile</span> <span class="err">&#39;</span><span class="n">com</span><span class="p">.</span><span class="n">ragnarok</span><span class="p">.</span><span class="n">rxcamera</span><span class="o">:</span><span class="n">lib</span><span class="o">:</span><span class="mf">0.0.1</span><span class="err">&#39;</span>
+<span class="p">}</span>
 </pre></div>
 
 
@@ -85,29 +100,6 @@ dependencies {
 </li>
 </ol>
 <p>另外，以上三个类都继承于<a href="http://developer.android.com/intl/zh-cn/reference/android/text/Layout.html">Layout</a>类，在此类中统一负责文本的具体绘制，在Layout ...</p> </div><!-- entry-content -->
-        </article>
-        <article class="hentry">
-                <header> <h2 class="entry-title"><a href="http://ragnraok.github.io/using-kotlin-to-write-android-app.html" rel="bookmark" title="Permalink to 使用Kotlin进行Android开发">使用Kotlin进行Android开发</a></h2> </header>
-                <div class="entry-content"> <h3>What is Kotlin</h3>
-<p>Kotlin，原意是在俄罗斯的一个<a href="https://zh.wikipedia.org/wiki/%E7%A7%91%E7%89%B9%E6%9E%97%E5%B3%B6">小岛</a>，JetBrain在2011年推出了以这个来命名的一个运行在JVM上的语言， 看上去有点类似C#和Scala的结合，并且同为静态类型，作为一门JVM上的语言，可以轻松兼容Java，并且整个语言设计的非常轻量。目前的版本为<code>0.12.200</code>，尚未发布正式版。</p>
-<hr />
-<p>Kotlin的下载和配置在其<a href="http://kotlinlang.org/docs/tutorials/getting-started.html">官网</a>上有，在这里就不再赘述了，值得一提的是，作为JetBrains家出品的语言，自家的IDEA当然全力支持！</p>
-<h3>基本语法介绍</h3>
-<p>Kotlin的语法非常简洁，熟悉Java或者Scala的人都可以快速上手：</p>
-<h4>函数声明：</h4>
-<div class="highlight"><pre>fun foo(va: Int): Int {
-    return 1
-}
-</pre></div>
-
-
-<p>也可以单行声明：</p>
-<div class="highlight"><pre>fun foo(va: Int): Int = 1
-</pre></div>
-
-
-<p>lambda当然也是支持的：</p>
-<div class="highlight"><pre>var c = {foo: Int -&gt; println(foo ...</pre></div> </div><!-- entry-content -->
         </article>
 <div class="pager">
       <ul>

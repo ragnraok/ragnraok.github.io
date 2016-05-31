@@ -53,7 +53,7 @@
     <span class="k">if</span> <span class="n">f</span><span class="o">.</span><span class="n">has_key</span><span class="p">(</span><span class="s">&quot;sbix&quot;</span><span class="p">):</span>
         <span class="n">sbix</span> <span class="o">=</span> <span class="n">f</span><span class="p">[</span><span class="s">&quot;sbix&quot;</span><span class="p">]</span>
         <span class="k">for</span> <span class="n">bs</span> <span class="ow">in</span> <span class="n">sbix</span><span class="o">.</span><span class="n">bitmapSets</span><span class="o">.</span><span class="n">itervalues</span><span class="p">():</span>
-            <span class="n">setpath</span> <span class="o">=</span> <span class="n">join</span><span class="p">(</span><span class="s">&quot;extracted&quot;</span><span class="p">,</span> <span class="s">&quot;set_</span><span class="si">%i</span><span class="s">&quot;</span> <span class="o">%</span> <span class="n">bs</span><span class="o">.</span><span class="n">size</span><span class="p">)</span>
+            <span class="n">setpath</span> <span class="o">=</span> <span class="n">join</span><span class="p">(</span><span class="s">&quot;extracted&quot;</span><span class="p">,</span> <span class="s">&quot;set_</span><span class="si">%i</span><span class="s">&quot;</span> <span class="o">%</span> <span class="n">bs</span><span class="o">.</span><span class="kp">size</span><span class="p">)</span>
             <span class="k">if</span> <span class="ow">not</span> <span class="n">exists</span><span class="p">(</span><span class="n">setpath</span><span class="p">):</span>
                 <span class="n">makedirs</span><span class="p">(</span><span class="n">setpath</span><span class="p">)</span>
 

@@ -47,22 +47,22 @@
 </li>
 </ol>
 <p>另外，以上三个类都继承于<a href="http://developer.android.com/intl/zh-cn/reference/android/text/Layout.html">Layout</a>类，在此类中统一负责文本的具体绘制，在Layout.draw方法中，会对文本一行一行的进行渲染：</p>
-<div class="highlight"><pre><span class="n">TextLine</span> <span class="n">tl</span> <span class="o">=</span> <span class="n">TextLine</span><span class="o">.</span><span class="na">obtain</span><span class="o">();</span>
+<div class="highlight"><pre><span class="n">TextLine</span> <span class="n">tl</span> <span class="o">=</span> <span class="n">TextLine</span><span class="p">.</span><span class="n">obtain</span><span class="p">();</span>
 
 <span class="c1">// Draw the lines, one at a time.</span>
 <span class="c1">// The baseline is the top of the following line minus the current line&#39;s descent.</span>
-<span class="k">for</span> <span class="o">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="n">firstLine</span><span class="o">;</span> <span class="n">i</span> <span class="o">&lt;=</span> <span class="n">lastLine</span><span class="o">;</span> <span class="n">i</span><span class="o">++)</span> <span class="o">{</span>
-      <span class="o">....</span>
-      <span class="n">Directions</span> <span class="n">directions</span> <span class="o">=</span> <span class="n">getLineDirections</span><span class="o">(</span><span class="n">i</span><span class="o">);</span>
-      <span class="k">if</span> <span class="o">(</span><span class="n">directions</span> <span class="o">==</span> <span class="n">DIRS_ALL_LEFT_TO_RIGHT</span> <span class="o">&amp;&amp;</span> <span class="o">!</span><span class="n">mSpannedText</span> <span class="o">&amp;&amp;</span> <span class="o">!</span><span class="n">hasTabOrEmoji</span><span class="o">)</span> <span class="o">{</span>
+<span class="k">for</span> <span class="p">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="n">firstLine</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;=</span> <span class="n">lastLine</span><span class="p">;</span> <span class="n">i</span><span class="o">++</span><span class="p">)</span> <span class="p">{</span>
+      <span class="p">....</span>
+      <span class="n">Directions</span> <span class="n">directions</span> <span class="o">=</span> <span class="n">getLineDirections</span><span class="p">(</span><span class="n">i</span><span class="p">);</span>
+      <span class="k">if</span> <span class="p">(</span><span class="n">directions</span> <span class="o">==</span> <span class="n">DIRS_ALL_LEFT_TO_RIGHT</span> <span class="o">&amp;&amp;</span> <span class="o">!</span><span class="n">mSpannedText</span> <span class="o">&amp;&amp;</span> <span class="o">!</span><span class="n">hasTabOrEmoji</span><span class="p">)</span> <span class="p">{</span>
          <span class="c1">// XXX: assumes there&#39;s nothing additional to be done</span>
-          <span class="n">canvas</span><span class="o">.</span><span class="na">drawText</span><span class="o">(</span><span class="n">buf</span><span class="o">,</span> <span class="n">start</span><span class="o">,</span> <span class="n">end</span><span class="o">,</span> <span class="n">x</span><span class="o">,</span> <span class="n">lbaseline</span><span class="o">,</span> <span class="n">paint</span><span class="o">);</span>
-      <span class="o">}</span> <span class="k">else</span> <span class="o">{</span>
-          <span class="n">tl</span><span class="o">.</span><span class="na">set</span><span class="o">(</span><span class="n">paint</span><span class="o">,</span> <span class="n">buf</span><span class="o">,</span> <span class="n">start</span><span class="o">,</span> <span class="n">end</span><span class="o">,</span> <span class="n">dir</span><span class="o">,</span> <span class="n">directions</span><span class="o">,</span> <span class="n">hasTabOrEmoji</span><span class="o">,</span> <span class="n">tabStops</span><span class="o">);</span>
-          <span class="n">tl</span><span class="o">.</span><span class="na">draw</span><span class="o">(</span><span class="n">canvas</span><span class="o">,</span> <span class="n">x</span><span class="o">,</span> <span class="n">ltop</span><span class="o">,</span> <span class="n">lbaseline</span><span class="o">,</span> <span class="n">lbottom</span><span class="o">);</span>
-      <span class="o">}</span>
-<span class="o">}</span>
-<span class="n">TextLine</span><span class="o">.</span><span class="na">recycle</span><span class="o">(</span><span class="n">tl</span><span class="o">);</span>
+          <span class="n">canvas</span><span class="p">.</span><span class="n">drawText</span><span class="p">(</span><span class="n">buf</span><span class="p">,</span> <span class="n">start</span><span class="p">,</span> <span class="n">end</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">lbaseline</span><span class="p">,</span> <span class="n">paint</span><span class="p">);</span>
+      <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+          <span class="n">tl</span><span class="p">.</span><span class="n">set</span><span class="p">(</span><span class="n">paint</span><span class="p">,</span> <span class="n">buf</span><span class="p">,</span> <span class="n">start</span><span class="p">,</span> <span class="n">end</span><span class="p">,</span> <span class="n">dir</span><span class="p">,</span> <span class="n">directions</span><span class="p">,</span> <span class="n">hasTabOrEmoji</span><span class="p">,</span> <span class="n">tabStops</span><span class="p">);</span>
+          <span class="n">tl</span><span class="p">.</span><span class="n">draw</span><span class="p">(</span><span class="n">canvas</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">ltop</span><span class="p">,</span> <span class="n">lbaseline</span><span class="p">,</span> <span class="n">lbottom</span><span class="p">);</span>
+      <span class="p">}</span>
+<span class="p">}</span>
+<span class="n">TextLine</span><span class="p">.</span><span class="n">recycle</span><span class="p">(</span><span class="n">tl</span><span class="p">);</span>
 </pre></div>
 
 
@@ -72,30 +72,30 @@
 <h3>TextView的预渲染优化</h3>
 <p>从TextView的渲染原理来看，如果只是单纯的显示文本，我们根本不需要另外设置SpanWatcher来监听span的变化，因此我们可以直接使用BoringLayout或者StaticLayout来直接显示文本内容，但是BoringLayout只能显示单行文本，因此这里最好的选择是直接用StaticLayout</p>
 <p>我们选择了自定义View，并希望最终有这样的一个接口：</p>
-<div class="highlight"><pre><span class="kd">public</span> <span class="kd">class</span> <span class="nc">StaticLayoutView</span> <span class="kd">extends</span> <span class="n">View</span> <span class="o">{</span>
-    <span class="kd">private</span> <span class="n">Layout</span> <span class="n">layout</span> <span class="o">=</span> <span class="kc">null</span><span class="o">;</span>
-    <span class="kd">public</span> <span class="kt">void</span> <span class="nf">setLayout</span><span class="o">(</span><span class="n">Layout</span> <span class="n">layout</span><span class="o">)</span> <span class="o">{</span>
-        <span class="k">this</span><span class="o">.</span><span class="na">layout</span> <span class="o">=</span> <span class="n">layout</span><span class="o">;</span>
-        <span class="n">requestLayout</span><span class="o">();</span>
-    <span class="o">}</span> 
-    <span class="nd">@Override</span>
-    <span class="kd">protected</span> <span class="kt">void</span> <span class="nf">onDraw</span><span class="o">(</span><span class="n">Canvas</span> <span class="n">canvas</span><span class="o">)</span> <span class="o">{</span>
-        <span class="kd">super</span><span class="o">.</span><span class="na">onDraw</span><span class="o">(</span><span class="n">canvas</span><span class="o">);</span>
+<div class="highlight"><pre><span class="n">public</span> <span class="n">class</span> <span class="n">StaticLayoutView</span> <span class="n">extends</span> <span class="n">View</span> <span class="p">{</span>
+    <span class="n">private</span> <span class="n">Layout</span> <span class="n">layout</span> <span class="o">=</span> <span class="n">null</span><span class="p">;</span>
+    <span class="n">public</span> <span class="kt">void</span> <span class="nf">setLayout</span><span class="p">(</span><span class="n">Layout</span> <span class="n">layout</span><span class="p">)</span> <span class="p">{</span>
+        <span class="n">this</span><span class="p">.</span><span class="n">layout</span> <span class="o">=</span> <span class="n">layout</span><span class="p">;</span>
+        <span class="n">requestLayout</span><span class="p">();</span>
+    <span class="p">}</span> 
+    <span class="err">@</span><span class="n">Override</span>
+    <span class="n">protected</span> <span class="kt">void</span> <span class="n">onDraw</span><span class="p">(</span><span class="n">Canvas</span> <span class="n">canvas</span><span class="p">)</span> <span class="p">{</span>
+        <span class="n">super</span><span class="p">.</span><span class="n">onDraw</span><span class="p">(</span><span class="n">canvas</span><span class="p">);</span>
 
-        <span class="n">canvas</span><span class="o">.</span><span class="na">save</span><span class="o">();</span>
-        <span class="k">if</span> <span class="o">(</span><span class="n">layout</span> <span class="o">!=</span> <span class="kc">null</span><span class="o">)</span> <span class="o">{</span>
-            <span class="n">layout</span><span class="o">.</span><span class="na">draw</span><span class="o">(</span><span class="n">canvas</span><span class="o">,</span> <span class="kc">null</span><span class="o">,</span> <span class="kc">null</span><span class="o">,</span> <span class="mi">0</span><span class="o">);</span>
-        <span class="o">}</span>
-        <span class="n">canvas</span><span class="o">.</span><span class="na">restore</span><span class="o">();</span>
-    <span class="o">}</span>
-<span class="o">}</span>
+        <span class="n">canvas</span><span class="p">.</span><span class="n">save</span><span class="p">();</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">layout</span> <span class="o">!=</span> <span class="n">null</span><span class="p">)</span> <span class="p">{</span>
+            <span class="n">layout</span><span class="p">.</span><span class="n">draw</span><span class="p">(</span><span class="n">canvas</span><span class="p">,</span> <span class="n">null</span><span class="p">,</span> <span class="n">null</span><span class="p">,</span> <span class="mi">0</span><span class="p">);</span>
+        <span class="p">}</span>
+        <span class="n">canvas</span><span class="p">.</span><span class="n">restore</span><span class="p">();</span>
+    <span class="p">}</span>
+<span class="p">}</span>
 </pre></div>
 
 
 <p>我们可以直接通过设置这个view的Layout来绘制文本，并在<code>onDraw</code>方法中直接使用这个Layout对象来绘制文本。在这里我们摒弃了<code>setText</code>方法，直接通过Layout来绘制文本，而这里的Layout对象，我们可以通过预先创建之后才设置进去（这里可以放到单独的一个线程中创建），这样对比起普通TextView的<code>setText</code>方法，我们减少了<code>setText</code>中的许多消耗，可以大幅度的提升效率。</p>
 <p>StaticLayout的创建非常简单，只需要给定文本，宽度等就能直接创建。另外，为了预先填充TextLayoutCache，我们也可以在创建完StaticLayout对象之后，预先在一个dummy canvas中draw出来：</p>
-<div class="highlight"><pre><span class="n">StaticLayout</span> <span class="n">layout</span> <span class="o">=</span> <span class="k">new</span> <span class="n">StaticLayout</span><span class="o">(</span><span class="n">TestSpan</span><span class="o">.</span><span class="na">getSpanString</span><span class="o">(</span><span class="n">i</span><span class="o">),</span> <span class="n">textPaint</span><span class="o">,</span> <span class="n">hardCodeWidth</span><span class="o">,</span> <span class="n">alignment</span><span class="o">,</span> <span class="mf">1.0f</span><span class="o">,</span> <span class="mi">0</span><span class="n">f</span><span class="o">,</span> <span class="kc">true</span><span class="o">);</span>
-<span class="n">layout</span><span class="o">.</span><span class="na">draw</span><span class="o">(</span><span class="n">dummyCanvas</span><span class="o">);</span>
+<div class="highlight"><pre><span class="n">StaticLayout</span> <span class="n">layout</span> <span class="o">=</span> <span class="n">new</span> <span class="n">StaticLayout</span><span class="p">(</span><span class="n">TestSpan</span><span class="p">.</span><span class="n">getSpanString</span><span class="p">(</span><span class="n">i</span><span class="p">),</span> <span class="n">textPaint</span><span class="p">,</span> <span class="n">hardCodeWidth</span><span class="p">,</span> <span class="n">alignment</span><span class="p">,</span> <span class="mf">1.0f</span><span class="p">,</span> <span class="mf">0f</span><span class="p">,</span> <span class="nb">true</span><span class="p">);</span>
+<span class="n">layout</span><span class="p">.</span><span class="n">draw</span><span class="p">(</span><span class="n">dummyCanvas</span><span class="p">);</span>
 </pre></div>
 
 

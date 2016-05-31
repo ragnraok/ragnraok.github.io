@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>如何获取Android系统中申请对象的信息 - Ragnarok Note</title>
+        <meta charset="utf-8" />
+        <link href="//netdna.bootstrapcdn.com/bootstrap/3.0.0/css/bootstrap.min.css" rel="stylesheet" />
+        <link href="/theme/static/css/style.css" rel="stylesheet" />
+        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+        <link href="/feeds/atom.xml" type="application/atom+xml" rel="alternate" title="Ragnarok Note Full Atom Feed" />
+    </head>
+
+    <body id="index" class="archive">
+        <div class="container">
+            <div class="header">
+                <ul class="nav nav-pills pull-right">
+                    <li class=""><a href="">Home</a></li>
+                    <li><a href="/archives.html">Archives</a></li>
+                </ul>
+                <h3 class="text-muted"><a href="">Ragnarok Note</a></h3>
+				<h2 class="text-muted"></h2>
+             </div>
+<section id="content" class="article content">
+  <header>
+    <h2 class="entry-title">
+      <a href="/get_android_alloc_object_size.html" rel="bookmark"
+         title="Permalink to 如何获取Android系统中申请对象的信息">如何获取Android系统中申请对象的信息</a></h2>
+ 
+  </header>
+  
+     
+  <div class="entry-content">
+    <p>最近一直在做有关内存方面的优化工作，在做优化的过程，除了关注内存的申请量以及GC的情况之外，我们经常需要想方法找出是那些对象占用了大量内存，以及他们是如何导致GC的，这意味着我们需要获取对象申请的信息（大小，类型，堆栈等），我们这篇文章来介绍下几种获取对象申请信息的方法</p>
+<h4>Allocation Trakcer</h4>
+<p>Allocation Tracker是android studio自带的一个功能，我们可以在MemoryMonitor中打开使用：</p>
+<p><img alt="" src="static/images/memorymonitor_1.jpeg" /></p>
+<p>如上图，点击红框按钮，然后操作app，开始allocation tracking，当认为需要结束的时候，再次点击按钮，稍等片刻，即可以在android studio中dump出在 <strong>这段时间</strong> 内 <strong>新申请</strong> 对象的信息：</p>
+<p><img alt="" src="static/images/memorymonitor_2.png" /></p>
+<p>这种使用方式相当直观，可以看到申请对象大小，数量，还有堆栈等，通过这些信息，我们可以作为我们接下来进行内存优化的参考</p>
+<p>但是，对于这种获取申请对象信息的方法，会存在几个问题：</p>
+<ol>
+<li>获取的信息过于分散，中间夹杂着不少其他的信息，不完全是app申请的，可能需要进行不少查找才能定位到具体的问题</li>
+<li>跟TraceView一样，无法做到自动化分析，每次都需要开发者手工开始/结束，对于某些问题的分析可能会造成不便，而且对于批量分析来说也比较困难</li>
+<li>虽然在allocation tracking的时候，不会对手机本身的运行造成过多的性能影响，然而在停止allocation tracker的时候，直到把数据dump出来之前，会把手机完全卡死，时间过长甚至会直接ANR</li>
+</ol>
+<p>对于这几个问题，特别是自动化分析来说，是否能够直接在代码上发起allocation tracker的请求并获得数据来分析呢？</p>
+<h4>在代码中发起allocation tracker请求</h4>
+<p>自然是可以的，不然为什么会有这个标题。。。</p>
+<p>我们可以把Android Studio的源码clone下来，在<a href="http://tools.android.com/build">这里</a>可以找到对应的git地址。在clone下来之后，我们可以在<code>./tools/adt/idea/android/src/com/android/tools/idea/ddms/actions/ToggleAllocationTrackingAction.java</code>中看到android studio具体是如何发起和停止Allocation Tracker的：</p>
+<p>发起和停止：</p>
+<div class="highlight"><pre><span class="k">if</span> <span class="p">(</span><span class="n">c</span><span class="p">.</span><span class="n">getClientData</span><span class="p">().</span><span class="n">getAllocationStatus</span><span class="p">()</span> <span class="o">==</span> 
+            <span class="n">ClientData</span><span class="p">.</span><span class="n">AllocationTrackingStatus</span><span class="p">.</span><span class="n">ON</span><span class="p">)</span> <span class="p">{</span>
+  <span class="n">c</span><span class="p">.</span><span class="n">requestAllocationDetails</span><span class="p">();</span>
+  <span class="n">c</span><span class="p">.</span><span class="n">enableAllocationTracker</span><span class="p">(</span><span class="nb">false</span><span class="p">);</span>
+  <span class="k">if</span> <span class="p">(</span><span class="n">myEvent</span> <span class="o">==</span> <span class="n">null</span><span class="p">)</span> <span class="p">{</span>
+    <span class="c1">// Unexpected end of tracking, start now:</span>
+    <span class="n">myEvent</span> <span class="o">=</span> <span class="n">myEvents</span><span class="p">.</span><span class="n">start</span><span class="p">(</span><span class="n">now</span><span class="p">,</span> <span class="n">MemoryMonitorView</span><span class="p">.</span><span class="n">EVENT_ALLOC</span><span class="p">);</span>
+  <span class="p">}</span>
+  <span class="n">myEvent</span><span class="p">.</span><span class="n">stop</span><span class="p">(</span><span class="n">now</span><span class="p">);</span>
+  <span class="n">myEvent</span> <span class="o">=</span> <span class="n">null</span><span class="p">;</span>
+<span class="p">}</span>
+<span class="k">else</span> <span class="p">{</span>
+  <span class="n">installListener</span><span class="p">(</span><span class="n">c</span><span class="p">,</span> <span class="n">myProject</span><span class="p">);</span>
+  <span class="n">c</span><span class="p">.</span><span class="n">enableAllocationTracker</span><span class="p">(</span><span class="nb">true</span><span class="p">);</span>
+  <span class="k">if</span> <span class="p">(</span><span class="n">myEvent</span> <span class="o">!=</span> <span class="n">null</span><span class="p">)</span> <span class="p">{</span>
+    <span class="c1">// TODO add support for different end types (error, etc)</span>
+    <span class="n">myEvent</span><span class="p">.</span><span class="n">stop</span><span class="p">(</span><span class="n">now</span><span class="p">);</span>
+  <span class="p">}</span>
+  <span class="n">myEvent</span> <span class="o">=</span> <span class="n">myEvents</span><span class="p">.</span><span class="n">start</span><span class="p">(</span><span class="n">now</span><span class="p">,</span> <span class="n">MemoryMonitorView</span><span class="p">.</span><span class="n">EVENT_ALLOC</span><span class="p">);</span>
+<span class="p">}</span>
+<span class="n">c</span><span class="p">.</span><span class="n">requestAllocationStatus</span><span class="p">();</span>
+</pre></div>
+
+
+<p>获取并解析数据：</p>
+<div class="highlight"><pre><span class="nx">AndroidDebugBridge.addClientChangeListener</span><span class="p">(</span><span class="nb">new</span> <span class="nx">IClientChangeListener</span><span class="p">()</span> <span class="p">{</span>
+        <span class="p">@</span><span class="nx">Override</span>
+        <span class="k">public</span> <span class="nf">void</span> <span class="nx">clientChanged</span><span class="p">(</span><span class="nx">Client</span> <span class="nx">client</span><span class="p">,</span> <span class="nx">int</span> <span class="nx">changeMask</span><span class="p">)</span> <span class="p">{</span>
+          <span class="k">if</span> <span class="p">(</span><span class="nx">client</span> <span class="o">==</span> <span class="nx">listeningClient</span> <span class="o">&amp;&amp;</span> <span class="p">(</span><span class="nx">changeMask</span> <span class="o">&amp;</span> <span class="nx">Client.CHANGE_HEAP_ALLOCATIONS</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
+            <span class="nx">final</span> <span class="nx">byte</span><span class="err">[</span><span class="cp">]</span> data = client.getClientData().getAllocationsData();
+
+            ApplicationManager.getApplication().invokeLater(new Runnable() {
+              @Override
+              public void run() {
+                try {
+                  if (myProject.isDisposed()) {
+                    return;
+                  }
+
+                  final CaptureService service = CaptureService.getInstance(myProject);
+                  String name = service.getSuggestedName(listeningClient);
+                  CaptureHandle handle = service.startCaptureFile(AllocationCaptureType.class, name);
+                  // service.appendDataCopy(handle, data);
+                  service.finalizeCaptureFileAsynchronous(handle, new FutureCallback<span class="nt">&lt;Capture&gt;</span>() {
+                    @Override
+                    public void onSuccess(Capture result) {
+                      service.notifyCaptureReady(result);
+                    }
+
+                    @Override
+                    public void onFailure(Throwable t) {
+                      throw new RuntimeException(t);
+                    }
+                  }, EdtExecutor.INSTANCE);
+                }
+                catch (IOException e) {
+                  throw new RuntimeException(e);
+                }
+              }
+            });
+
+            // Remove self from listeners.
+            AndroidDebugBridge.removeClientChangeListener(this);
+          }
+        }
+      });
+</pre></div>
+
+
+<p>可以看出来这应该是一个异步的过程，在发起请求之后，系统会开始记录，然后再次发起停止请求之后，请求获得内存申请的数据（通过<code>c.requestAllocationDetails</code>这一行），然后再预先注册好的<code>IClientChangeListener</code>回调当中，获得数据已经准备好的通知，然后再获取数据，进行分析</p>
+<p>对于这里发起和停止Allocation的数据，以及注册的回调，大概射击到了<code>Client</code>，<code>AndroidDebugBridge</code>，<code>IClientChangeListener</code>等几个接口，这几个接口均不是Android Studio/IDEA中自带的类，而是在<code>ddmlib</code>这个库中包含的，在android studio源码<code>/tools/base/ddmlib</code>目录中有其源码，另外，在<code>/prebuilts/tools/common/offline-m2/com/android/tools/ddms/ddmlib</code>目录中也有其预先build好的jar包。</p>
+<p>ddmlib这个库的作用，是用来建立电脑和android手机上连接的AndroidDebugBridge，然后让其对手机发起一些请求，例如刚才的AllocationTracker，还有dump hprof，traceview，甚至可以直接发送JdwpPacket，自定义PC和手机上的通讯（当然这个接口并非是开放的）。</p>
+<p>更重要的是，Google这个库是对外开放的，并且在放到的maven当中，可以让开发者直接获取到这个库，不过似乎Google并没有大肆宣传这个，甚至连文档都没有。</p>
+<p>既然如此，我们也可以仿照上面的代码，用代码发起一次AllocationTracker请求，并进行分析：</p>
+<div class="highlight"><pre><span class="n">AndroidDebugBridge</span><span class="p">.</span><span class="n">init</span><span class="p">(</span><span class="nb">true</span><span class="p">);</span>
+
+<span class="n">AndroidDebugBridge</span> <span class="n">bridge</span> <span class="o">=</span> <span class="n">AndroidDebugBridge</span><span class="p">.</span><span class="n">createBridge</span><span class="p">(</span><span class="s">&quot;/Users/ragnarok/adt-bundle-mac-x86_64-20131030/sdk/platform-tools/adb&quot;</span><span class="p">,</span> <span class="nb">false</span><span class="p">);</span>
+ <span class="k">while</span> <span class="p">(</span><span class="o">!</span><span class="n">bridge</span><span class="p">.</span><span class="n">isConnected</span><span class="p">()</span> <span class="o">&amp;&amp;</span> <span class="o">!</span><span class="n">bridge</span><span class="p">.</span><span class="n">hasInitialDeviceList</span><span class="p">())</span> <span class="p">{</span>
+        <span class="n">try</span> <span class="p">{</span>
+            <span class="n">Thread</span><span class="p">.</span><span class="n">sleep</span><span class="p">(</span><span class="mi">200</span><span class="p">);</span>
+        <span class="p">}</span>
+        <span class="n">catch</span> <span class="p">(</span><span class="n">Exception</span> <span class="n">e</span><span class="p">)</span> <span class="p">{</span>
+            <span class="n">System</span><span class="p">.</span><span class="n">out</span><span class="p">.</span><span class="n">println</span><span class="p">(</span><span class="n">e</span><span class="p">);</span>
+            <span class="k">return</span><span class="p">;</span>
+        <span class="p">}</span>
+ <span class="p">}</span>
+ <span class="k">if</span> <span class="p">(</span><span class="n">bridge</span><span class="p">.</span><span class="n">getDevices</span><span class="p">()</span> <span class="o">!=</span> <span class="n">null</span> <span class="o">&amp;&amp;</span> <span class="n">bridge</span><span class="p">.</span><span class="n">getDevices</span><span class="p">().</span><span class="n">length</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
+        <span class="n">IDevice</span> <span class="n">device</span> <span class="o">=</span> <span class="n">bridge</span><span class="p">.</span><span class="n">getDevices</span><span class="p">()[</span><span class="mi">0</span><span class="p">];</span>
+        <span class="n">final</span> <span class="n">Client</span> <span class="n">client</span> <span class="o">=</span> <span class="n">device</span><span class="p">.</span><span class="n">getClient</span><span class="p">(</span><span class="s">&quot;com.example.ragnarok.allocrecordtest&quot;</span><span class="p">);</span>
+        <span class="n">System</span><span class="p">.</span><span class="n">out</span><span class="p">.</span><span class="n">print</span><span class="p">(</span><span class="s">&quot;client: &quot;</span> <span class="o">+</span> <span class="n">client</span><span class="p">);</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">client</span> <span class="o">==</span> <span class="n">null</span><span class="p">)</span> <span class="p">{</span>
+            <span class="k">return</span><span class="p">;</span>
+        <span class="p">}</span>
+        <span class="n">AndroidDebugBridge</span><span class="p">.</span><span class="n">addClientChangeListener</span><span class="p">(</span><span class="n">new</span> <span class="n">AndroidDebugBridge</span><span class="p">.</span><span class="n">IClientChangeListener</span><span class="p">()</span> <span class="p">{</span>
+             <span class="n">public</span> <span class="kt">void</span> <span class="n">clientChanged</span><span class="p">(</span><span class="n">Client</span> <span class="n">cl</span><span class="p">,</span> <span class="kt">int</span> <span class="n">changeMask</span><span class="p">)</span> <span class="p">{</span>
+                    <span class="k">if</span> <span class="p">(</span><span class="n">cl</span> <span class="o">==</span> <span class="n">client</span><span class="p">)</span> <span class="p">{</span>
+                        <span class="k">if</span> <span class="p">((</span><span class="n">changeMask</span> <span class="o">&amp;</span> <span class="n">Client</span><span class="p">.</span><span class="n">CHANGE_HEAP_ALLOCATIONS</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
+                            <span class="n">System</span><span class="p">.</span><span class="n">out</span><span class="p">.</span><span class="n">println</span><span class="p">(</span><span class="s">&quot;clientChanged: &quot;</span> <span class="o">+</span> <span class="n">cl</span> <span class="o">+</span> <span class="s">&quot;, &quot;</span> <span class="o">+</span> <span class="n">changeMask</span><span class="p">);</span>
+                            <span class="n">byte</span><span class="p">[]</span> <span class="n">data</span> <span class="o">=</span> <span class="n">cl</span><span class="p">.</span><span class="n">getClientData</span><span class="p">().</span><span class="n">getAllocationsData</span><span class="p">();</span>
+                            <span class="k">if</span> <span class="p">(</span><span class="n">data</span> <span class="o">!=</span> <span class="n">null</span><span class="p">)</span> <span class="p">{</span>
+                                <span class="n">AllocationInfo</span><span class="p">[]</span> <span class="n">infoList</span> <span class="o">=</span> <span class="n">AllocationsParser</span><span class="p">.</span><span class="n">parse</span><span class="p">(</span><span class="n">ByteBuffer</span><span class="p">.</span><span class="n">wrap</span><span class="p">(</span><span class="n">data</span><span class="p">));</span>
+                            <span class="p">}</span>
+                       <span class="p">}</span>
+                    <span class="p">}</span>   
+                <span class="p">}</span>
+        <span class="p">});</span>
+        <span class="n">client</span><span class="p">.</span><span class="n">enableAllocationTracker</span><span class="p">(</span><span class="nb">true</span><span class="p">);</span>
+                <span class="n">new</span> <span class="nf">Timer</span><span class="p">().</span><span class="n">schedule</span><span class="p">(</span><span class="n">new</span> <span class="n">TimerTask</span><span class="p">()</span> <span class="p">{</span>
+                <span class="err">@</span><span class="n">Override</span>
+                <span class="n">public</span> <span class="kt">void</span> <span class="n">run</span><span class="p">()</span> <span class="p">{</span>
+                    <span class="n">client</span><span class="p">.</span><span class="n">requestAllocationDetails</span><span class="p">();</span>
+                    <span class="n">client</span><span class="p">.</span><span class="n">enableAllocationTracker</span><span class="p">(</span><span class="nb">false</span><span class="p">);</span>
+                <span class="p">}</span>
+        <span class="p">},</span> <span class="mi">3000</span><span class="p">);</span>
+<span class="p">}</span>
+</pre></div>
+
+
+<p>代码比较长，我们主要做了这些操作：</p>
+<ol>
+<li>初始化AndroidDebugBridge，并获取连接上的第一个设备对应的<code>IDevice</code></li>
+<li>获取这个设备上"com.example.ragnarok.allocrecordtest"这个进程上对应的Client实例</li>
+<li>注册回调，并在回调中获取AllocationTracker回来的数据，并调用<code>AllocationParser</code>进行解析</li>
+<li>发起和停止allocation tracker</li>
+</ol>
+<p>最后在分析的时候，我们获得了一组<code>AllocationInfo</code>，存储了申请对象的信息：</p>
+<div class="highlight"><pre><span class="n">public</span> <span class="n">class</span> <span class="n">AllocationInfo</span> <span class="p">{</span>
+    <span class="n">private</span> <span class="n">final</span> <span class="n">String</span> <span class="n">mAllocatedClass</span><span class="p">;</span>
+    <span class="n">private</span> <span class="n">final</span> <span class="kt">int</span> <span class="n">mAllocNumber</span><span class="p">;</span>
+    <span class="n">private</span> <span class="n">final</span> <span class="kt">int</span> <span class="n">mAllocationSize</span><span class="p">;</span>
+    <span class="n">private</span> <span class="n">final</span> <span class="kt">short</span> <span class="n">mThreadId</span><span class="p">;</span>
+    <span class="n">private</span> <span class="n">final</span> <span class="n">StackTraceElement</span><span class="p">[]</span> <span class="n">mStackTrace</span><span class="p">;</span>
+
+   <span class="p">.....</span>
+<span class="p">}</span>
+</pre></div>
+
+
+<p>因为现在可以用代码发起Allocation Tracker请求了，那我们就可以接入自动化分析，并过滤掉我们不需要的数据。</p>
+<p>但是这样，也还是会有问题：</p>
+<ol>
+<li>这种方法会占用adb端口，这意味着可能在使用的时候，需要停止掉android studio对adb的使用</li>
+<li>在停止allocation tracker之后，<code>requestAllocationDetails</code>的调用还是会卡死手机，当然其实对于自动化分析来说，这里问题应该不大，但是对于使用者来说，还是造成了些许不爽</li>
+</ol>
+<p>对于上面的第二个问题，我们先来分析下android上的JVM是如何响应发过来的allocation tracker请求的</p>
+<h4>android的JVM如何响应allocation tracker请求（Dalvik only now）</h4>
+<p>我们先来看下Dalvik虚拟机是怎么响应这个请求的，下面仅以4.4.4的代码为例</p>
+<p>首先，Dalvik虚拟机在收到Allocation Tracker的请求之后，在对JdwpPacket包进行解析之后，最后会在<code>DdmVmInternal</code>这个类中进行处理，这个类在<code>/libcore/dalvik/src/main/java/org/apache/harmony/dalvik/ddmc/DdmVmInternal.java</code>当中，其中有这么两个方法：</p>
+<div class="highlight"><pre><span class="cm">/**</span>
+<span class="cm">* Enable or disable &quot;recent allocation&quot; tracking.</span>
+<span class="cm">*/</span>
+<span class="n">native</span> <span class="n">public</span> <span class="k">static</span> <span class="k">void</span> <span class="n">enableRecentAllocations</span><span class="p">(</span><span class="n">boolean</span> <span class="n">enable</span><span class="p">);</span>
+
+<span class="cm">/*</span>
+<span class="cm">* Return a boolean indicating whether or not the &quot;recent allocation&quot;</span>
+<span class="cm">* feature is currently enabled.</span>
+<span class="cm">*/</span>
+<span class="n">native</span> <span class="n">public</span> <span class="k">static</span> <span class="n">boolean</span> <span class="n">getRecentAllocationStatus</span><span class="p">();</span>
+</pre></div>
+
+
+<p>很明显，这两个方法是用于开启和关闭Allocation Tracker，并且获得申请对象信息的数据的，然而是native的方法，对应的native代码在<code>/dalvik/vm/native/org_apache_harmony_dalvik_ddmc_DdmVmInternal.cpp</code>这里：</p>
+<div class="highlight"><pre><span class="cm">/*</span>
+<span class="cm"> * public static void enableRecentAllocations(boolean enable)</span>
+<span class="cm"> *</span>
+<span class="cm"> * Enable or disable recent allocation tracking.</span>
+<span class="cm"> */</span>
+<span class="k">static</span> <span class="kt">void</span> <span class="nf">Dalvik_org_apache_harmony_dalvik_ddmc_DdmVmInternal_enableRecentAllocations</span><span class="p">(</span>
+    <span class="k">const</span> <span class="n">u4</span><span class="o">*</span> <span class="n">args</span><span class="p">,</span> <span class="n">JValue</span><span class="o">*</span> <span class="n">pResult</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="kt">bool</span> <span class="n">enable</span> <span class="o">=</span> <span class="p">(</span><span class="n">args</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">);</span>
+
+    <span class="k">if</span> <span class="p">(</span><span class="n">enable</span><span class="p">)</span>
+        <span class="p">(</span><span class="kt">void</span><span class="p">)</span> <span class="n">dvmEnableAllocTracker</span><span class="p">();</span>
+    <span class="k">else</span>
+        <span class="p">(</span><span class="kt">void</span><span class="p">)</span> <span class="n">dvmDisableAllocTracker</span><span class="p">();</span>
+    <span class="n">RETURN_VOID</span><span class="p">();</span>
+<span class="p">}</span>
+
+<span class="cm">/*</span>
+<span class="cm"> * public static byte[] getRecentAllocations()</span>
+<span class="cm"> *</span>
+<span class="cm"> * Fill a buffer with data on recent heap allocations.</span>
+<span class="cm"> */</span>
+<span class="k">static</span> <span class="kt">void</span> <span class="nf">Dalvik_org_apache_harmony_dalvik_ddmc_DdmVmInternal_getRecentAllocations</span><span class="p">(</span>
+    <span class="k">const</span> <span class="n">u4</span><span class="o">*</span> <span class="n">args</span><span class="p">,</span> <span class="n">JValue</span><span class="o">*</span> <span class="n">pResult</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="n">ArrayObject</span><span class="o">*</span> <span class="n">data</span><span class="p">;</span>
+
+    <span class="n">data</span> <span class="o">=</span> <span class="n">dvmDdmGetRecentAllocations</span><span class="p">();</span>
+    <span class="n">dvmReleaseTrackedAlloc</span><span class="p">((</span><span class="n">Object</span><span class="o">*</span><span class="p">)</span> <span class="n">data</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
+    <span class="n">RETURN_PTR</span><span class="p">(</span><span class="n">data</span><span class="p">);</span>
+<span class="p">}</span>
+</pre></div>
+
+
+<p>而<code>dvmEnableAllocTracker</code>，<code>dvmDisableAllocTracker</code>，<code>dvmDdmGetRecentAllocations</code>这几个方法，经过几层的调用之后，最后是调用到了<code>/dalvik/vm/AllocTracker.cpp</code>这里的方法：</p>
+<div class="highlight"><pre><span class="cm">/*</span>
+<span class="cm"> * Enable allocation tracking.  Does nothing if tracking is already enabled.</span>
+<span class="cm"> *</span>
+<span class="cm"> * Returns &quot;true&quot; on success.</span>
+<span class="cm"> */</span>
+<span class="kt">bool</span> <span class="nf">dvmEnableAllocTracker</span><span class="p">()</span>
+<span class="p">{</span>
+    <span class="kt">bool</span> <span class="n">result</span> <span class="o">=</span> <span class="nb">true</span><span class="p">;</span>
+    <span class="n">dvmLockMutex</span><span class="p">(</span><span class="o">&amp;</span><span class="n">gDvm</span><span class="p">.</span><span class="n">allocTrackerLock</span><span class="p">);</span>
+
+    <span class="k">if</span> <span class="p">(</span><span class="n">gDvm</span><span class="p">.</span><span class="n">allocRecords</span> <span class="o">==</span> <span class="nb">NULL</span><span class="p">)</span> <span class="p">{</span>
+        <span class="n">gDvm</span><span class="p">.</span><span class="n">allocRecordMax</span> <span class="o">=</span> <span class="n">getAllocRecordMax</span><span class="p">();</span>
+
+        <span class="n">ALOGI</span><span class="p">(</span><span class="s">&quot;Enabling alloc tracker (%d entries, %d frames --&gt; %d bytes)&quot;</span><span class="p">,</span>
+              <span class="n">gDvm</span><span class="p">.</span><span class="n">allocRecordMax</span><span class="p">,</span> <span class="n">kMaxAllocRecordStackDepth</span><span class="p">,</span>
+              <span class="k">sizeof</span><span class="p">(</span><span class="n">AllocRecord</span><span class="p">)</span> <span class="o">*</span> <span class="n">gDvm</span><span class="p">.</span><span class="n">allocRecordMax</span><span class="p">);</span>
+        <span class="n">gDvm</span><span class="p">.</span><span class="n">allocRecordHead</span> <span class="o">=</span> <span class="n">gDvm</span><span class="p">.</span><span class="n">allocRecordCount</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+        <span class="n">gDvm</span><span class="p">.</span><span class="n">allocRecords</span> <span class="o">=</span> <span class="p">(</span><span class="n">AllocRecord</span><span class="o">*</span><span class="p">)</span> <span class="n">malloc</span><span class="p">(</span><span class="k">sizeof</span><span class="p">(</span><span class="n">AllocRecord</span><span class="p">)</span> <span class="o">*</span> <span class="n">gDvm</span><span class="p">.</span><span class="n">allocRecordMax</span><span class="p">);</span>
+
+        <span class="k">if</span> <span class="p">(</span><span class="n">gDvm</span><span class="p">.</span><span class="n">allocRecords</span> <span class="o">==</span> <span class="nb">NULL</span><span class="p">)</span>
+            <span class="n">result</span> <span class="o">=</span> <span class="nb">false</span><span class="p">;</span>
+    <span class="p">}</span>
+
+    <span class="n">dvmUnlockMutex</span><span class="p">(</span><span class="o">&amp;</span><span class="n">gDvm</span><span class="p">.</span><span class="n">allocTrackerLock</span><span class="p">);</span>
+    <span class="k">return</span> <span class="n">result</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="cm">/*</span>
+<span class="cm"> * Disable allocation tracking.  Does nothing if tracking is not enabled.</span>
+<span class="cm"> */</span>
+<span class="kt">void</span> <span class="nf">dvmDisableAllocTracker</span><span class="p">()</span>
+<span class="p">{</span>
+    <span class="n">dvmLockMutex</span><span class="p">(</span><span class="o">&amp;</span><span class="n">gDvm</span><span class="p">.</span><span class="n">allocTrackerLock</span><span class="p">);</span>
+
+    <span class="k">if</span> <span class="p">(</span><span class="n">gDvm</span><span class="p">.</span><span class="n">allocRecords</span> <span class="o">!=</span> <span class="nb">NULL</span><span class="p">)</span> <span class="p">{</span>
+        <span class="n">free</span><span class="p">(</span><span class="n">gDvm</span><span class="p">.</span><span class="n">allocRecords</span><span class="p">);</span>
+        <span class="n">gDvm</span><span class="p">.</span><span class="n">allocRecords</span> <span class="o">=</span> <span class="nb">NULL</span><span class="p">;</span>
+    <span class="p">}</span>
+
+    <span class="n">dvmUnlockMutex</span><span class="p">(</span><span class="o">&amp;</span><span class="n">gDvm</span><span class="p">.</span><span class="n">allocTrackerLock</span><span class="p">);</span>
+<span class="p">}</span>
+
+<span class="cm">/*</span>
+<span class="cm"> * Generate a DDM packet with all of the tracked allocation data.</span>
+<span class="cm"> *</span>
+<span class="cm"> * On success, returns &quot;true&quot; with &quot;*pData&quot; and &quot;*pDataLen&quot; set.</span>
+<span class="cm"> */</span>
+<span class="kt">bool</span> <span class="nf">dvmGenerateTrackedAllocationReport</span><span class="p">(</span><span class="n">u1</span><span class="o">**</span> <span class="n">pData</span><span class="p">,</span> <span class="kt">size_t</span><span class="o">*</span> <span class="n">pDataLen</span><span class="p">)</span>
+<span class="p">{</span> <span class="p">....</span> <span class="p">}</span> <span class="c1">// 这个方法用于dump出申请对象的数据</span>
+</pre></div>
+
+
+<p>从上面的代码可以看出，在开启了Allocation Tracker之后，在Dalvik全局变量<code>gDvm</code>下，将其中的<code>allocRecords</code>指向了一块新的申请的内存区域，另外<code>allocRecordHead</code>指向最新申请的对象信息，<code>allocRecordCount</code>则是总共记录的数量，另外<code>allocRecordMax</code>则是整个Allocation Tracker所允许记录的最大申请对象信息的数目，在4.4.4这个版本下，这个值默认是65536，也可以在手机中的/sytem/build.prop中指定<code>dalvik.vm.allocTrackerMax</code>项的值。</p>
+<p>这里很明显看出来，<code>gDvm.allocRecords</code>是用来记录新申请对象的信息的，而申请对象的时候，只要开启了Allocation Tracker，每次都会往这里添加一个记录，具体代码在这里：</p>
+<p>首先这里是新申请对象地方，在<code>/dalvik/vm/alloc/Alloc.cpp</code>中：</p>
+<div class="highlight"><pre><span class="cm">/*</span>
+<span class="cm"> * Create an instance of the specified class.</span>
+<span class="cm"> *</span>
+<span class="cm"> * Returns NULL and throws an exception on failure.</span>
+<span class="cm"> */</span>
+<span class="n">Object</span><span class="o">*</span> <span class="nf">dvmAllocObject</span><span class="p">(</span><span class="n">ClassObject</span><span class="o">*</span> <span class="n">clazz</span><span class="p">,</span> <span class="kt">int</span> <span class="n">flags</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="n">Object</span><span class="o">*</span> <span class="n">newObj</span><span class="p">;</span>
+
+    <span class="n">assert</span><span class="p">(</span><span class="n">clazz</span> <span class="o">!=</span> <span class="nb">NULL</span><span class="p">);</span>
+    <span class="n">assert</span><span class="p">(</span><span class="n">dvmIsClassInitialized</span><span class="p">(</span><span class="n">clazz</span><span class="p">)</span> <span class="o">||</span> <span class="n">dvmIsClassInitializing</span><span class="p">(</span><span class="n">clazz</span><span class="p">));</span>
+
+    <span class="cm">/* allocate on GC heap; memory is zeroed out */</span>
+    <span class="n">newObj</span> <span class="o">=</span> <span class="p">(</span><span class="n">Object</span><span class="o">*</span><span class="p">)</span><span class="n">dvmMalloc</span><span class="p">(</span><span class="n">clazz</span><span class="o">-&gt;</span><span class="n">objectSize</span><span class="p">,</span> <span class="n">flags</span><span class="p">);</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">newObj</span> <span class="o">!=</span> <span class="nb">NULL</span><span class="p">)</span> <span class="p">{</span>
+        <span class="n">DVM_OBJECT_INIT</span><span class="p">(</span><span class="n">newObj</span><span class="p">,</span> <span class="n">clazz</span><span class="p">);</span>
+        <span class="n">dvmTrackAllocation</span><span class="p">(</span><span class="n">clazz</span><span class="p">,</span> <span class="n">clazz</span><span class="o">-&gt;</span><span class="n">objectSize</span><span class="p">);</span>   <span class="cm">/* notify DDMS */</span>
+    <span class="p">}</span>
+
+    <span class="k">return</span> <span class="n">newObj</span><span class="p">;</span>
+<span class="p">}</span>
+</pre></div>
+
+
+<p>而在<code>dvmTrackAllocation</code>方法，则是在<code>/vm/AllocTracker.h</code>中定义：</p>
+<div class="highlight"><pre><span class="cm">/*</span>
+<span class="cm"> * If allocation tracking is enabled, add a new entry to the set.</span>
+<span class="cm"> */</span>
+<span class="cp">#define dvmTrackAllocation(_clazz, _size)                                   \</span>
+<span class="cp">    {                                                                       \</span>
+<span class="cp">        if (gDvm.allocRecords != NULL)                                      \</span>
+<span class="cp">            dvmDoTrackAllocation(_clazz, _size);                            \</span>
+<span class="cp">    }</span>
+<span class="kt">void</span> <span class="nf">dvmDoTrackAllocation</span><span class="p">(</span><span class="n">ClassObject</span><span class="o">*</span> <span class="n">clazz</span><span class="p">,</span> <span class="kt">size_t</span> <span class="n">size</span><span class="p">);</span>
+
+<span class="c1">// dvmDoTrackAllocation的定义在/dalvik/vm/AllocTracker.cpp当中</span>
+<span class="cm">/*</span>
+<span class="cm"> * Add a new allocation to the set.</span>
+<span class="cm"> */</span>
+<span class="kt">void</span> <span class="nf">dvmDoTrackAllocation</span><span class="p">(</span><span class="n">ClassObject</span><span class="o">*</span> <span class="n">clazz</span><span class="p">,</span> <span class="kt">size_t</span> <span class="n">size</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="n">Thread</span><span class="o">*</span> <span class="n">self</span> <span class="o">=</span> <span class="n">dvmThreadSelf</span><span class="p">();</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">self</span> <span class="o">==</span> <span class="nb">NULL</span><span class="p">)</span> <span class="p">{</span>
+        <span class="n">ALOGW</span><span class="p">(</span><span class="s">&quot;alloc tracker: no thread&quot;</span><span class="p">);</span>
+        <span class="k">return</span><span class="p">;</span>
+    <span class="p">}</span>
+
+    <span class="n">dvmLockMutex</span><span class="p">(</span><span class="o">&amp;</span><span class="n">gDvm</span><span class="p">.</span><span class="n">allocTrackerLock</span><span class="p">);</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">gDvm</span><span class="p">.</span><span class="n">allocRecords</span> <span class="o">==</span> <span class="nb">NULL</span><span class="p">)</span> <span class="p">{</span>
+        <span class="n">dvmUnlockMutex</span><span class="p">(</span><span class="o">&amp;</span><span class="n">gDvm</span><span class="p">.</span><span class="n">allocTrackerLock</span><span class="p">);</span>
+        <span class="k">return</span><span class="p">;</span>
+    <span class="p">}</span>
+
+    <span class="cm">/* advance and clip */</span>
+    <span class="k">if</span> <span class="p">(</span><span class="o">++</span><span class="n">gDvm</span><span class="p">.</span><span class="n">allocRecordHead</span> <span class="o">==</span> <span class="n">gDvm</span><span class="p">.</span><span class="n">allocRecordMax</span><span class="p">)</span>
+        <span class="n">gDvm</span><span class="p">.</span><span class="n">allocRecordHead</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+
+    <span class="n">AllocRecord</span><span class="o">*</span> <span class="n">pRec</span> <span class="o">=</span> <span class="o">&amp;</span><span class="n">gDvm</span><span class="p">.</span><span class="n">allocRecords</span><span class="p">[</span><span class="n">gDvm</span><span class="p">.</span><span class="n">allocRecordHead</span><span class="p">];</span>
+
+    <span class="n">pRec</span><span class="o">-&gt;</span><span class="n">clazz</span> <span class="o">=</span> <span class="n">clazz</span><span class="p">;</span>
+    <span class="n">pRec</span><span class="o">-&gt;</span><span class="n">size</span> <span class="o">=</span> <span class="n">size</span><span class="p">;</span>
+    <span class="n">pRec</span><span class="o">-&gt;</span><span class="n">threadId</span> <span class="o">=</span> <span class="n">self</span><span class="o">-&gt;</span><span class="n">threadId</span><span class="p">;</span>
+    <span class="n">getStackFrames</span><span class="p">(</span><span class="n">self</span><span class="p">,</span> <span class="n">pRec</span><span class="p">);</span>
+
+    <span class="k">if</span> <span class="p">(</span><span class="n">gDvm</span><span class="p">.</span><span class="n">allocRecordCount</span> <span class="o">&lt;</span> <span class="n">gDvm</span><span class="p">.</span><span class="n">allocRecordMax</span><span class="p">)</span>
+        <span class="n">gDvm</span><span class="p">.</span><span class="n">allocRecordCount</span><span class="o">++</span><span class="p">;</span>
+
+    <span class="n">dvmUnlockMutex</span><span class="p">(</span><span class="o">&amp;</span><span class="n">gDvm</span><span class="p">.</span><span class="n">allocTrackerLock</span><span class="p">);</span>
+<span class="p">}</span>
+</pre></div>
+
+
+<p>分析到这里，Dalvik对Allocation Tracker的响应过程就非常清晰了：</p>
+<ol>
+<li>在收到Allocation Tracker的请求的时候，首先给Dalvik全局变量gDvm的中的<code>allocRecords</code>指向一段新申请的内存，申请内存的数量，由<code>gDvm.allocRecordMax</code>指定</li>
+<li>后续Dalvik每次新申请对象的时候，只要<code>allocRecords</code>不为NULL，那就会不断的往<code>allocRecords</code>指向的内存区域中写入的新申请对象的信息，包括类型，大小，线程号，堆栈</li>
+</ol>
+<p>而<code>gDvm</code>这个变量则具体是一个全局记录Dalvik虚拟机中状态的全局变量，定义和声明都在<code>/dalvik/vm/Globals.h</code>中：</p>
+<div class="highlight"><pre><span class="cm">/*</span>
+<span class="cm"> * All fields are initialized to zero.</span>
+<span class="cm"> *</span>
+<span class="cm"> * Storage allocated here must be freed by a subsystem shutdown function.</span>
+<span class="cm"> */</span>
+<span class="k">struct</span> <span class="n">DvmGlobals</span> <span class="p">{</span>
+<span class="p">....</span>
+    <span class="cm">/*</span>
+<span class="cm">     * Used for tracking allocations that we report to DDMS.  When the feature</span>
+<span class="cm">     * is enabled (through a DDMS request) the &quot;allocRecords&quot; pointer becomes</span>
+<span class="cm">     * non-NULL.</span>
+<span class="cm">     */</span>
+    <span class="kt">pthread_mutex_t</span> <span class="n">allocTrackerLock</span><span class="p">;</span>
+    <span class="n">AllocRecord</span><span class="o">*</span>    <span class="n">allocRecords</span><span class="p">;</span>
+    <span class="kt">int</span>             <span class="n">allocRecordHead</span><span class="p">;</span>        <span class="cm">/* most-recently-added entry */</span>
+    <span class="kt">int</span>             <span class="n">allocRecordCount</span><span class="p">;</span>       <span class="cm">/* #of valid entries */</span>
+    <span class="kt">int</span>             <span class="n">allocRecordMax</span><span class="p">;</span>         <span class="cm">/* Number of allocated entries. */</span>
+<span class="p">....</span>
+<span class="p">}</span>
+<span class="k">extern</span> <span class="k">struct</span> <span class="n">DvmGlobals</span> <span class="n">gDvm</span><span class="p">;</span>
+</pre></div>
+
+
+<p>而<code>AllocRecord</code>的定义，则是在<code>/dalvik/vm/AllocTracker.cpp</code> 中：</p>
+<div class="highlight"><pre><span class="cm">/*</span>
+<span class="cm"> * Record the details of an allocation.</span>
+<span class="cm"> */</span>
+<span class="k">struct</span> <span class="n">AllocRecord</span> <span class="p">{</span>
+    <span class="n">ClassObject</span><span class="o">*</span>    <span class="n">clazz</span><span class="p">;</span>      <span class="cm">/* class allocated in this block */</span>
+    <span class="n">u4</span>              <span class="n">size</span><span class="p">;</span>       <span class="cm">/* total size requested */</span>
+    <span class="n">u2</span>              <span class="n">threadId</span><span class="p">;</span>   <span class="cm">/* simple thread ID; could be recycled */</span>
+
+    <span class="cm">/* stack trace elements; unused entries have method==NULL */</span>
+    <span class="k">struct</span> <span class="p">{</span>
+        <span class="k">const</span> <span class="n">Method</span><span class="o">*</span> <span class="n">method</span><span class="p">;</span>   <span class="cm">/* which method we&#39;re executing in */</span>
+        <span class="kt">int</span>         <span class="n">pc</span><span class="p">;</span>         <span class="cm">/* current execution offset, in 16-bit units */</span>
+    <span class="p">}</span> <span class="n">stackElem</span><span class="p">[</span><span class="n">kMaxAllocRecordStackDepth</span><span class="p">];</span>
+<span class="p">};</span>
+<span class="cp">#define kMaxAllocRecordStackDepth   16      </span><span class="cm">/* max 255 */</span><span class="cp"></span>
+</pre></div>
+
+
+<p>可以看出来这里拿到的信息，跟直接使用ddmlib的是一样的</p>
+<p>另外，可以看到<code>gDvm</code>的声明是为<code>extern</code>的，这意味着我们或许可以 <strong>直接</strong> 获取到这个变量，一颗赛艇！</p>
+<h4>不影响手机本身性能的情况下获取申请对象信息</h4>
+<p>从上面的代码分析可以看到，类型为<code>DvmGlobals</code>的<code>gDvm</code>这个变量被声明成了extern，并且为非static变量，这意味在dalvik的so中，我们可以直接在符号表中获取到这个变量，简单来说，测试的代码如下：</p>
+<div class="highlight"><pre><span class="cp">#include &quot;Globals.h&quot;</span>
+<span class="p">....</span>
+<span class="kt">void</span> <span class="o">*</span> <span class="n">handle</span> <span class="o">=</span> <span class="n">dlopen</span><span class="p">(</span><span class="s">&quot;libdvm.so&quot;</span><span class="p">,</span> <span class="n">RTLD_NOW</span><span class="p">);</span>
+<span class="n">snprintf</span><span class="p">(</span><span class="n">buff</span><span class="p">,</span> <span class="mi">1024</span><span class="p">,</span> <span class="s">&quot;handle is 0x%x&quot;</span><span class="p">,</span> <span class="n">handle</span><span class="p">);</span>
+<span class="n">LOGI</span><span class="p">(</span><span class="s">&quot;%s&quot;</span><span class="p">,</span> <span class="n">buff</span><span class="p">);</span>
+
+<span class="n">t_gDvm</span> <span class="o">=</span> <span class="p">(</span><span class="k">struct</span> <span class="n">DvmGlobals</span> <span class="o">*</span><span class="p">)</span><span class="n">dlsym</span><span class="p">(</span><span class="n">handle</span><span class="p">,</span> <span class="s">&quot;gDvm&quot;</span><span class="p">);</span>
+
+<span class="k">if</span> <span class="p">(</span><span class="n">t_gDvm</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">LOGI</span><span class="p">(</span><span class="s">&quot;get DvmGlobals&quot;</span><span class="p">);</span>
+    <span class="c1">// now t_gDvm-&gt;allocRecords is the allocation record data</span>
+<span class="p">}</span>
+</pre></div>
+
+
+<p>上面的<code>#include "Globals.h"</code>是指Dalvik源码中的<code>Globals.h</code>头文件， 另外这段Native的代码需要打包在某个app当中，然后在开启Allocation Tracker之后（之前介绍的随便一种方法都可以），运行这段代码，那么<code>t_gDvm-&gt;allocRecords</code>中就是申请对象的数据了，可以直接读取里面的字段，打印出来大概是这样的：</p>
+<p><img alt="" src="static/images/allocrecordjni.png" /></p>
+<p>由于是直接读取Dalvik本身记录对象信息的结构，没有了结束Allocation Tracker时候把数据dump出来的请求，这意味着完全不会影响手机本身的性能，而且对于对象信息的获取，也能够更加的及时，例如说每隔10s把数据拿出来分析。相对来说，对于之前使用ddmlib的方案，10s定时请求这么高的频率，很有可能跑一会直接就把手机卡死了。</p>
+<p>但是对于这种方案，会存在兼容性问题，这里可以看到，我们获取<code>gDvm</code>变量的方式是用<code>dlsym</code>系统调用直接拿出来，然后强转成<code>DvmGlobals</code>类型，然而由于不同版本的Dalvik虚拟机中的<code>DvmGlobals</code>的定义不一样，可能会造成拿出<code>gDvm</code>这个符号之后，对应的<code>allocRecords</code>字段并不是真正的在这台机器上的<code>allocRecords</code>字段，出现数据的错乱，或者<code>gDvm-&gt;allocRecords</code>压根为NULL 。就目前的简单测试来，暂时只有MX3 4.4.4系统的flyme os能够正常操作，估计这里要适配大部分机器的话，工作量应该不少。</p>
+<h4>Notes:</h4>
+  </div><!-- /.entry-content -->
+   <footer class="post-info text-muted">
+    Posted on <abbr class="published" title="2016-05-30T00:00:00+08:00">
+      一 30 五月 2016
+    </abbr>
+    <address class="vcard author">
+      by <a class="url fn" href="/author/ragnarok-zhou.html">Ragnarok Zhou</a>
+    </address> in <a href="/category/android.html">Android</a> Tagged   </footer><!-- /.post-info -->
+</section>
+    <div class="comment">
+        <div id="disqus_thread"></div> <!-- comment app container -->
+    </div>
+	<!-- Comment BEGIN -->
+    <script type="text/javascript">
+        var disqus_shortname = 'ragnaroknote'; // required: replace example with your forum shortname
+
+        /* * * DON'T EDIT BELOW THIS LINE * * */
+        (function() {
+            var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+            dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+            (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+        })();
+    </script>
+    <noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+     <!-- Comment END -->
+            <footer id="contentinfo" class="footer">
+                    <nav class="pull-right bottom-nav">
+                        <a href="/feeds/atom.xml">RSS</a>
+                    </nav>
+                    <address id="about" class="vcard body">
+                    &copy; <a href="">Ragnarok Note</a> Proudly powered by <a href="http://getpelican.com/">Pelican</a>
+                    </address><!-- /#about -->
+            </footer><!-- /#contentinfo -->
+        </div><!-- container -->
+    </body>
+</html>
