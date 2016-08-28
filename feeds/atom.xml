@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <feed xmlns="http://www.w3.org/2005/Atom"><title>Ragnarok Note</title><link href="http://ragnraok.github.io/" rel="alternate"></link><link href="http://ragnraok.github.io/feeds/atom.xml" rel="self"></link><id>http://ragnraok.github.io/</id><updated>2016-05-30T00:00:00+08:00</updated><entry><title>如何获取Android系统中申请对象的信息</title><link href="http://ragnraok.github.io/get_android_alloc_object_info.html" rel="alternate"></link><published>2016-05-30T00:00:00+08:00</published><author><name>Ragnarok Zhou</name></author><id>tag:ragnraok.github.io,2016-05-30:get_android_alloc_object_info.html</id><summary type="html">&lt;p&gt;最近一直在做有关内存方面的优化工作，在做优化的过程，除了关注内存的申请量以及GC的情况之外，我们经常需要想方法找出是那些对象占用了大量内存，以及他们是如何导致GC的，这意味着我们需要获取对象申请的信息（大小，类型，堆栈等），我们这篇文章来介绍下几种获取对象申请信息的方法&lt;/p&gt;
-&lt;h3&gt;Allocation Trakcer&lt;/h3&gt;
+&lt;h3&gt;Allocation Tracker&lt;/h3&gt;
 &lt;p&gt;Allocation Tracker是android studio自带的一个功能，我们可以在MemoryMonitor中打开使用：&lt;/p&gt;
 &lt;p&gt;&lt;img alt="" src="static/images/memorymonitor_1.jpeg" /&gt;&lt;/p&gt;
 &lt;p&gt;如上图，点击红框按钮，然后操作app，开始allocation tracking，当认为需要结束的时候，再次点击按钮，稍等片刻，即可以在android studio中dump出在 &lt;strong&gt;这段时间&lt;/strong&gt; 内 &lt;strong&gt;新申请&lt;/strong&gt; 对象的信息：&lt;/p&gt;
