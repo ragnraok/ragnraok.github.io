@@ -63,12 +63,20 @@
 &lt;p&gt;颜色格式问题&lt;/p&gt;
 &lt;p&gt;MediaCodec在初始化的时候，在&lt;code&gt;configure&lt;/code&gt;的时候，需要传入一个MediaFormat对象，当作为编码器使用的时候，我们一般需要在MediaFormat中指定视频的宽高，帧率，码率，I帧间隔等基本信息，除此之外，还有一个重要的信息就是，指定编码器接受的YUV帧的颜色格式。这个是因为由于YUV根据其采样比例，UV分量的排列顺序有很多种不同的颜色格式，而对于Android的摄像头在&lt;code&gt;onPreviewFrame&lt;/code&gt;输出的YUV帧格式，如果没有配置任何参数的情况下，基本上都是NV21格式，但Google对MediaCodec的API在设计和规范的时候，显得很不厚道，过于贴近Android的HAL层了，导致了NV21格式并不是所有机器的MediaCodec都支持这种格式作为编码器的输入格式！
 因此，在初始化MediaCodec的时候，我们需要通过&lt;code&gt;codecInfo.getCapabilitiesForType&lt;/code&gt;来查询机器上的MediaCodec实现具体支持哪些YUV格式作为输入格式，一般来说，起码在4.4+的系统上，这两种格式在大部分机器都有支持：&lt;/p&gt;
-&lt;p&gt;&lt;code&gt;Java
-MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420Planar
-MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420SemiPlanar&lt;/code&gt;&lt;/p&gt;
-&lt;p&gt;两种格式分别是YUV420P和NV21，如果机器上只支持YUV420P格式的情况下，则需要先将摄像头输出的NV21格式先转换成YUV420P，才能送入编码器进行编码，否则最终出来的视频就会花屏，或者颜色出现错乱&lt;/p&gt;
-&lt;p&gt;这个算是一个不大不小的坑，基本上用上了MediaCodec进行视频编码都会遇上这个问题&lt;/p&gt;
 &lt;/li&gt;
+&lt;/ol&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="n"&gt;MediaCodecInfo&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="na"&gt;CodecCapabilities&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="na"&gt;COLOR_FormatYUV420Planar&lt;/span&gt;
+&lt;span class="n"&gt;MediaCodecInfo&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="na"&gt;CodecCapabilities&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="na"&gt;COLOR_FormatYUV420SemiPlanar&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;两种格式分别是YUV420P和NV21，如果机器上只支持YUV420P格式的情况下，则需要先将摄像头输出的NV21格式先转换成YUV420P，才能送入编码器进行编码，否则最终出来的视频就会花屏，或者颜色出现错乱
+
+这个算是一个不大不小的坑，基本上用上了MediaCodec进行视频编码都会遇上这个问题
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;ol&gt;
 &lt;li&gt;
 &lt;p&gt;编码器支持特性相当有限&lt;/p&gt;
 &lt;p&gt;如果使用MediaCodec来编码H264视频流，对于H264格式来说，会有一些针对压缩率以及码率相关的视频质量设置，典型的诸如Profile(baseline, main, high)，Profile Level, Bitrate mode(CBR, CQ, VBR)，合理配置这些参数可以让我们在同等的码率下，获得更高的压缩率，从而提升视频的质量，Android也提供了对应的API进行设置，可以设置到MediaFormat中这些设置项:&lt;/p&gt;
@@ -76,31 +84,39 @@ MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420SemiPlanar&lt;/code&gt;&lt;/p
 MediaFormat.KEY_BITRATE_MODE
 MediaFormat.KEY_PROFILE
 MediaFormat.KEY_LEVEL&lt;/code&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ol&gt;
 &lt;p&gt;但问题是，对于Profile，Level, Bitrate mode这些设置，在大部分手机上都是不支持的，即使是设置了最终也不会生效，例如设置了Profile为high，最后出来的视频依然还会是Baseline，Shit....&lt;/p&gt;
 &lt;p&gt;这个问题，在7.0以下的机器几乎是必现的，其中一个可能的原因是，Android在源码层级&lt;a href="http://androidxref.com/6.0.1_r10/xref/frameworks/av/media/libstagefright/ACodec.cpp"&gt;hardcode&lt;/a&gt;了profile的的设置：&lt;/p&gt;
-&lt;p&gt;&lt;code&gt;Java
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;```cpp
 // XXX
 if (h264type.eProfile != OMX_VIDEO_AVCProfileBaseline) {
-    ALOGW("Use baseline profile instead of %d for AVC recording",
+    ALOGW(&amp;quot;Use baseline profile instead of %d for AVC recording&amp;quot;,
         h264type.eProfile);
     h264type.eProfile = OMX_VIDEO_AVCProfileBaseline;
-}&lt;/code&gt;&lt;/p&gt;
+}
+```
+&lt;/pre&gt;&lt;/div&gt;
+
+
 &lt;p&gt;Android直到&lt;a href="http://androidxref.com/7.0.0_r1/xref/frameworks/av/media/libstagefright/ACodec.cpp"&gt;7.0&lt;/a&gt;之后才取消了这段地方的Hardcode&lt;/p&gt;
-&lt;p&gt;&lt;code&gt;Java
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;```Java
 if (h264type.eProfile == OMX_VIDEO_AVCProfileBaseline) {
     ....
 } else if (h264type.eProfile == OMX_VIDEO_AVCProfileMain ||
         h264type.eProfile == OMX_VIDEO_AVCProfileHigh) {
     .....
-}&lt;/code&gt;&lt;/p&gt;
+}
+```
+&lt;/pre&gt;&lt;/div&gt;
+
+
 &lt;p&gt;这个问题可以说间接导致了MediaCodec编码出来的视频质量偏低，同等码率下，难以获得跟软编码甚至iOS那样的视频质量。   &lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;16位对齐要求&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;16位对齐要求&lt;/li&gt;
+&lt;/ol&gt;
 &lt;p&gt;前面说到，MediaCodec这个API在设计的时候，过于贴近HAL层，这在很多Soc的实现上，是直接把传入MediaCodec的buffer，在不经过任何前置处理的情况下就直接送入了Soc中。而在编码h264视频流的时候，由于h264的编码块大小一般是16x16，于是乎在一开始设置视频的宽高的时候，如果设置了一个没有对齐16的大小，例如960x540，在某些cpu上，最终编码出来的视频就会直接&lt;strong&gt;花屏&lt;/strong&gt;！&lt;/p&gt;
 &lt;p&gt;很明显这还是因为厂商在实现这个API的时候，对传入的数据缺少校验以及前置处理导致的，目前来看，华为，三星的Soc出现这个问题会比较频繁，其他厂商的一些早期Soc也有这种问题，一般来说解决方法还是在设置视频宽高的时候，统一设置成对齐16位之后的大小就好了。&lt;/p&gt;
-&lt;/li&gt;
-&lt;/ol&gt;
 &lt;hr /&gt;
 &lt;h4&gt;FFMpeg+x264/openh264&lt;/h4&gt;
 &lt;p&gt;除了使用MediaCodec进行编码之外，另外一种比较流行的方案就是使用ffmpeg+x264/openh264进行软编码，ffmpeg是用于一些视频帧的预处理。这里主要是使用x264/openh264作为视频的编码器。&lt;/p&gt;
