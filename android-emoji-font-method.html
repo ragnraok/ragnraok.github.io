@@ -42,32 +42,32 @@
 <li>上述文章中作者提供了一个FontTools的扩展，叫做<code>sbix_code.zip</code>，<a href="http://www.kutilek.de/download/sbix_code.zip">下载</a>之后解压缩，将里面的文件复制到FontTools在python的site-packages目录下，如果是在OSX上，假设你使用的是python 2.7，那一般是在<code>/Library/Python/2.7/site-packages/FontTools</code>目录下。</li>
 <li>该作者还提供了一个使用的demo：<a href="http://www.kutilek.de/download/sbix_demo.zip">sbix_demo.zip</a>，解压缩之后编辑里面的<code>extractSbixImages.py</code>，修改如下：</li>
 </ul>
-<div class="highlight"><pre><span class="c">#! /usr/bin/env/python</span>
+<div class="highlight"><pre><span></span><span class="ch">#! /usr/bin/env/python</span>
 <span class="kn">from</span> <span class="nn">fontTools.ttLib</span> <span class="kn">import</span> <span class="n">TTFont</span>
 <span class="kn">from</span> <span class="nn">os.path</span> <span class="kn">import</span> <span class="n">exists</span><span class="p">,</span> <span class="n">join</span>
 <span class="kn">from</span> <span class="nn">os</span> <span class="kn">import</span> <span class="n">makedirs</span>
 
 <span class="k">def</span> <span class="nf">main</span><span class="p">():</span>
-    <span class="n">f</span> <span class="o">=</span> <span class="n">TTFont</span><span class="p">(</span><span class="s">&quot;Apple Color Emoji.ttf&quot;</span><span class="p">)</span>
+    <span class="n">f</span> <span class="o">=</span> <span class="n">TTFont</span><span class="p">(</span><span class="s2">&quot;Apple Color Emoji.ttf&quot;</span><span class="p">)</span>
 
-    <span class="k">if</span> <span class="n">f</span><span class="o">.</span><span class="n">has_key</span><span class="p">(</span><span class="s">&quot;sbix&quot;</span><span class="p">):</span>
-        <span class="n">sbix</span> <span class="o">=</span> <span class="n">f</span><span class="p">[</span><span class="s">&quot;sbix&quot;</span><span class="p">]</span>
+    <span class="k">if</span> <span class="n">f</span><span class="o">.</span><span class="n">has_key</span><span class="p">(</span><span class="s2">&quot;sbix&quot;</span><span class="p">):</span>
+        <span class="n">sbix</span> <span class="o">=</span> <span class="n">f</span><span class="p">[</span><span class="s2">&quot;sbix&quot;</span><span class="p">]</span>
         <span class="k">for</span> <span class="n">bs</span> <span class="ow">in</span> <span class="n">sbix</span><span class="o">.</span><span class="n">bitmapSets</span><span class="o">.</span><span class="n">itervalues</span><span class="p">():</span>
-            <span class="n">setpath</span> <span class="o">=</span> <span class="n">join</span><span class="p">(</span><span class="s">&quot;extracted&quot;</span><span class="p">,</span> <span class="s">&quot;set_</span><span class="si">%i</span><span class="s">&quot;</span> <span class="o">%</span> <span class="n">bs</span><span class="o">.</span><span class="kp">size</span><span class="p">)</span>
+            <span class="n">setpath</span> <span class="o">=</span> <span class="n">join</span><span class="p">(</span><span class="s2">&quot;extracted&quot;</span><span class="p">,</span> <span class="s2">&quot;set_</span><span class="si">%i</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">bs</span><span class="o">.</span><span class="n">size</span><span class="p">)</span>
             <span class="k">if</span> <span class="ow">not</span> <span class="n">exists</span><span class="p">(</span><span class="n">setpath</span><span class="p">):</span>
                 <span class="n">makedirs</span><span class="p">(</span><span class="n">setpath</span><span class="p">)</span>
 
-            <span class="k">print</span> <span class="s">&quot;Writing bitmap set to &lt;</span><span class="si">%s</span><span class="s">&gt;&quot;</span> <span class="o">%</span> <span class="n">setpath</span>
+            <span class="k">print</span> <span class="s2">&quot;Writing bitmap set to &lt;</span><span class="si">%s</span><span class="s2">&gt;&quot;</span> <span class="o">%</span> <span class="n">setpath</span>
             <span class="k">for</span> <span class="n">bm</span> <span class="ow">in</span> <span class="n">bs</span><span class="o">.</span><span class="n">bitmaps</span><span class="o">.</span><span class="n">itervalues</span><span class="p">():</span>
                 <span class="k">if</span> <span class="n">bm</span><span class="o">.</span><span class="n">imageFormatTag</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
-                    <span class="n">filename</span> <span class="o">=</span> <span class="n">join</span><span class="p">(</span><span class="n">setpath</span><span class="p">,</span> <span class="s">&quot;</span><span class="si">%s</span><span class="s">.png&quot;</span> <span class="o">%</span> <span class="n">bm</span><span class="o">.</span><span class="n">glyphName</span><span class="p">)</span>
-                    <span class="n">pf</span> <span class="o">=</span> <span class="nb">file</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="s">&quot;wb&quot;</span><span class="p">)</span>
+                    <span class="n">filename</span> <span class="o">=</span> <span class="n">join</span><span class="p">(</span><span class="n">setpath</span><span class="p">,</span> <span class="s2">&quot;</span><span class="si">%s</span><span class="s2">.png&quot;</span> <span class="o">%</span> <span class="n">bm</span><span class="o">.</span><span class="n">glyphName</span><span class="p">)</span>
+                    <span class="n">pf</span> <span class="o">=</span> <span class="nb">file</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="s2">&quot;wb&quot;</span><span class="p">)</span>
                     <span class="n">pf</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">bm</span><span class="o">.</span><span class="n">imageData</span><span class="p">)</span>
                     <span class="n">pf</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
     <span class="k">else</span><span class="p">:</span>
-        <span class="k">print</span> <span class="s">&quot;Font has no sbix table.&quot;</span>
+        <span class="k">print</span> <span class="s2">&quot;Font has no sbix table.&quot;</span>
 
-<span class="k">if</span> <span class="n">__name__</span> <span class="o">==</span> <span class="s">&quot;__main__&quot;</span><span class="p">:</span>
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
     <span class="n">main</span><span class="p">()</span>
 </pre></div>
 

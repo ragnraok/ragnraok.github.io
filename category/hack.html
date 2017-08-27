@@ -35,7 +35,7 @@
                 <header> <h2 class="entry-title"><a href="http://ragnraok.github.io/using-jdk-parser.html" rel="bookmark" title="Permalink to 使用JDK的Parser来解析Java源代码">使用JDK的Parser来解析Java源代码</a></h2> </header>
                 <div class="entry-content"> <p>在JDK中，自带了一套相关的编译API，可以在Java中发起编译流程，解析Java源文件然后获取其语法树，在JDK的<code>tools.jar</code>（OSX下可以在/Library/Java/JavaVirtualMachines/jdk_version/Contents/Home/lib中找到）中包含着这整套API，但是这却不是Oracle和OpenJDK发布中的公开API，因此对于这套API，并没有官方的正式文档来进行说明。但是，也有不少项目利用了这套API来做了不少事情，例如大名鼎鼎的<a href="https://github.com/rzwitserloot/lombok.git">lombok</a>使用了这套API在Annotation Processing阶段修改了源代码中的语法树，最终结果相当于直接在源文件中插入了新的代码！</p>
 <p>由于这套API目前缺少相关文档，使用起来比较困难，例如，解析源代码中的所有变量，并打印出来：</p>
-<div class="highlight"><pre><span class="kr">public</span> <span class="kr">class</span> <span class="nx">JavaParser</span> <span class="p">{</span>
+<div class="highlight"><pre><span></span><span class="kr">public</span> <span class="kr">class</span> <span class="nx">JavaParser</span> <span class="p">{</span>
 
     <span class="kr">private</span> <span class="kr">static</span> <span class="kr">final</span> <span class="nb">String</span> <span class="nx">path</span> <span class="o">=</span> <span class="s2">&quot;User.java&quot;</span><span class="p">;</span>
 

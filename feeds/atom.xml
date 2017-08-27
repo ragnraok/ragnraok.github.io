@@ -1,5 +1,223 @@
 <?xml version="1.0" encoding="utf-8"?>
-<feed xmlns="http://www.w3.org/2005/Atom"><title>Ragnarok Note</title><link href="http://ragnraok.github.io/" rel="alternate"></link><link href="http://ragnraok.github.io/feeds/atom.xml" rel="self"></link><id>http://ragnraok.github.io/</id><updated>2016-05-30T00:00:00+08:00</updated><entry><title>如何获取Android系统中申请对象的信息</title><link href="http://ragnraok.github.io/get_android_alloc_object_info.html" rel="alternate"></link><published>2016-05-30T00:00:00+08:00</published><author><name>Ragnarok Zhou</name></author><id>tag:ragnraok.github.io,2016-05-30:get_android_alloc_object_info.html</id><summary type="html">&lt;p&gt;最近一直在做有关内存方面的优化工作，在做优化的过程，除了关注内存的申请量以及GC的情况之外，我们经常需要想方法找出是那些对象占用了大量内存，以及他们是如何导致GC的，这意味着我们需要获取对象申请的信息（大小，类型，堆栈等），我们这篇文章来介绍下几种获取对象申请信息的方法&lt;/p&gt;
+<feed xmlns="http://www.w3.org/2005/Atom"><title>Ragnarok Note</title><link href="http://ragnraok.github.io/" rel="alternate"></link><link href="http://ragnraok.github.io/feeds/atom.xml" rel="self"></link><id>http://ragnraok.github.io/</id><updated>2017-08-27T00:00:00+08:00</updated><entry><title>谈谈关于Android视频编码的那些坑</title><link href="http://ragnraok.github.io/android_video_record.html" rel="alternate"></link><published>2017-08-27T00:00:00+08:00</published><author><name>Ragnarok Zhou</name></author><id>tag:ragnraok.github.io,2017-08-27:android_video_record.html</id><summary type="html">&lt;p&gt;Android的视频相关的开发，大概一直是整个Android生态，以及Android API中，最为分裂以及兼容性问题最为突出的一部分。摄像头，以及视频编码相关的API，Google一直对这方面的控制力非常差，导致不同厂商对这两个API的实现有不少差异，而且从API的设计来看，一直以来优化也相当有限，甚至有人认为这是“Android上最难用的API之一”&lt;/p&gt;
+&lt;p&gt;以微信为例，我们录制一个540p的mp4文件，对于Android来说，大体上是遵循这么一个流程：&lt;/p&gt;
+&lt;hr /&gt;
+&lt;p&gt;&lt;img alt="" src="static/images/encoderProcess.png" /&gt;&lt;/p&gt;
+&lt;hr /&gt;
+&lt;p&gt;大体上就是从摄像头输出的YUV帧经过预处理之后，送入编码器，获得编码好的h264视频流。&lt;/p&gt;
+&lt;p&gt;上面只是针对视频流的编码，另外还需要对音频流单独录制，最后再将视频流和音频流进行合成出最终视频。&lt;/p&gt;
+&lt;p&gt;这篇文章主要将会对视频流的编码中两个常见问题进行分析：&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;视频编码器的选择（硬编 or 软编）？&lt;/li&gt;
+&lt;li&gt;如何对摄像头输出的YUV帧进行快速预处理（镜像，缩放，旋转）？&lt;/li&gt;
+&lt;/ol&gt;
+&lt;hr /&gt;
+&lt;h3&gt;视频编码器的选择&lt;/h3&gt;
+&lt;p&gt;对于录制视频的需求，不少app都需要对每一帧数据进行单独处理，因此很少会直接用到&lt;code&gt;MediaRecorder&lt;/code&gt;来直接录取视频，一般来说，会有这么两个选择&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;MediaCodec&lt;/li&gt;
+&lt;li&gt;FFMpeg+x264/openh264&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;我们来逐个解析一下&lt;/p&gt;
+&lt;hr /&gt;
+&lt;h4&gt;MediaCodec&lt;/h4&gt;
+&lt;p&gt;MediaCodec是API 16之后Google推出的用于音视频编解码的一套偏底层的API，可以直接利用硬件加速进行视频的编解码。调用的时候需要先初始化MediaCodec作为视频的编码器，然后只需要不停传入原始的YUV数据进入编码器就可以直接输出编码好的h264流，整个API设计模型来看，就是同时包含了输入端和输出端的两条队列：&lt;/p&gt;
+&lt;p&gt;&lt;img alt="" src="static/images/mediacodec_buffers.png" /&gt;&lt;/p&gt;
+&lt;p&gt;因此，作为编码器，输入端队列存放的就是原始YUV数据，输出端队列输出的就是编码好的h264流，作为解码器则对应相反。在调用的时候，MediaCodec提供了同步和异步两种调用方式，但是异步使用Callback的方式是在API 21之后才加入的，以同步调用为例，一般来说调用方式大概是这样（摘自官方例子）：&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt; &lt;span class="n"&gt;MediaCodec&lt;/span&gt; &lt;span class="n"&gt;codec&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;MediaCodec&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="na"&gt;createByCodecName&lt;/span&gt;&lt;span class="o"&gt;(&lt;/span&gt;&lt;span class="n"&gt;name&lt;/span&gt;&lt;span class="o"&gt;);&lt;/span&gt;
+ &lt;span class="n"&gt;codec&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="na"&gt;configure&lt;/span&gt;&lt;span class="o"&gt;(&lt;/span&gt;&lt;span class="n"&gt;format&lt;/span&gt;&lt;span class="o"&gt;,&lt;/span&gt; &lt;span class="err"&gt;…&lt;/span&gt;&lt;span class="o"&gt;);&lt;/span&gt;
+ &lt;span class="n"&gt;MediaFormat&lt;/span&gt; &lt;span class="n"&gt;outputFormat&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;codec&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="na"&gt;getOutputFormat&lt;/span&gt;&lt;span class="o"&gt;();&lt;/span&gt; &lt;span class="c1"&gt;// option B&lt;/span&gt;
+ &lt;span class="n"&gt;codec&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="na"&gt;start&lt;/span&gt;&lt;span class="o"&gt;();&lt;/span&gt;
+ &lt;span class="k"&gt;for&lt;/span&gt; &lt;span class="o"&gt;(;;)&lt;/span&gt; &lt;span class="o"&gt;{&lt;/span&gt;
+   &lt;span class="kt"&gt;int&lt;/span&gt; &lt;span class="n"&gt;inputBufferId&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;codec&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="na"&gt;dequeueInputBuffer&lt;/span&gt;&lt;span class="o"&gt;(&lt;/span&gt;&lt;span class="n"&gt;timeoutUs&lt;/span&gt;&lt;span class="o"&gt;);&lt;/span&gt;
+   &lt;span class="k"&gt;if&lt;/span&gt; &lt;span class="o"&gt;(&lt;/span&gt;&lt;span class="n"&gt;inputBufferId&lt;/span&gt; &lt;span class="o"&gt;&amp;gt;=&lt;/span&gt; &lt;span class="mi"&gt;0&lt;/span&gt;&lt;span class="o"&gt;)&lt;/span&gt; &lt;span class="o"&gt;{&lt;/span&gt;
+     &lt;span class="n"&gt;ByteBuffer&lt;/span&gt; &lt;span class="n"&gt;inputBuffer&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;codec&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="na"&gt;getInputBuffer&lt;/span&gt;&lt;span class="o"&gt;(&lt;/span&gt;&lt;span class="err"&gt;…&lt;/span&gt;&lt;span class="o"&gt;);&lt;/span&gt;
+     &lt;span class="c1"&gt;// fill inputBuffer with valid data&lt;/span&gt;
+     &lt;span class="err"&gt;…&lt;/span&gt;
+     &lt;span class="n"&gt;codec&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="na"&gt;queueInputBuffer&lt;/span&gt;&lt;span class="o"&gt;(&lt;/span&gt;&lt;span class="n"&gt;inputBufferId&lt;/span&gt;&lt;span class="o"&gt;,&lt;/span&gt; &lt;span class="err"&gt;…&lt;/span&gt;&lt;span class="o"&gt;);&lt;/span&gt;
+   &lt;span class="o"&gt;}&lt;/span&gt;
+   &lt;span class="kt"&gt;int&lt;/span&gt; &lt;span class="n"&gt;outputBufferId&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;codec&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="na"&gt;dequeueOutputBuffer&lt;/span&gt;&lt;span class="o"&gt;(&lt;/span&gt;&lt;span class="err"&gt;…&lt;/span&gt;&lt;span class="o"&gt;);&lt;/span&gt;
+   &lt;span class="k"&gt;if&lt;/span&gt; &lt;span class="o"&gt;(&lt;/span&gt;&lt;span class="n"&gt;outputBufferId&lt;/span&gt; &lt;span class="o"&gt;&amp;gt;=&lt;/span&gt; &lt;span class="mi"&gt;0&lt;/span&gt;&lt;span class="o"&gt;)&lt;/span&gt; &lt;span class="o"&gt;{&lt;/span&gt;
+     &lt;span class="n"&gt;ByteBuffer&lt;/span&gt; &lt;span class="n"&gt;outputBuffer&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;codec&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="na"&gt;getOutputBuffer&lt;/span&gt;&lt;span class="o"&gt;(&lt;/span&gt;&lt;span class="n"&gt;outputBufferId&lt;/span&gt;&lt;span class="o"&gt;);&lt;/span&gt;
+     &lt;span class="n"&gt;MediaFormat&lt;/span&gt; &lt;span class="n"&gt;bufferFormat&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;codec&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="na"&gt;getOutputFormat&lt;/span&gt;&lt;span class="o"&gt;(&lt;/span&gt;&lt;span class="n"&gt;outputBufferId&lt;/span&gt;&lt;span class="o"&gt;);&lt;/span&gt; &lt;span class="c1"&gt;// option A&lt;/span&gt;
+     &lt;span class="c1"&gt;// bufferFormat is identical to outputFormat&lt;/span&gt;
+     &lt;span class="c1"&gt;// outputBuffer is ready to be processed or rendered.&lt;/span&gt;
+     &lt;span class="err"&gt;…&lt;/span&gt;
+     &lt;span class="n"&gt;codec&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="na"&gt;releaseOutputBuffer&lt;/span&gt;&lt;span class="o"&gt;(&lt;/span&gt;&lt;span class="n"&gt;outputBufferId&lt;/span&gt;&lt;span class="o"&gt;,&lt;/span&gt; &lt;span class="err"&gt;…&lt;/span&gt;&lt;span class="o"&gt;);&lt;/span&gt;
+   &lt;span class="o"&gt;}&lt;/span&gt; &lt;span class="k"&gt;else&lt;/span&gt; &lt;span class="k"&gt;if&lt;/span&gt; &lt;span class="o"&gt;(&lt;/span&gt;&lt;span class="n"&gt;outputBufferId&lt;/span&gt; &lt;span class="o"&gt;==&lt;/span&gt; &lt;span class="n"&gt;MediaCodec&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="na"&gt;INFO_OUTPUT_FORMAT_CHANGED&lt;/span&gt;&lt;span class="o"&gt;)&lt;/span&gt; &lt;span class="o"&gt;{&lt;/span&gt;
+     &lt;span class="c1"&gt;// Subsequent data will conform to new format.&lt;/span&gt;
+     &lt;span class="c1"&gt;// Can ignore if using getOutputFormat(outputBufferId)&lt;/span&gt;
+     &lt;span class="n"&gt;outputFormat&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;codec&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="na"&gt;getOutputFormat&lt;/span&gt;&lt;span class="o"&gt;();&lt;/span&gt; &lt;span class="c1"&gt;// option B&lt;/span&gt;
+   &lt;span class="o"&gt;}&lt;/span&gt;
+ &lt;span class="o"&gt;}&lt;/span&gt;
+ &lt;span class="n"&gt;codec&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="na"&gt;stop&lt;/span&gt;&lt;span class="o"&gt;();&lt;/span&gt;
+ &lt;span class="n"&gt;codec&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="na"&gt;release&lt;/span&gt;&lt;span class="o"&gt;();&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;p&gt;简单解释一下，通过&lt;code&gt;getInputBuffers&lt;/code&gt;获取输入队列，然后调用&lt;code&gt;dequeueInputBuffer&lt;/code&gt;获取输入队列空闲数组下标，注意&lt;code&gt;dequeueOutputBuffer&lt;/code&gt;会有几个特殊的返回值表示当前编解码状态的变化，然后再通过&lt;code&gt;queueInputBuffer&lt;/code&gt;把原始YUV数据送入编码器，而在输出队列端同样通过&lt;code&gt;getOutputBuffers&lt;/code&gt;和&lt;code&gt;dequeueOutputBuffer&lt;/code&gt;获取输出的h264流，处理完输出数据之后，需要通过&lt;code&gt;releaseOutputBuffer&lt;/code&gt;把输出buffer还给系统，重新放到输出队列中。&lt;br /&gt;
+关于MediaCodec更复杂的使用例子，可以参照下CTS测试里面的使用方式：&lt;a href="https://android.googlesource.com/platform/cts/+/jb-mr2-release/tests/tests/media/src/android/media/cts/EncodeDecodeTest.java"&gt;EncodeDecodeTest.java&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;从上面例子来看的确是非常原始的API，由于MediaCodec底层是直接调用了手机平台硬件的编解码能力，所以速度非常快，但是因为Google对整个Android硬件生态的掌控力非常弱，所以这个API有很多问题：&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;
+&lt;p&gt;颜色格式问题&lt;/p&gt;
+&lt;p&gt;MediaCodec在初始化的时候，在&lt;code&gt;configure&lt;/code&gt;的时候，需要传入一个MediaFormat对象，当作为编码器使用的时候，我们一般需要在MediaFormat中指定视频的宽高，帧率，码率，I帧间隔等基本信息，除此之外，还有一个重要的信息就是，指定编码器接受的YUV帧的颜色格式。这个是因为由于YUV根据其采样比例，UV分量的排列顺序有很多种不同的颜色格式，而对于Android的摄像头在&lt;code&gt;onPreviewFrame&lt;/code&gt;输出的YUV帧格式，如果没有配置任何参数的情况下，基本上都是NV21格式，但Google对MediaCodec的API在设计和规范的时候，显得很不厚道，过于贴近Android的HAL层了，导致了NV21格式并不是所有机器的MediaCodec都支持这种格式作为编码器的输入格式！
+因此，在初始化MediaCodec的时候，我们需要通过&lt;code&gt;codecInfo.getCapabilitiesForType&lt;/code&gt;来查询机器上的MediaCodec实现具体支持哪些YUV格式作为输入格式，一般来说，起码在4.4+的系统上，这两种格式在大部分机器都有支持：&lt;/p&gt;
+&lt;p&gt;&lt;code&gt;Java
+MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420Planar
+MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420SemiPlanar&lt;/code&gt;&lt;/p&gt;
+&lt;p&gt;两种格式分别是YUV420P和NV21，如果机器上只支持YUV420P格式的情况下，则需要先将摄像头输出的NV21格式先转换成YUV420P，才能送入编码器进行编码，否则最终出来的视频就会花屏，或者颜色出现错乱&lt;/p&gt;
+&lt;p&gt;这个算是一个不大不小的坑，基本上用上了MediaCodec进行视频编码都会遇上这个问题&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;编码器支持特性相当有限&lt;/p&gt;
+&lt;p&gt;如果使用MediaCodec来编码H264视频流，对于H264格式来说，会有一些针对压缩率以及码率相关的视频质量设置，典型的诸如Profile(baseline, main, high)，Profile Level, Bitrate mode(CBR, CQ, VBR)，合理配置这些参数可以让我们在同等的码率下，获得更高的压缩率，从而提升视频的质量，Android也提供了对应的API进行设置，可以设置到MediaFormat中这些设置项:&lt;/p&gt;
+&lt;p&gt;&lt;code&gt;Java
+MediaFormat.KEY_BITRATE_MODE
+MediaFormat.KEY_PROFILE
+MediaFormat.KEY_LEVEL&lt;/code&gt;&lt;/p&gt;
+&lt;p&gt;但问题是，对于Profile，Level, Bitrate mode这些设置，在大部分手机上都是不支持的，即使是设置了最终也不会生效，例如设置了Profile为high，最后出来的视频依然还会是Baseline，Shit....&lt;/p&gt;
+&lt;p&gt;这个问题，在7.0以下的机器几乎是必现的，其中一个可能的原因是，Android在源码层级&lt;a href="http://androidxref.com/6.0.1_r10/xref/frameworks/av/media/libstagefright/ACodec.cpp"&gt;hardcode&lt;/a&gt;了profile的的设置：&lt;/p&gt;
+&lt;p&gt;&lt;code&gt;Java
+// XXX
+if (h264type.eProfile != OMX_VIDEO_AVCProfileBaseline) {
+    ALOGW("Use baseline profile instead of %d for AVC recording",
+        h264type.eProfile);
+    h264type.eProfile = OMX_VIDEO_AVCProfileBaseline;
+}&lt;/code&gt;&lt;/p&gt;
+&lt;p&gt;Android直到&lt;a href="http://androidxref.com/7.0.0_r1/xref/frameworks/av/media/libstagefright/ACodec.cpp"&gt;7.0&lt;/a&gt;之后才取消了这段地方的Hardcode&lt;/p&gt;
+&lt;p&gt;&lt;code&gt;Java
+if (h264type.eProfile == OMX_VIDEO_AVCProfileBaseline) {
+    ....
+} else if (h264type.eProfile == OMX_VIDEO_AVCProfileMain ||
+        h264type.eProfile == OMX_VIDEO_AVCProfileHigh) {
+    .....
+}&lt;/code&gt;&lt;/p&gt;
+&lt;p&gt;这个问题可以说间接导致了MediaCodec编码出来的视频质量偏低，同等码率下，难以获得跟软编码甚至iOS那样的视频质量。   &lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;16位对齐要求&lt;/p&gt;
+&lt;p&gt;前面说到，MediaCodec这个API在设计的时候，过于贴近HAL层，这在很多Soc的实现上，是直接把传入MediaCodec的buffer，在不经过任何前置处理的情况下就直接送入了Soc中。而在编码h264视频流的时候，由于h264的编码块大小一般是16x16，于是乎在一开始设置视频的宽高的时候，如果设置了一个没有对齐16的大小，例如960x540，在某些cpu上，最终编码出来的视频就会直接&lt;strong&gt;花屏&lt;/strong&gt;！&lt;/p&gt;
+&lt;p&gt;很明显这还是因为厂商在实现这个API的时候，对传入的数据缺少校验以及前置处理导致的，目前来看，华为，三星的Soc出现这个问题会比较频繁，其他厂商的一些早期Soc也有这种问题，一般来说解决方法还是在设置视频宽高的时候，统一设置成对齐16位之后的大小就好了。&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ol&gt;
+&lt;hr /&gt;
+&lt;h4&gt;FFMpeg+x264/openh264&lt;/h4&gt;
+&lt;p&gt;除了使用MediaCodec进行编码之外，另外一种比较流行的方案就是使用ffmpeg+x264/openh264进行软编码，ffmpeg是用于一些视频帧的预处理。这里主要是使用x264/openh264作为视频的编码器。&lt;/p&gt;
+&lt;p&gt;x264基本上被认为是当今市面上最快的商用视频编码器，而且基本上所有h264的特性都支持，通过合理配置各种参数还是能够得到较好的压缩率和编码速度的，限于篇幅，这里不再阐述h264的参数配置，有兴趣可以看下&lt;a href="https://www.nmm-hd.org/d/index.php?title=X264%E4%BD%BF%E7%94%A8%E4%BB%8B%E7%BB%8D&amp;amp;variant=zh-cn"&gt;这里&lt;/a&gt;和&lt;a href="http://www.cnblogs.com/wainiwann/p/5647521.html"&gt;这里&lt;/a&gt;对x264编码参数的调优。&lt;/p&gt;
+&lt;p&gt;&lt;a href="https://github.com/cisco/openh264"&gt;openh264&lt;/a&gt;则是由思科开源的另外一个h264编码器，项目在2013年开源，对比起x264来说略显年轻，不过由于思科支付满了h264的年度专利费，所以对于外部用户来说，相当于可以直接免费使用了，另外，firefox直接内置了openh264，作为其在webRTC中的视频的编解码器使用。&lt;/p&gt;
+&lt;p&gt;但对比起x264，openh264在h264高级特性的支持比较差：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Profile只支持到baseline, level 5.2&lt;/li&gt;
+&lt;li&gt;多线程编码只支持slice based，不支持frame based的多线程编码&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;从编码效率上来看，openh264的速度也并不会比x264快，不过其最大的好处，还是能够直接免费使用吧。&lt;/p&gt;
+&lt;h4&gt;软硬编对比&lt;/h4&gt;
+&lt;p&gt;从上面的分析来看，硬编的好处主要在于速度快，而且系统自带不需要引入外部的库，但是特性支持有限，而且硬编的压缩率一般偏低，而对于软编码来说，虽然速度较慢，但是压缩率比较高，而且支持的H264特性也会比硬编码多很多，相对来说比较可控。就可用性而言，在4.4+的系统上，MediaCodec的可用性是能够基本保证的，但是不同等级的机器的编码器能力会有不少差别，建议可以根据机器的配置，选择不同的编码器配置。&lt;/p&gt;
+&lt;hr /&gt;
+&lt;h3&gt;YUV帧的预处理&lt;/h3&gt;
+&lt;p&gt;根据最开始给出的流程，在送入编码器之前，我们需要先对摄像头输出的YUV帧进行一些前置处理&lt;/p&gt;
+&lt;p&gt;1.缩放&lt;/p&gt;
+&lt;p&gt;如果设置了camera的预览大小为1080p的情况下，在&lt;code&gt;onPreviewFrame&lt;/code&gt;中输出的YUV帧直接就是1920x1080的大小，如果需要编码跟这个大小不一样的视频，我们就需要在录制的过程中，&lt;strong&gt;实时&lt;/strong&gt;的对YUV帧进行缩放。&lt;/p&gt;
+&lt;p&gt;以微信为例，摄像头预览1080p的数据，需要编码960x540大小的视频。&lt;/p&gt;
+&lt;p&gt;最为常见的做法是使用ffmpeg这种的sws_scale函数进行直接缩放，效果/性能比较好的一般是选择SWS_FAST_BILINEAR算法：&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="n"&gt;mScaleYuvCtxPtr&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;sws_getContext&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;
+                   &lt;span class="n"&gt;srcWidth&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;
+                   &lt;span class="n"&gt;srcHeight&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;
+                   &lt;span class="n"&gt;AV_PIX_FMT_NV21&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;
+                   &lt;span class="n"&gt;dstWidth&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;
+                   &lt;span class="n"&gt;dstHeight&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;
+                   &lt;span class="n"&gt;AV_PIX_FMT_NV21&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;
+                   &lt;span class="n"&gt;SWS_FAST_BILINEAR&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="nb"&gt;NULL&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="nb"&gt;NULL&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="nb"&gt;NULL&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
+&lt;span class="n"&gt;sws_scale&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;mScaleYuvCtxPtr&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;
+                    &lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="k"&gt;const&lt;/span&gt; &lt;span class="kt"&gt;uint8_t&lt;/span&gt;&lt;span class="o"&gt;*&lt;/span&gt; &lt;span class="k"&gt;const&lt;/span&gt; &lt;span class="o"&gt;*&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="n"&gt;srcAvPicture&lt;/span&gt;&lt;span class="o"&gt;-&amp;gt;&lt;/span&gt;&lt;span class="n"&gt;data&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;
+                    &lt;span class="n"&gt;srcAvPicture&lt;/span&gt;&lt;span class="o"&gt;-&amp;gt;&lt;/span&gt;&lt;span class="n"&gt;linesize&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="mi"&gt;0&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;srcHeight&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;
+                    &lt;span class="n"&gt;dstAvPicture&lt;/span&gt;&lt;span class="o"&gt;-&amp;gt;&lt;/span&gt;&lt;span class="n"&gt;data&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;dstAvPicture&lt;/span&gt;&lt;span class="o"&gt;-&amp;gt;&lt;/span&gt;&lt;span class="n"&gt;linesize&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;p&gt;在nexus 6p上，直接使用ffmpeg来进行缩放的时间基本上都需要&lt;strong&gt;40ms+&lt;/strong&gt;，对于我们需要录制30fps的来说，每帧处理时间最多就30ms左右，如果光是缩放就消耗了如此多的时间，基本上录制出来的视频只能在15fps上下了。&lt;/p&gt;
+&lt;p&gt;很明显，直接使用ffmpeg进行缩放是在是太慢了，不得不说swsscale简直就是ffmpeg里面的渣渣，在对比了几种业界常用的算之后，我们最后考虑实现使用这种快速缩放的算法：&lt;/p&gt;
+&lt;p&gt;&lt;img alt="" src="static/images/frame_compress.png" /&gt;&lt;/p&gt;
+&lt;p&gt;我们选择一种叫做的&lt;strong&gt;局部均值&lt;/strong&gt;算法，前后两行四个临近点算出最终图片的四个像素点，对于源图片的每行像素，我们可以使用Neon直接实现，以缩放Y分量为例：&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;    &lt;span class="nf"&gt;const&lt;/span&gt; &lt;span class="no"&gt;uint8&lt;/span&gt;&lt;span class="p"&gt;*&lt;/span&gt; &lt;span class="no"&gt;src_next&lt;/span&gt; &lt;span class="err"&gt;=&lt;/span&gt; &lt;span class="no"&gt;src_ptr&lt;/span&gt; &lt;span class="err"&gt;+&lt;/span&gt; &lt;span class="no"&gt;src_stride&lt;/span&gt;&lt;span class="c"&gt;;&lt;/span&gt;
+    &lt;span class="no"&gt;asm&lt;/span&gt; &lt;span class="no"&gt;volatile&lt;/span&gt; &lt;span class="p"&gt;(&lt;/span&gt;
+      &lt;span class="err"&gt;&amp;quot;1:&lt;/span&gt;                                          &lt;span class="err"&gt;\&lt;/span&gt;&lt;span class="nf"&gt;n&lt;/span&gt;&lt;span class="err"&gt;&amp;quot;&lt;/span&gt;    
+        &lt;span class="err"&gt;&amp;quot;&lt;/span&gt;&lt;span class="no"&gt;vld4.8&lt;/span&gt;     &lt;span class="err"&gt;{&lt;/span&gt;&lt;span class="no"&gt;d0&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="no"&gt;d1&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="no"&gt;d2&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="no"&gt;d3&lt;/span&gt;&lt;span class="err"&gt;}&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="p"&gt;[&lt;/span&gt;&lt;span class="err"&gt;%&lt;/span&gt;&lt;span class="mi"&gt;0&lt;/span&gt;&lt;span class="p"&gt;]!&lt;/span&gt;        &lt;span class="err"&gt;\&lt;/span&gt;&lt;span class="no"&gt;n&lt;/span&gt;&lt;span class="err"&gt;&amp;quot;&lt;/span&gt;
+        &lt;span class="err"&gt;&amp;quot;&lt;/span&gt;&lt;span class="nf"&gt;vld4.8&lt;/span&gt;     &lt;span class="err"&gt;{&lt;/span&gt;&lt;span class="no"&gt;d4&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="no"&gt;d5&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="no"&gt;d6&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="no"&gt;d7&lt;/span&gt;&lt;span class="err"&gt;}&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="p"&gt;[&lt;/span&gt;&lt;span class="err"&gt;%&lt;/span&gt;&lt;span class="mi"&gt;1&lt;/span&gt;&lt;span class="p"&gt;]!&lt;/span&gt;        &lt;span class="err"&gt;\&lt;/span&gt;&lt;span class="no"&gt;n&lt;/span&gt;&lt;span class="err"&gt;&amp;quot;&lt;/span&gt;
+        &lt;span class="err"&gt;&amp;quot;&lt;/span&gt;&lt;span class="nf"&gt;subs&lt;/span&gt;       &lt;span class="err"&gt;%&lt;/span&gt;&lt;span class="mi"&gt;3&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="err"&gt;%&lt;/span&gt;&lt;span class="mi"&gt;3&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="c"&gt;#16                    \n&amp;quot;  // 16 processed per loop&lt;/span&gt;
+
+        &lt;span class="err"&gt;&amp;quot;&lt;/span&gt;&lt;span class="nf"&gt;vrhadd.u8&lt;/span&gt;   &lt;span class="no"&gt;d0&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="no"&gt;d0&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="no"&gt;d1&lt;/span&gt;                    &lt;span class="err"&gt;\&lt;/span&gt;&lt;span class="no"&gt;n&lt;/span&gt;&lt;span class="err"&gt;&amp;quot;&lt;/span&gt;
+        &lt;span class="err"&gt;&amp;quot;&lt;/span&gt;&lt;span class="nf"&gt;vrhadd.u8&lt;/span&gt;   &lt;span class="no"&gt;d4&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="no"&gt;d4&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="no"&gt;d5&lt;/span&gt;                    &lt;span class="err"&gt;\&lt;/span&gt;&lt;span class="no"&gt;n&lt;/span&gt;&lt;span class="err"&gt;&amp;quot;&lt;/span&gt;
+        &lt;span class="err"&gt;&amp;quot;&lt;/span&gt;&lt;span class="nf"&gt;vrhadd.u8&lt;/span&gt;   &lt;span class="no"&gt;d0&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="no"&gt;d0&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="no"&gt;d4&lt;/span&gt;                    &lt;span class="err"&gt;\&lt;/span&gt;&lt;span class="no"&gt;n&lt;/span&gt;&lt;span class="err"&gt;&amp;quot;&lt;/span&gt;
+
+        &lt;span class="err"&gt;&amp;quot;&lt;/span&gt;&lt;span class="nf"&gt;vrhadd.u8&lt;/span&gt;   &lt;span class="no"&gt;d2&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="no"&gt;d2&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="no"&gt;d3&lt;/span&gt;                    &lt;span class="err"&gt;\&lt;/span&gt;&lt;span class="no"&gt;n&lt;/span&gt;&lt;span class="err"&gt;&amp;quot;&lt;/span&gt;
+        &lt;span class="err"&gt;&amp;quot;&lt;/span&gt;&lt;span class="nf"&gt;vrhadd.u8&lt;/span&gt;   &lt;span class="no"&gt;d6&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="no"&gt;d6&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="no"&gt;d7&lt;/span&gt;                    &lt;span class="err"&gt;\&lt;/span&gt;&lt;span class="no"&gt;n&lt;/span&gt;&lt;span class="err"&gt;&amp;quot;&lt;/span&gt;
+        &lt;span class="err"&gt;&amp;quot;&lt;/span&gt;&lt;span class="nf"&gt;vrhadd.u8&lt;/span&gt;   &lt;span class="no"&gt;d2&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="no"&gt;d2&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="no"&gt;d6&lt;/span&gt;                    &lt;span class="err"&gt;\&lt;/span&gt;&lt;span class="no"&gt;n&lt;/span&gt;&lt;span class="err"&gt;&amp;quot;&lt;/span&gt;
+
+        &lt;span class="err"&gt;&amp;quot;&lt;/span&gt;&lt;span class="nf"&gt;vst2.8&lt;/span&gt;     &lt;span class="err"&gt;{&lt;/span&gt;&lt;span class="no"&gt;d0&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="no"&gt;d2&lt;/span&gt;&lt;span class="err"&gt;}&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="p"&gt;[&lt;/span&gt;&lt;span class="err"&gt;%&lt;/span&gt;&lt;span class="mi"&gt;2&lt;/span&gt;&lt;span class="p"&gt;]!&lt;/span&gt;                    &lt;span class="err"&gt;\&lt;/span&gt;&lt;span class="no"&gt;n&lt;/span&gt;&lt;span class="err"&gt;&amp;quot;&lt;/span&gt;  &lt;span class="err"&gt;//&lt;/span&gt; &lt;span class="no"&gt;store&lt;/span&gt; &lt;span class="no"&gt;odd&lt;/span&gt; &lt;span class="no"&gt;pixels&lt;/span&gt;
+
+        &lt;span class="err"&gt;&amp;quot;&lt;/span&gt;&lt;span class="nf"&gt;bgt&lt;/span&gt;        &lt;span class="mi"&gt;1&lt;/span&gt;&lt;span class="no"&gt;b&lt;/span&gt;                             &lt;span class="err"&gt;\&lt;/span&gt;&lt;span class="no"&gt;n&lt;/span&gt;&lt;span class="err"&gt;&amp;quot;&lt;/span&gt;
+      &lt;span class="err"&gt;:&lt;/span&gt; &lt;span class="err"&gt;&amp;quot;+&lt;/span&gt;&lt;span class="nf"&gt;r&lt;/span&gt;&lt;span class="err"&gt;&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="no"&gt;src_ptr&lt;/span&gt;&lt;span class="p"&gt;),&lt;/span&gt;          &lt;span class="err"&gt;//&lt;/span&gt; &lt;span class="err"&gt;%&lt;/span&gt;&lt;span class="mi"&gt;0&lt;/span&gt;
+        &lt;span class="err"&gt;&amp;quot;+&lt;/span&gt;&lt;span class="nf"&gt;r&lt;/span&gt;&lt;span class="err"&gt;&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="no"&gt;src_next&lt;/span&gt;&lt;span class="p"&gt;),&lt;/span&gt;         &lt;span class="err"&gt;//&lt;/span&gt; &lt;span class="err"&gt;%&lt;/span&gt;&lt;span class="mi"&gt;1&lt;/span&gt;
+        &lt;span class="err"&gt;&amp;quot;+&lt;/span&gt;&lt;span class="nf"&gt;r&lt;/span&gt;&lt;span class="err"&gt;&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="no"&gt;dst&lt;/span&gt;&lt;span class="p"&gt;),&lt;/span&gt;              &lt;span class="err"&gt;//&lt;/span&gt; &lt;span class="err"&gt;%&lt;/span&gt;&lt;span class="mi"&gt;2&lt;/span&gt;
+        &lt;span class="err"&gt;&amp;quot;+&lt;/span&gt;&lt;span class="nf"&gt;r&lt;/span&gt;&lt;span class="err"&gt;&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="no"&gt;dst_width&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;         &lt;span class="err"&gt;//&lt;/span&gt; &lt;span class="err"&gt;%&lt;/span&gt;&lt;span class="mi"&gt;3&lt;/span&gt;
+      &lt;span class="err"&gt;:&lt;/span&gt;
+      &lt;span class="err"&gt;:&lt;/span&gt; &lt;span class="err"&gt;&amp;quot;&lt;/span&gt;&lt;span class="nf"&gt;q0&lt;/span&gt;&lt;span class="err"&gt;&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="err"&gt;&amp;quot;&lt;/span&gt;&lt;span class="no"&gt;q1&lt;/span&gt;&lt;span class="err"&gt;&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="err"&gt;&amp;quot;&lt;/span&gt;&lt;span class="no"&gt;q2&lt;/span&gt;&lt;span class="err"&gt;&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="err"&gt;&amp;quot;&lt;/span&gt;&lt;span class="no"&gt;q3&lt;/span&gt;&lt;span class="err"&gt;&amp;quot;&lt;/span&gt;              &lt;span class="err"&gt;//&lt;/span&gt; &lt;span class="no"&gt;Clobber&lt;/span&gt; &lt;span class="no"&gt;List&lt;/span&gt;
+    &lt;span class="err"&gt;)&lt;/span&gt;&lt;span class="c"&gt;;&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;p&gt;上面使用的Neon指令每次只能读取和存储8或者16位的数据，对于多出来的数据，只需要用同样的算法改成用C语言实现即可。&lt;/p&gt;
+&lt;p&gt;在使用上述的算法优化之后，进行每帧缩放，在Nexus 6p上，只需要不到&lt;strong&gt;5ms&lt;/strong&gt;就能完成了，而对于缩放质量来说，ffmpeg的SWS_FAST_BILINEAR算法和上述算法缩放出来的图片进行对比，峰值信噪比（psnr）在大部分场景下大概在&lt;strong&gt;38-40&lt;/strong&gt;左右，质量也足够好了。&lt;/p&gt;
+&lt;p&gt;2.旋转&lt;/p&gt;
+&lt;p&gt;在android机器上，由于摄像头安装角度不同，&lt;code&gt;onPreviewFrame&lt;/code&gt;出来的YUV帧一般都是旋转了90或者270度，如果最终视频是要竖拍的，那一般来说需要把YUV帧进行旋转。&lt;/p&gt;
+&lt;p&gt;对于旋转的算法，如果是纯C实现的代码，一般来说是个O（n^2 ） 复杂度的算法，如果是旋转960x540的yuv帧数据，在nexus 6p上，每帧旋转也需要&lt;strong&gt;30ms+&lt;/strong&gt;，这显然也是不能接受的。&lt;/p&gt;
+&lt;p&gt;在这里我们换个思路，能不能不对YUV帧进行旋转？（当然是可以的6666）&lt;/p&gt;
+&lt;p&gt;事实上在mp4文件格式的头部，我们可以指定一个旋转矩阵，具体来说是在&lt;strong&gt;moov.trak.tkhd box&lt;/strong&gt;里面指定，视频播放器在播放视频的时候，会在读取这里矩阵信息，从而决定视频本身的旋转角度，位移，缩放等，具体可以参考下苹果的&lt;a href="https://developer.apple.com/library/content/documentation/QuickTime/QTFF/QTFFChap4/qtff4.html#//apple_ref/doc/uid/TP40000939-CH206-18737"&gt;文档&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;通过ffmpeg，我们可以很轻松的给合成之后的mp4文件打上这个旋转角度：&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="kt"&gt;char&lt;/span&gt; &lt;span class="n"&gt;rotateStr&lt;/span&gt;&lt;span class="p"&gt;[&lt;/span&gt;&lt;span class="mi"&gt;1024&lt;/span&gt;&lt;span class="p"&gt;];&lt;/span&gt;
+&lt;span class="n"&gt;sprintf&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;rotateStr&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="s"&gt;&amp;quot;%d&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;rotate&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
+&lt;span class="n"&gt;av_dict_set&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="o"&gt;&amp;amp;&lt;/span&gt;&lt;span class="n"&gt;out_stream&lt;/span&gt;&lt;span class="o"&gt;-&amp;gt;&lt;/span&gt;&lt;span class="n"&gt;metadata&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="s"&gt;&amp;quot;rotate&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;rotateStr&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="mi"&gt;0&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;p&gt;于是可以在录制的时候省下一大笔旋转的开销了，excited!&lt;/p&gt;
+&lt;p&gt;3.镜像&lt;/p&gt;
+&lt;p&gt;在使用前置摄像头拍摄的时候，如果不对YUV帧进行处理，那么直接拍出来的视频是会&lt;strong&gt;镜像翻转&lt;/strong&gt;的，这里原理就跟照镜子一样，从前置摄像头方向拿出来的YUV帧刚好是反的，但有些时候拍出来的镜像视频可能不合我们的需求，因此这个时候我们就需要对YUV帧进行镜像翻转。&lt;/p&gt;
+&lt;p&gt;但由于摄像头安装角度一般是90或者270度，所以实际上原生的YUV帧是水平翻转过来的，因此做镜像翻转的时候，只需要刚好以中间为中轴，分别上下交换每行数据即可，注意Y跟UV要分开处理，这种算法用Neon实现相当简单：&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="nf"&gt;asm&lt;/span&gt; &lt;span class="no"&gt;volatile&lt;/span&gt; &lt;span class="p"&gt;(&lt;/span&gt;
+      &lt;span class="err"&gt;&amp;quot;1:&lt;/span&gt;                                          &lt;span class="err"&gt;\&lt;/span&gt;&lt;span class="nf"&gt;n&lt;/span&gt;&lt;span class="err"&gt;&amp;quot;&lt;/span&gt;
+        &lt;span class="err"&gt;&amp;quot;&lt;/span&gt;&lt;span class="nf"&gt;vld4.8&lt;/span&gt;     &lt;span class="err"&gt;{&lt;/span&gt;&lt;span class="no"&gt;d0&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="no"&gt;d1&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="no"&gt;d2&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="no"&gt;d3&lt;/span&gt;&lt;span class="err"&gt;}&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="p"&gt;[&lt;/span&gt;&lt;span class="err"&gt;%&lt;/span&gt;&lt;span class="mi"&gt;2&lt;/span&gt;&lt;span class="p"&gt;]!&lt;/span&gt;        &lt;span class="err"&gt;\&lt;/span&gt;&lt;span class="no"&gt;n&lt;/span&gt;&lt;span class="err"&gt;&amp;quot;&lt;/span&gt;  &lt;span class="err"&gt;//&lt;/span&gt; &lt;span class="no"&gt;load&lt;/span&gt; &lt;span class="mi"&gt;32&lt;/span&gt; &lt;span class="no"&gt;from&lt;/span&gt; &lt;span class="no"&gt;src&lt;/span&gt;
+        &lt;span class="err"&gt;&amp;quot;&lt;/span&gt;&lt;span class="nf"&gt;vld4.8&lt;/span&gt;     &lt;span class="err"&gt;{&lt;/span&gt;&lt;span class="no"&gt;d4&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="no"&gt;d5&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="no"&gt;d6&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="no"&gt;d7&lt;/span&gt;&lt;span class="err"&gt;}&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="p"&gt;[&lt;/span&gt;&lt;span class="err"&gt;%&lt;/span&gt;&lt;span class="mi"&gt;3&lt;/span&gt;&lt;span class="p"&gt;]!&lt;/span&gt;        &lt;span class="err"&gt;\&lt;/span&gt;&lt;span class="no"&gt;n&lt;/span&gt;&lt;span class="err"&gt;&amp;quot;&lt;/span&gt;  &lt;span class="err"&gt;//&lt;/span&gt; &lt;span class="no"&gt;load&lt;/span&gt; &lt;span class="mi"&gt;32&lt;/span&gt; &lt;span class="no"&gt;from&lt;/span&gt; &lt;span class="no"&gt;dst&lt;/span&gt;
+        &lt;span class="err"&gt;&amp;quot;&lt;/span&gt;&lt;span class="nf"&gt;subs&lt;/span&gt;       &lt;span class="err"&gt;%&lt;/span&gt;&lt;span class="mi"&gt;4&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="err"&gt;%&lt;/span&gt;&lt;span class="mi"&gt;4&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="c"&gt;#32                    \n&amp;quot;  // 32 processed per loop&lt;/span&gt;
+        &lt;span class="err"&gt;&amp;quot;&lt;/span&gt;&lt;span class="no"&gt;vst4.8&lt;/span&gt;     &lt;span class="err"&gt;{&lt;/span&gt;&lt;span class="no"&gt;d0&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="no"&gt;d1&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="no"&gt;d2&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="no"&gt;d3&lt;/span&gt;&lt;span class="err"&gt;}&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="p"&gt;[&lt;/span&gt;&lt;span class="err"&gt;%&lt;/span&gt;&lt;span class="mi"&gt;1&lt;/span&gt;&lt;span class="p"&gt;]!&lt;/span&gt;        &lt;span class="err"&gt;\&lt;/span&gt;&lt;span class="no"&gt;n&lt;/span&gt;&lt;span class="err"&gt;&amp;quot;&lt;/span&gt;  &lt;span class="err"&gt;//&lt;/span&gt; &lt;span class="no"&gt;store&lt;/span&gt; &lt;span class="mi"&gt;32&lt;/span&gt; &lt;span class="no"&gt;to&lt;/span&gt; &lt;span class="no"&gt;dst&lt;/span&gt;
+        &lt;span class="err"&gt;&amp;quot;&lt;/span&gt;&lt;span class="nf"&gt;vst4.8&lt;/span&gt;     &lt;span class="err"&gt;{&lt;/span&gt;&lt;span class="no"&gt;d4&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="no"&gt;d5&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="no"&gt;d6&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="no"&gt;d7&lt;/span&gt;&lt;span class="err"&gt;}&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="p"&gt;[&lt;/span&gt;&lt;span class="err"&gt;%&lt;/span&gt;&lt;span class="mi"&gt;0&lt;/span&gt;&lt;span class="p"&gt;]!&lt;/span&gt;        &lt;span class="err"&gt;\&lt;/span&gt;&lt;span class="no"&gt;n&lt;/span&gt;&lt;span class="err"&gt;&amp;quot;&lt;/span&gt;  &lt;span class="err"&gt;//&lt;/span&gt; &lt;span class="no"&gt;store&lt;/span&gt; &lt;span class="mi"&gt;32&lt;/span&gt; &lt;span class="no"&gt;to&lt;/span&gt; &lt;span class="no"&gt;src&lt;/span&gt;
+        &lt;span class="err"&gt;&amp;quot;&lt;/span&gt;&lt;span class="nf"&gt;bgt&lt;/span&gt;        &lt;span class="mi"&gt;1&lt;/span&gt;&lt;span class="no"&gt;b&lt;/span&gt;                             &lt;span class="err"&gt;\&lt;/span&gt;&lt;span class="no"&gt;n&lt;/span&gt;&lt;span class="err"&gt;&amp;quot;&lt;/span&gt;
+      &lt;span class="err"&gt;:&lt;/span&gt; &lt;span class="err"&gt;&amp;quot;+&lt;/span&gt;&lt;span class="nf"&gt;r&lt;/span&gt;&lt;span class="err"&gt;&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="no"&gt;src&lt;/span&gt;&lt;span class="p"&gt;),&lt;/span&gt;   &lt;span class="err"&gt;//&lt;/span&gt; &lt;span class="err"&gt;%&lt;/span&gt;&lt;span class="mi"&gt;0&lt;/span&gt;
+        &lt;span class="err"&gt;&amp;quot;+&lt;/span&gt;&lt;span class="nf"&gt;r&lt;/span&gt;&lt;span class="err"&gt;&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="no"&gt;dst&lt;/span&gt;&lt;span class="p"&gt;),&lt;/span&gt;   &lt;span class="err"&gt;//&lt;/span&gt; &lt;span class="err"&gt;%&lt;/span&gt;&lt;span class="mi"&gt;1&lt;/span&gt;
+        &lt;span class="err"&gt;&amp;quot;+&lt;/span&gt;&lt;span class="nf"&gt;r&lt;/span&gt;&lt;span class="err"&gt;&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="no"&gt;srcdata&lt;/span&gt;&lt;span class="p"&gt;),&lt;/span&gt; &lt;span class="err"&gt;//&lt;/span&gt; &lt;span class="err"&gt;%&lt;/span&gt;&lt;span class="mi"&gt;2&lt;/span&gt;
+        &lt;span class="err"&gt;&amp;quot;+&lt;/span&gt;&lt;span class="nf"&gt;r&lt;/span&gt;&lt;span class="err"&gt;&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="no"&gt;dstdata&lt;/span&gt;&lt;span class="p"&gt;),&lt;/span&gt; &lt;span class="err"&gt;//&lt;/span&gt; &lt;span class="err"&gt;%&lt;/span&gt;&lt;span class="mi"&gt;3&lt;/span&gt;
+        &lt;span class="err"&gt;&amp;quot;+&lt;/span&gt;&lt;span class="nf"&gt;r&lt;/span&gt;&lt;span class="err"&gt;&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="no"&gt;count&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;  &lt;span class="err"&gt;//&lt;/span&gt; &lt;span class="err"&gt;%&lt;/span&gt;&lt;span class="mi"&gt;4&lt;/span&gt;  &lt;span class="err"&gt;//&lt;/span&gt; &lt;span class="no"&gt;Output&lt;/span&gt; &lt;span class="no"&gt;registers&lt;/span&gt;
+      &lt;span class="err"&gt;:&lt;/span&gt;                     &lt;span class="err"&gt;//&lt;/span&gt; &lt;span class="nf"&gt;Input&lt;/span&gt; &lt;span class="no"&gt;registers&lt;/span&gt;
+      &lt;span class="err"&gt;:&lt;/span&gt; &lt;span class="err"&gt;&amp;quot;&lt;/span&gt;&lt;span class="nf"&gt;cc&lt;/span&gt;&lt;span class="err"&gt;&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="err"&gt;&amp;quot;&lt;/span&gt;&lt;span class="no"&gt;memory&lt;/span&gt;&lt;span class="err"&gt;&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="err"&gt;&amp;quot;&lt;/span&gt;&lt;span class="no"&gt;q0&lt;/span&gt;&lt;span class="err"&gt;&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="err"&gt;&amp;quot;&lt;/span&gt;&lt;span class="no"&gt;q1&lt;/span&gt;&lt;span class="err"&gt;&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="err"&gt;&amp;quot;&lt;/span&gt;&lt;span class="no"&gt;q2&lt;/span&gt;&lt;span class="err"&gt;&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="err"&gt;&amp;quot;&lt;/span&gt;&lt;span class="no"&gt;q3&lt;/span&gt;&lt;span class="err"&gt;&amp;quot;&lt;/span&gt;  &lt;span class="err"&gt;//&lt;/span&gt; &lt;span class="no"&gt;Clobber&lt;/span&gt; &lt;span class="no"&gt;List&lt;/span&gt;
+    &lt;span class="err"&gt;)&lt;/span&gt;&lt;span class="c"&gt;;&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;p&gt;同样，剩余的数据用纯C代码实现就好了， 在nexus6p上，这种镜像翻转一帧1080x1920 YUV数据大概只要不到&lt;strong&gt;5ms&lt;/strong&gt;&lt;/p&gt;
+&lt;hr /&gt;
+&lt;p&gt;在编码好h264视频流之后，最终处理就是把音频流跟视频流合流然后包装到mp4文件，这部分我们可以通过系统的&lt;a href="https://developer.android.com/reference/android/media/MediaMuxer.html"&gt;MediaMuxer&lt;/a&gt;，&lt;a href="https://code.google.com/archive/p/mp4v2/"&gt;mp4v2&lt;/a&gt;，或者ffmpeg来实现，这部分比较简单，在这里就不再阐述了&lt;/p&gt;
+&lt;hr /&gt;
+&lt;p&gt;注：本文亦被发表在《程序员》以及WeMobileDev公众号上&lt;/p&gt;
+&lt;hr /&gt;
+&lt;h3&gt;References&lt;/h3&gt;
+&lt;ol&gt;
+&lt;li&gt;&lt;a href="http://blog.csdn.net/leixiaohua1020"&gt;雷霄骅(leixiaohua1020)的专栏&lt;/a&gt; ，大名鼎鼎雷神的博客，里面有非常多关于音视频编码/ffmpeg相关的学习资料，入门必备。也祝愿他能够在天堂安息吧&lt;/li&gt;
+&lt;li&gt;&lt;a href="http://bigflake.com/mediacodec/"&gt;Android MediaCodec stuff&lt;/a&gt;，包含了一些MediaCodec使用的示例代码，初次使用可以参考下这里&lt;/li&gt;
+&lt;li&gt;&lt;a href="https://community.arm.com/processors/b/blog/posts/coding-for-neon---part-1-load-and-stores"&gt;Coding for NEON&lt;/a&gt;，一个系列教程，讲述了一些常用Neon指令使用方法。上面在介绍缩放的时候使用到了Neon，事实上大部分音视频处理过程都会使用到，以YUV帧处理为例，缩放，旋转，镜像翻转都可以使用neon来做优化&lt;/li&gt;
+&lt;li&gt;&lt;a href="https://chromium.googlesource.com/libyuv/libyuv/"&gt;libyuv&lt;/a&gt;，Google开源的一个YUV处理库，上面只针对1080p-&amp;gt;540p视频帧缩放的算法，而对于通用的压缩处理，可以直接使用这里的实现，对比起ffmpeg的速度快上不少&lt;/li&gt;
+&lt;/ol&gt;</summary></entry><entry><title>如何获取Android系统中申请对象的信息</title><link href="http://ragnraok.github.io/get_android_alloc_object_info.html" rel="alternate"></link><published>2016-05-30T00:00:00+08:00</published><author><name>Ragnarok Zhou</name></author><id>tag:ragnraok.github.io,2016-05-30:get_android_alloc_object_info.html</id><summary type="html">&lt;p&gt;最近一直在做有关内存方面的优化工作，在做优化的过程，除了关注内存的申请量以及GC的情况之外，我们经常需要想方法找出是那些对象占用了大量内存，以及他们是如何导致GC的，这意味着我们需要获取对象申请的信息（大小，类型，堆栈等），我们这篇文章来介绍下几种获取对象申请信息的方法&lt;/p&gt;
 &lt;h3&gt;Allocation Tracker&lt;/h3&gt;
 &lt;p&gt;Allocation Tracker是android studio自带的一个功能，我们可以在MemoryMonitor中打开使用：&lt;/p&gt;
 &lt;p&gt;&lt;img alt="" src="static/images/memorymonitor_1.jpeg" /&gt;&lt;/p&gt;
@@ -17,55 +235,55 @@
 &lt;p&gt;自然是可以的，不然为什么会有这个标题。。。&lt;/p&gt;
 &lt;p&gt;我们可以把Android Studio的源码clone下来，在&lt;a href="http://tools.android.com/build"&gt;这里&lt;/a&gt;可以找到对应的git地址。在clone下来之后，我们可以在&lt;code&gt;./tools/adt/idea/android/src/com/android/tools/idea/ddms/actions/ToggleAllocationTrackingAction.java&lt;/code&gt;中看到android studio具体是如何发起和停止Allocation Tracker的：&lt;/p&gt;
 &lt;p&gt;发起和停止：&lt;/p&gt;
-&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span class="k"&gt;if&lt;/span&gt; &lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;c&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;getClientData&lt;/span&gt;&lt;span class="p"&gt;().&lt;/span&gt;&lt;span class="n"&gt;getAllocationStatus&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt; &lt;span class="o"&gt;==&lt;/span&gt; 
-            &lt;span class="n"&gt;ClientData&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;AllocationTrackingStatus&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;ON&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
-  &lt;span class="n"&gt;c&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;requestAllocationDetails&lt;/span&gt;&lt;span class="p"&gt;();&lt;/span&gt;
-  &lt;span class="n"&gt;c&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;enableAllocationTracker&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nb"&gt;false&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
-  &lt;span class="k"&gt;if&lt;/span&gt; &lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;myEvent&lt;/span&gt; &lt;span class="o"&gt;==&lt;/span&gt; &lt;span class="n"&gt;null&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="k"&gt;if&lt;/span&gt; &lt;span class="o"&gt;(&lt;/span&gt;&lt;span class="n"&gt;c&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="na"&gt;getClientData&lt;/span&gt;&lt;span class="o"&gt;().&lt;/span&gt;&lt;span class="na"&gt;getAllocationStatus&lt;/span&gt;&lt;span class="o"&gt;()&lt;/span&gt; &lt;span class="o"&gt;==&lt;/span&gt; 
+            &lt;span class="n"&gt;ClientData&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="na"&gt;AllocationTrackingStatus&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="na"&gt;ON&lt;/span&gt;&lt;span class="o"&gt;)&lt;/span&gt; &lt;span class="o"&gt;{&lt;/span&gt;
+  &lt;span class="n"&gt;c&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="na"&gt;requestAllocationDetails&lt;/span&gt;&lt;span class="o"&gt;();&lt;/span&gt;
+  &lt;span class="n"&gt;c&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="na"&gt;enableAllocationTracker&lt;/span&gt;&lt;span class="o"&gt;(&lt;/span&gt;&lt;span class="kc"&gt;false&lt;/span&gt;&lt;span class="o"&gt;);&lt;/span&gt;
+  &lt;span class="k"&gt;if&lt;/span&gt; &lt;span class="o"&gt;(&lt;/span&gt;&lt;span class="n"&gt;myEvent&lt;/span&gt; &lt;span class="o"&gt;==&lt;/span&gt; &lt;span class="kc"&gt;null&lt;/span&gt;&lt;span class="o"&gt;)&lt;/span&gt; &lt;span class="o"&gt;{&lt;/span&gt;
     &lt;span class="c1"&gt;// Unexpected end of tracking, start now:&lt;/span&gt;
-    &lt;span class="n"&gt;myEvent&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;myEvents&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;start&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;now&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;MemoryMonitorView&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;EVENT_ALLOC&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
-  &lt;span class="p"&gt;}&lt;/span&gt;
-  &lt;span class="n"&gt;myEvent&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;stop&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;now&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
-  &lt;span class="n"&gt;myEvent&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;null&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
-&lt;span class="p"&gt;}&lt;/span&gt;
-&lt;span class="k"&gt;else&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
-  &lt;span class="n"&gt;installListener&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;c&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;myProject&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
-  &lt;span class="n"&gt;c&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;enableAllocationTracker&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nb"&gt;true&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
-  &lt;span class="k"&gt;if&lt;/span&gt; &lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;myEvent&lt;/span&gt; &lt;span class="o"&gt;!=&lt;/span&gt; &lt;span class="n"&gt;null&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
+    &lt;span class="n"&gt;myEvent&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;myEvents&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="na"&gt;start&lt;/span&gt;&lt;span class="o"&gt;(&lt;/span&gt;&lt;span class="n"&gt;now&lt;/span&gt;&lt;span class="o"&gt;,&lt;/span&gt; &lt;span class="n"&gt;MemoryMonitorView&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="na"&gt;EVENT_ALLOC&lt;/span&gt;&lt;span class="o"&gt;);&lt;/span&gt;
+  &lt;span class="o"&gt;}&lt;/span&gt;
+  &lt;span class="n"&gt;myEvent&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="na"&gt;stop&lt;/span&gt;&lt;span class="o"&gt;(&lt;/span&gt;&lt;span class="n"&gt;now&lt;/span&gt;&lt;span class="o"&gt;);&lt;/span&gt;
+  &lt;span class="n"&gt;myEvent&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="kc"&gt;null&lt;/span&gt;&lt;span class="o"&gt;;&lt;/span&gt;
+&lt;span class="o"&gt;}&lt;/span&gt;
+&lt;span class="k"&gt;else&lt;/span&gt; &lt;span class="o"&gt;{&lt;/span&gt;
+  &lt;span class="n"&gt;installListener&lt;/span&gt;&lt;span class="o"&gt;(&lt;/span&gt;&lt;span class="n"&gt;c&lt;/span&gt;&lt;span class="o"&gt;,&lt;/span&gt; &lt;span class="n"&gt;myProject&lt;/span&gt;&lt;span class="o"&gt;);&lt;/span&gt;
+  &lt;span class="n"&gt;c&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="na"&gt;enableAllocationTracker&lt;/span&gt;&lt;span class="o"&gt;(&lt;/span&gt;&lt;span class="kc"&gt;true&lt;/span&gt;&lt;span class="o"&gt;);&lt;/span&gt;
+  &lt;span class="k"&gt;if&lt;/span&gt; &lt;span class="o"&gt;(&lt;/span&gt;&lt;span class="n"&gt;myEvent&lt;/span&gt; &lt;span class="o"&gt;!=&lt;/span&gt; &lt;span class="kc"&gt;null&lt;/span&gt;&lt;span class="o"&gt;)&lt;/span&gt; &lt;span class="o"&gt;{&lt;/span&gt;
     &lt;span class="c1"&gt;// TODO add support for different end types (error, etc)&lt;/span&gt;
-    &lt;span class="n"&gt;myEvent&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;stop&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;now&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
-  &lt;span class="p"&gt;}&lt;/span&gt;
-  &lt;span class="n"&gt;myEvent&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;myEvents&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;start&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;now&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;MemoryMonitorView&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;EVENT_ALLOC&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
-&lt;span class="p"&gt;}&lt;/span&gt;
-&lt;span class="n"&gt;c&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;requestAllocationStatus&lt;/span&gt;&lt;span class="p"&gt;();&lt;/span&gt;
+    &lt;span class="n"&gt;myEvent&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="na"&gt;stop&lt;/span&gt;&lt;span class="o"&gt;(&lt;/span&gt;&lt;span class="n"&gt;now&lt;/span&gt;&lt;span class="o"&gt;);&lt;/span&gt;
+  &lt;span class="o"&gt;}&lt;/span&gt;
+  &lt;span class="n"&gt;myEvent&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;myEvents&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="na"&gt;start&lt;/span&gt;&lt;span class="o"&gt;(&lt;/span&gt;&lt;span class="n"&gt;now&lt;/span&gt;&lt;span class="o"&gt;,&lt;/span&gt; &lt;span class="n"&gt;MemoryMonitorView&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="na"&gt;EVENT_ALLOC&lt;/span&gt;&lt;span class="o"&gt;);&lt;/span&gt;
+&lt;span class="o"&gt;}&lt;/span&gt;
+&lt;span class="n"&gt;c&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="na"&gt;requestAllocationStatus&lt;/span&gt;&lt;span class="o"&gt;();&lt;/span&gt;
 &lt;/pre&gt;&lt;/div&gt;
 
 
 &lt;p&gt;获取并解析数据：&lt;/p&gt;
-&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span class="n"&gt;AndroidDebugBridge&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;addClientChangeListener&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;new&lt;/span&gt; &lt;span class="n"&gt;IClientChangeListener&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
-        &lt;span class="err"&gt;@&lt;/span&gt;&lt;span class="n"&gt;Override&lt;/span&gt;
-        &lt;span class="n"&gt;public&lt;/span&gt; &lt;span class="kt"&gt;void&lt;/span&gt; &lt;span class="n"&gt;clientChanged&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;Client&lt;/span&gt; &lt;span class="n"&gt;client&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="kt"&gt;int&lt;/span&gt; &lt;span class="n"&gt;changeMask&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
-          &lt;span class="k"&gt;if&lt;/span&gt; &lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;client&lt;/span&gt; &lt;span class="o"&gt;==&lt;/span&gt; &lt;span class="n"&gt;listeningClient&lt;/span&gt; &lt;span class="o"&gt;&amp;amp;&amp;amp;&lt;/span&gt; &lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;changeMask&lt;/span&gt; &lt;span class="o"&gt;&amp;amp;&lt;/span&gt; &lt;span class="n"&gt;Client&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;CHANGE_HEAP_ALLOCATIONS&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="o"&gt;!=&lt;/span&gt; &lt;span class="mi"&gt;0&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
-            &lt;span class="n"&gt;final&lt;/span&gt; &lt;span class="n"&gt;byte&lt;/span&gt;&lt;span class="p"&gt;[]&lt;/span&gt; &lt;span class="n"&gt;data&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;client&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;getClientData&lt;/span&gt;&lt;span class="p"&gt;().&lt;/span&gt;&lt;span class="n"&gt;getAllocationsData&lt;/span&gt;&lt;span class="p"&gt;();&lt;/span&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="n"&gt;AndroidDebugBridge&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="na"&gt;addClientChangeListener&lt;/span&gt;&lt;span class="o"&gt;(&lt;/span&gt;&lt;span class="k"&gt;new&lt;/span&gt; &lt;span class="n"&gt;IClientChangeListener&lt;/span&gt;&lt;span class="o"&gt;()&lt;/span&gt; &lt;span class="o"&gt;{&lt;/span&gt;
+        &lt;span class="nd"&gt;@Override&lt;/span&gt;
+        &lt;span class="kd"&gt;public&lt;/span&gt; &lt;span class="kt"&gt;void&lt;/span&gt; &lt;span class="nf"&gt;clientChanged&lt;/span&gt;&lt;span class="o"&gt;(&lt;/span&gt;&lt;span class="n"&gt;Client&lt;/span&gt; &lt;span class="n"&gt;client&lt;/span&gt;&lt;span class="o"&gt;,&lt;/span&gt; &lt;span class="kt"&gt;int&lt;/span&gt; &lt;span class="n"&gt;changeMask&lt;/span&gt;&lt;span class="o"&gt;)&lt;/span&gt; &lt;span class="o"&gt;{&lt;/span&gt;
+          &lt;span class="k"&gt;if&lt;/span&gt; &lt;span class="o"&gt;(&lt;/span&gt;&lt;span class="n"&gt;client&lt;/span&gt; &lt;span class="o"&gt;==&lt;/span&gt; &lt;span class="n"&gt;listeningClient&lt;/span&gt; &lt;span class="o"&gt;&amp;amp;&amp;amp;&lt;/span&gt; &lt;span class="o"&gt;(&lt;/span&gt;&lt;span class="n"&gt;changeMask&lt;/span&gt; &lt;span class="o"&gt;&amp;amp;&lt;/span&gt; &lt;span class="n"&gt;Client&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="na"&gt;CHANGE_HEAP_ALLOCATIONS&lt;/span&gt;&lt;span class="o"&gt;)&lt;/span&gt; &lt;span class="o"&gt;!=&lt;/span&gt; &lt;span class="mi"&gt;0&lt;/span&gt;&lt;span class="o"&gt;)&lt;/span&gt; &lt;span class="o"&gt;{&lt;/span&gt;
+            &lt;span class="kd"&gt;final&lt;/span&gt; &lt;span class="kt"&gt;byte&lt;/span&gt;&lt;span class="o"&gt;[]&lt;/span&gt; &lt;span class="n"&gt;data&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;client&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="na"&gt;getClientData&lt;/span&gt;&lt;span class="o"&gt;().&lt;/span&gt;&lt;span class="na"&gt;getAllocationsData&lt;/span&gt;&lt;span class="o"&gt;();&lt;/span&gt;
 
-            &lt;span class="n"&gt;ApplicationManager&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;getApplication&lt;/span&gt;&lt;span class="p"&gt;().&lt;/span&gt;&lt;span class="n"&gt;invokeLater&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;new&lt;/span&gt; &lt;span class="n"&gt;Runnable&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
-              &lt;span class="err"&gt;@&lt;/span&gt;&lt;span class="n"&gt;Override&lt;/span&gt;
-              &lt;span class="n"&gt;public&lt;/span&gt; &lt;span class="kt"&gt;void&lt;/span&gt; &lt;span class="n"&gt;run&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
-                &lt;span class="n"&gt;try&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
-                  &lt;span class="k"&gt;if&lt;/span&gt; &lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;myProject&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;isDisposed&lt;/span&gt;&lt;span class="p"&gt;())&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
-                    &lt;span class="k"&gt;return&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
-                  &lt;span class="p"&gt;}&lt;/span&gt;
+            &lt;span class="n"&gt;ApplicationManager&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="na"&gt;getApplication&lt;/span&gt;&lt;span class="o"&gt;().&lt;/span&gt;&lt;span class="na"&gt;invokeLater&lt;/span&gt;&lt;span class="o"&gt;(&lt;/span&gt;&lt;span class="k"&gt;new&lt;/span&gt; &lt;span class="n"&gt;Runnable&lt;/span&gt;&lt;span class="o"&gt;()&lt;/span&gt; &lt;span class="o"&gt;{&lt;/span&gt;
+              &lt;span class="nd"&gt;@Override&lt;/span&gt;
+              &lt;span class="kd"&gt;public&lt;/span&gt; &lt;span class="kt"&gt;void&lt;/span&gt; &lt;span class="nf"&gt;run&lt;/span&gt;&lt;span class="o"&gt;()&lt;/span&gt; &lt;span class="o"&gt;{&lt;/span&gt;
+                &lt;span class="k"&gt;try&lt;/span&gt; &lt;span class="o"&gt;{&lt;/span&gt;
+                  &lt;span class="k"&gt;if&lt;/span&gt; &lt;span class="o"&gt;(&lt;/span&gt;&lt;span class="n"&gt;myProject&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="na"&gt;isDisposed&lt;/span&gt;&lt;span class="o"&gt;())&lt;/span&gt; &lt;span class="o"&gt;{&lt;/span&gt;
+                    &lt;span class="k"&gt;return&lt;/span&gt;&lt;span class="o"&gt;;&lt;/span&gt;
+                  &lt;span class="o"&gt;}&lt;/span&gt;
 
-                  &lt;span class="n"&gt;final&lt;/span&gt; &lt;span class="n"&gt;CaptureService&lt;/span&gt; &lt;span class="n"&gt;service&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;CaptureService&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;getInstance&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;myProject&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
-                  &lt;span class="n"&gt;String&lt;/span&gt; &lt;span class="n"&gt;name&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;service&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;getSuggestedName&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;listeningClient&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
-                  &lt;span class="n"&gt;CaptureHandle&lt;/span&gt; &lt;span class="n"&gt;handle&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;service&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;startCaptureFile&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;AllocationCaptureType&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;class&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;name&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
-                  &lt;span class="n"&gt;service&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;appendDataCopy&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;handle&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;data&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
-                  &lt;span class="p"&gt;.....&lt;/span&gt;
+                  &lt;span class="kd"&gt;final&lt;/span&gt; &lt;span class="n"&gt;CaptureService&lt;/span&gt; &lt;span class="n"&gt;service&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;CaptureService&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="na"&gt;getInstance&lt;/span&gt;&lt;span class="o"&gt;(&lt;/span&gt;&lt;span class="n"&gt;myProject&lt;/span&gt;&lt;span class="o"&gt;);&lt;/span&gt;
+                  &lt;span class="n"&gt;String&lt;/span&gt; &lt;span class="n"&gt;name&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;service&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="na"&gt;getSuggestedName&lt;/span&gt;&lt;span class="o"&gt;(&lt;/span&gt;&lt;span class="n"&gt;listeningClient&lt;/span&gt;&lt;span class="o"&gt;);&lt;/span&gt;
+                  &lt;span class="n"&gt;CaptureHandle&lt;/span&gt; &lt;span class="n"&gt;handle&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;service&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="na"&gt;startCaptureFile&lt;/span&gt;&lt;span class="o"&gt;(&lt;/span&gt;&lt;span class="n"&gt;AllocationCaptureType&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="na"&gt;class&lt;/span&gt;&lt;span class="o"&gt;,&lt;/span&gt; &lt;span class="n"&gt;name&lt;/span&gt;&lt;span class="o"&gt;);&lt;/span&gt;
+                  &lt;span class="n"&gt;service&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="na"&gt;appendDataCopy&lt;/span&gt;&lt;span class="o"&gt;(&lt;/span&gt;&lt;span class="n"&gt;handle&lt;/span&gt;&lt;span class="o"&gt;,&lt;/span&gt; &lt;span class="n"&gt;data&lt;/span&gt;&lt;span class="o"&gt;);&lt;/span&gt;
+                  &lt;span class="o"&gt;.....&lt;/span&gt;
                     &lt;span class="c1"&gt;// Remove self from listeners.&lt;/span&gt;
-                &lt;span class="n"&gt;AndroidDebugBridge&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;removeClientChangeListener&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;this&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
-          &lt;span class="p"&gt;}&lt;/span&gt;
-        &lt;span class="p"&gt;}&lt;/span&gt;
-      &lt;span class="p"&gt;});&lt;/span&gt;
+                &lt;span class="n"&gt;AndroidDebugBridge&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="na"&gt;removeClientChangeListener&lt;/span&gt;&lt;span class="o"&gt;(&lt;/span&gt;&lt;span class="k"&gt;this&lt;/span&gt;&lt;span class="o"&gt;);&lt;/span&gt;
+          &lt;span class="o"&gt;}&lt;/span&gt;
+        &lt;span class="o"&gt;}&lt;/span&gt;
+      &lt;span class="o"&gt;});&lt;/span&gt;
 &lt;/pre&gt;&lt;/div&gt;
 
 
@@ -74,47 +292,47 @@
 &lt;p&gt;ddmlib这个库的作用，是用来建立电脑和android手机上连接的AndroidDebugBridge，然后让其对手机发起一些请求，例如刚才的AllocationTracker，还有dump hprof，traceview，甚至可以直接发送JdwpPacket，自定义PC和手机上的通讯（当然这个接口并非是开放的）。&lt;/p&gt;
 &lt;p&gt;更重要的是，Google这个库是对外开放的，并且放到了maven当中，可以让开发者直接获取到这个库，不过似乎Google并没有大肆宣传这个，甚至连文档都没有。&lt;/p&gt;
 &lt;p&gt;既然如此，我们也可以仿照上面的代码，用代码发起一次AllocationTracker请求，并进行分析：&lt;/p&gt;
-&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span class="n"&gt;AndroidDebugBridge&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;init&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nb"&gt;true&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="n"&gt;AndroidDebugBridge&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="na"&gt;init&lt;/span&gt;&lt;span class="o"&gt;(&lt;/span&gt;&lt;span class="kc"&gt;true&lt;/span&gt;&lt;span class="o"&gt;);&lt;/span&gt;
 
-&lt;span class="n"&gt;AndroidDebugBridge&lt;/span&gt; &lt;span class="n"&gt;bridge&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;AndroidDebugBridge&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;createBridge&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s"&gt;&amp;quot;/path/to/your/adb/command&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="nb"&gt;false&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
- &lt;span class="k"&gt;while&lt;/span&gt; &lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="o"&gt;!&lt;/span&gt;&lt;span class="n"&gt;bridge&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;isConnected&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt; &lt;span class="o"&gt;&amp;amp;&amp;amp;&lt;/span&gt; &lt;span class="o"&gt;!&lt;/span&gt;&lt;span class="n"&gt;bridge&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;hasInitialDeviceList&lt;/span&gt;&lt;span class="p"&gt;())&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
-        &lt;span class="n"&gt;try&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
-            &lt;span class="n"&gt;Thread&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;sleep&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="mi"&gt;200&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
-        &lt;span class="p"&gt;}&lt;/span&gt;
-        &lt;span class="n"&gt;catch&lt;/span&gt; &lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;Exception&lt;/span&gt; &lt;span class="n"&gt;e&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
-            &lt;span class="n"&gt;System&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;out&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;println&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;e&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
-            &lt;span class="k"&gt;return&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
-        &lt;span class="p"&gt;}&lt;/span&gt;
- &lt;span class="p"&gt;}&lt;/span&gt;
- &lt;span class="k"&gt;if&lt;/span&gt; &lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;bridge&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;getDevices&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt; &lt;span class="o"&gt;!=&lt;/span&gt; &lt;span class="n"&gt;null&lt;/span&gt; &lt;span class="o"&gt;&amp;amp;&amp;amp;&lt;/span&gt; &lt;span class="n"&gt;bridge&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;getDevices&lt;/span&gt;&lt;span class="p"&gt;().&lt;/span&gt;&lt;span class="n"&gt;length&lt;/span&gt; &lt;span class="o"&gt;&amp;gt;&lt;/span&gt; &lt;span class="mi"&gt;0&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
-        &lt;span class="n"&gt;IDevice&lt;/span&gt; &lt;span class="n"&gt;device&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;bridge&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;getDevices&lt;/span&gt;&lt;span class="p"&gt;()[&lt;/span&gt;&lt;span class="mi"&gt;0&lt;/span&gt;&lt;span class="p"&gt;];&lt;/span&gt;
-        &lt;span class="n"&gt;final&lt;/span&gt; &lt;span class="n"&gt;Client&lt;/span&gt; &lt;span class="n"&gt;client&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;device&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;getClient&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s"&gt;&amp;quot;com.example.ragnarok.allocrecordtest&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
-        &lt;span class="n"&gt;System&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;out&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;print&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s"&gt;&amp;quot;client: &amp;quot;&lt;/span&gt; &lt;span class="o"&gt;+&lt;/span&gt; &lt;span class="n"&gt;client&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
-        &lt;span class="k"&gt;if&lt;/span&gt; &lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;client&lt;/span&gt; &lt;span class="o"&gt;==&lt;/span&gt; &lt;span class="n"&gt;null&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
-            &lt;span class="k"&gt;return&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
-        &lt;span class="p"&gt;}&lt;/span&gt;
-        &lt;span class="n"&gt;AndroidDebugBridge&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;addClientChangeListener&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;new&lt;/span&gt; &lt;span class="n"&gt;AndroidDebugBridge&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;IClientChangeListener&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
-             &lt;span class="n"&gt;public&lt;/span&gt; &lt;span class="kt"&gt;void&lt;/span&gt; &lt;span class="n"&gt;clientChanged&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;Client&lt;/span&gt; &lt;span class="n"&gt;cl&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="kt"&gt;int&lt;/span&gt; &lt;span class="n"&gt;changeMask&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
-                    &lt;span class="k"&gt;if&lt;/span&gt; &lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;cl&lt;/span&gt; &lt;span class="o"&gt;==&lt;/span&gt; &lt;span class="n"&gt;client&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
-                        &lt;span class="k"&gt;if&lt;/span&gt; &lt;span class="p"&gt;((&lt;/span&gt;&lt;span class="n"&gt;changeMask&lt;/span&gt; &lt;span class="o"&gt;&amp;amp;&lt;/span&gt; &lt;span class="n"&gt;Client&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;CHANGE_HEAP_ALLOCATIONS&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="o"&gt;!=&lt;/span&gt; &lt;span class="mi"&gt;0&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
-                            &lt;span class="n"&gt;System&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;out&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;println&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s"&gt;&amp;quot;clientChanged: &amp;quot;&lt;/span&gt; &lt;span class="o"&gt;+&lt;/span&gt; &lt;span class="n"&gt;cl&lt;/span&gt; &lt;span class="o"&gt;+&lt;/span&gt; &lt;span class="s"&gt;&amp;quot;, &amp;quot;&lt;/span&gt; &lt;span class="o"&gt;+&lt;/span&gt; &lt;span class="n"&gt;changeMask&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
-                            &lt;span class="n"&gt;byte&lt;/span&gt;&lt;span class="p"&gt;[]&lt;/span&gt; &lt;span class="n"&gt;data&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;cl&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;getClientData&lt;/span&gt;&lt;span class="p"&gt;().&lt;/span&gt;&lt;span class="n"&gt;getAllocationsData&lt;/span&gt;&lt;span class="p"&gt;();&lt;/span&gt;
-                            &lt;span class="k"&gt;if&lt;/span&gt; &lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;data&lt;/span&gt; &lt;span class="o"&gt;!=&lt;/span&gt; &lt;span class="n"&gt;null&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
-                                &lt;span class="n"&gt;AllocationInfo&lt;/span&gt;&lt;span class="p"&gt;[]&lt;/span&gt; &lt;span class="n"&gt;infoList&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;AllocationsParser&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;parse&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;ByteBuffer&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;wrap&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;data&lt;/span&gt;&lt;span class="p"&gt;));&lt;/span&gt;
-                            &lt;span class="p"&gt;}&lt;/span&gt;
-                       &lt;span class="p"&gt;}&lt;/span&gt;
-                    &lt;span class="p"&gt;}&lt;/span&gt;   
-                &lt;span class="p"&gt;}&lt;/span&gt;
-        &lt;span class="p"&gt;});&lt;/span&gt;
-        &lt;span class="n"&gt;client&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;enableAllocationTracker&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nb"&gt;true&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
-                &lt;span class="n"&gt;new&lt;/span&gt; &lt;span class="nf"&gt;Timer&lt;/span&gt;&lt;span class="p"&gt;().&lt;/span&gt;&lt;span class="n"&gt;schedule&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;new&lt;/span&gt; &lt;span class="n"&gt;TimerTask&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
-                &lt;span class="err"&gt;@&lt;/span&gt;&lt;span class="n"&gt;Override&lt;/span&gt;
-                &lt;span class="n"&gt;public&lt;/span&gt; &lt;span class="kt"&gt;void&lt;/span&gt; &lt;span class="n"&gt;run&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
-                    &lt;span class="n"&gt;client&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;requestAllocationDetails&lt;/span&gt;&lt;span class="p"&gt;();&lt;/span&gt;
-                    &lt;span class="n"&gt;client&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;enableAllocationTracker&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nb"&gt;false&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
-                &lt;span class="p"&gt;}&lt;/span&gt;
-        &lt;span class="p"&gt;},&lt;/span&gt; &lt;span class="mi"&gt;3000&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
-&lt;span class="p"&gt;}&lt;/span&gt;
+&lt;span class="n"&gt;AndroidDebugBridge&lt;/span&gt; &lt;span class="n"&gt;bridge&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;AndroidDebugBridge&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="na"&gt;createBridge&lt;/span&gt;&lt;span class="o"&gt;(&lt;/span&gt;&lt;span class="s"&gt;&amp;quot;/path/to/your/adb/command&amp;quot;&lt;/span&gt;&lt;span class="o"&gt;,&lt;/span&gt; &lt;span class="kc"&gt;false&lt;/span&gt;&lt;span class="o"&gt;);&lt;/span&gt;
+ &lt;span class="k"&gt;while&lt;/span&gt; &lt;span class="o"&gt;(!&lt;/span&gt;&lt;span class="n"&gt;bridge&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="na"&gt;isConnected&lt;/span&gt;&lt;span class="o"&gt;()&lt;/span&gt; &lt;span class="o"&gt;&amp;amp;&amp;amp;&lt;/span&gt; &lt;span class="o"&gt;!&lt;/span&gt;&lt;span class="n"&gt;bridge&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="na"&gt;hasInitialDeviceList&lt;/span&gt;&lt;span class="o"&gt;())&lt;/span&gt; &lt;span class="o"&gt;{&lt;/span&gt;
+        &lt;span class="k"&gt;try&lt;/span&gt; &lt;span class="o"&gt;{&lt;/span&gt;
+            &lt;span class="n"&gt;Thread&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="na"&gt;sleep&lt;/span&gt;&lt;span class="o"&gt;(&lt;/span&gt;&lt;span class="mi"&gt;200&lt;/span&gt;&lt;span class="o"&gt;);&lt;/span&gt;
+        &lt;span class="o"&gt;}&lt;/span&gt;
+        &lt;span class="k"&gt;catch&lt;/span&gt; &lt;span class="o"&gt;(&lt;/span&gt;&lt;span class="n"&gt;Exception&lt;/span&gt; &lt;span class="n"&gt;e&lt;/span&gt;&lt;span class="o"&gt;)&lt;/span&gt; &lt;span class="o"&gt;{&lt;/span&gt;
+            &lt;span class="n"&gt;System&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="na"&gt;out&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="na"&gt;println&lt;/span&gt;&lt;span class="o"&gt;(&lt;/span&gt;&lt;span class="n"&gt;e&lt;/span&gt;&lt;span class="o"&gt;);&lt;/span&gt;
+            &lt;span class="k"&gt;return&lt;/span&gt;&lt;span class="o"&gt;;&lt;/span&gt;
+        &lt;span class="o"&gt;}&lt;/span&gt;
+ &lt;span class="o"&gt;}&lt;/span&gt;
+ &lt;span class="k"&gt;if&lt;/span&gt; &lt;span class="o"&gt;(&lt;/span&gt;&lt;span class="n"&gt;bridge&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="na"&gt;getDevices&lt;/span&gt;&lt;span class="o"&gt;()&lt;/span&gt; &lt;span class="o"&gt;!=&lt;/span&gt; &lt;span class="kc"&gt;null&lt;/span&gt; &lt;span class="o"&gt;&amp;amp;&amp;amp;&lt;/span&gt; &lt;span class="n"&gt;bridge&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="na"&gt;getDevices&lt;/span&gt;&lt;span class="o"&gt;().&lt;/span&gt;&lt;span class="na"&gt;length&lt;/span&gt; &lt;span class="o"&gt;&amp;gt;&lt;/span&gt; &lt;span class="mi"&gt;0&lt;/span&gt;&lt;span class="o"&gt;)&lt;/span&gt; &lt;span class="o"&gt;{&lt;/span&gt;
+        &lt;span class="n"&gt;IDevice&lt;/span&gt; &lt;span class="n"&gt;device&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;bridge&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="na"&gt;getDevices&lt;/span&gt;&lt;span class="o"&gt;()[&lt;/span&gt;&lt;span class="mi"&gt;0&lt;/span&gt;&lt;span class="o"&gt;];&lt;/span&gt;
+        &lt;span class="kd"&gt;final&lt;/span&gt; &lt;span class="n"&gt;Client&lt;/span&gt; &lt;span class="n"&gt;client&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;device&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="na"&gt;getClient&lt;/span&gt;&lt;span class="o"&gt;(&lt;/span&gt;&lt;span class="s"&gt;&amp;quot;com.example.ragnarok.allocrecordtest&amp;quot;&lt;/span&gt;&lt;span class="o"&gt;);&lt;/span&gt;
+        &lt;span class="n"&gt;System&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="na"&gt;out&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="na"&gt;print&lt;/span&gt;&lt;span class="o"&gt;(&lt;/span&gt;&lt;span class="s"&gt;&amp;quot;client: &amp;quot;&lt;/span&gt; &lt;span class="o"&gt;+&lt;/span&gt; &lt;span class="n"&gt;client&lt;/span&gt;&lt;span class="o"&gt;);&lt;/span&gt;
+        &lt;span class="k"&gt;if&lt;/span&gt; &lt;span class="o"&gt;(&lt;/span&gt;&lt;span class="n"&gt;client&lt;/span&gt; &lt;span class="o"&gt;==&lt;/span&gt; &lt;span class="kc"&gt;null&lt;/span&gt;&lt;span class="o"&gt;)&lt;/span&gt; &lt;span class="o"&gt;{&lt;/span&gt;
+            &lt;span class="k"&gt;return&lt;/span&gt;&lt;span class="o"&gt;;&lt;/span&gt;
+        &lt;span class="o"&gt;}&lt;/span&gt;
+        &lt;span class="n"&gt;AndroidDebugBridge&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="na"&gt;addClientChangeListener&lt;/span&gt;&lt;span class="o"&gt;(&lt;/span&gt;&lt;span class="k"&gt;new&lt;/span&gt; &lt;span class="n"&gt;AndroidDebugBridge&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="na"&gt;IClientChangeListener&lt;/span&gt;&lt;span class="o"&gt;()&lt;/span&gt; &lt;span class="o"&gt;{&lt;/span&gt;
+             &lt;span class="kd"&gt;public&lt;/span&gt; &lt;span class="kt"&gt;void&lt;/span&gt; &lt;span class="nf"&gt;clientChanged&lt;/span&gt;&lt;span class="o"&gt;(&lt;/span&gt;&lt;span class="n"&gt;Client&lt;/span&gt; &lt;span class="n"&gt;cl&lt;/span&gt;&lt;span class="o"&gt;,&lt;/span&gt; &lt;span class="kt"&gt;int&lt;/span&gt; &lt;span class="n"&gt;changeMask&lt;/span&gt;&lt;span class="o"&gt;)&lt;/span&gt; &lt;span class="o"&gt;{&lt;/span&gt;
+                    &lt;span class="k"&gt;if&lt;/span&gt; &lt;span class="o"&gt;(&lt;/span&gt;&lt;span class="n"&gt;cl&lt;/span&gt; &lt;span class="o"&gt;==&lt;/span&gt; &lt;span class="n"&gt;client&lt;/span&gt;&lt;span class="o"&gt;)&lt;/span&gt; &lt;span class="o"&gt;{&lt;/span&gt;
+                        &lt;span class="k"&gt;if&lt;/span&gt; &lt;span class="o"&gt;((&lt;/span&gt;&lt;span class="n"&gt;changeMask&lt;/span&gt; &lt;span class="o"&gt;&amp;amp;&lt;/span&gt; &lt;span class="n"&gt;Client&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="na"&gt;CHANGE_HEAP_ALLOCATIONS&lt;/span&gt;&lt;span class="o"&gt;)&lt;/span&gt; &lt;span class="o"&gt;!=&lt;/span&gt; &lt;span class="mi"&gt;0&lt;/span&gt;&lt;span class="o"&gt;)&lt;/span&gt; &lt;span class="o"&gt;{&lt;/span&gt;
+                            &lt;span class="n"&gt;System&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="na"&gt;out&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="na"&gt;println&lt;/span&gt;&lt;span class="o"&gt;(&lt;/span&gt;&lt;span class="s"&gt;&amp;quot;clientChanged: &amp;quot;&lt;/span&gt; &lt;span class="o"&gt;+&lt;/span&gt; &lt;span class="n"&gt;cl&lt;/span&gt; &lt;span class="o"&gt;+&lt;/span&gt; &lt;span class="s"&gt;&amp;quot;, &amp;quot;&lt;/span&gt; &lt;span class="o"&gt;+&lt;/span&gt; &lt;span class="n"&gt;changeMask&lt;/span&gt;&lt;span class="o"&gt;);&lt;/span&gt;
+                            &lt;span class="kt"&gt;byte&lt;/span&gt;&lt;span class="o"&gt;[]&lt;/span&gt; &lt;span class="n"&gt;data&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;cl&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="na"&gt;getClientData&lt;/span&gt;&lt;span class="o"&gt;().&lt;/span&gt;&lt;span class="na"&gt;getAllocationsData&lt;/span&gt;&lt;span class="o"&gt;();&lt;/span&gt;
+                            &lt;span class="k"&gt;if&lt;/span&gt; &lt;span class="o"&gt;(&lt;/span&gt;&lt;span class="n"&gt;data&lt;/span&gt; &lt;span class="o"&gt;!=&lt;/span&gt; &lt;span class="kc"&gt;null&lt;/span&gt;&lt;span class="o"&gt;)&lt;/span&gt; &lt;span class="o"&gt;{&lt;/span&gt;
+                                &lt;span class="n"&gt;AllocationInfo&lt;/span&gt;&lt;span class="o"&gt;[]&lt;/span&gt; &lt;span class="n"&gt;infoList&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;AllocationsParser&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="na"&gt;parse&lt;/span&gt;&lt;span class="o"&gt;(&lt;/span&gt;&lt;span class="n"&gt;ByteBuffer&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="na"&gt;wrap&lt;/span&gt;&lt;span class="o"&gt;(&lt;/span&gt;&lt;span class="n"&gt;data&lt;/span&gt;&lt;span class="o"&gt;));&lt;/span&gt;
+                            &lt;span class="o"&gt;}&lt;/span&gt;
+                       &lt;span class="o"&gt;}&lt;/span&gt;
+                    &lt;span class="o"&gt;}&lt;/span&gt;   
+                &lt;span class="o"&gt;}&lt;/span&gt;
+        &lt;span class="o"&gt;});&lt;/span&gt;
+        &lt;span class="n"&gt;client&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="na"&gt;enableAllocationTracker&lt;/span&gt;&lt;span class="o"&gt;(&lt;/span&gt;&lt;span class="kc"&gt;true&lt;/span&gt;&lt;span class="o"&gt;);&lt;/span&gt;
+                &lt;span class="k"&gt;new&lt;/span&gt; &lt;span class="n"&gt;Timer&lt;/span&gt;&lt;span class="o"&gt;().&lt;/span&gt;&lt;span class="na"&gt;schedule&lt;/span&gt;&lt;span class="o"&gt;(&lt;/span&gt;&lt;span class="k"&gt;new&lt;/span&gt; &lt;span class="n"&gt;TimerTask&lt;/span&gt;&lt;span class="o"&gt;()&lt;/span&gt; &lt;span class="o"&gt;{&lt;/span&gt;
+                &lt;span class="nd"&gt;@Override&lt;/span&gt;
+                &lt;span class="kd"&gt;public&lt;/span&gt; &lt;span class="kt"&gt;void&lt;/span&gt; &lt;span class="nf"&gt;run&lt;/span&gt;&lt;span class="o"&gt;()&lt;/span&gt; &lt;span class="o"&gt;{&lt;/span&gt;
+                    &lt;span class="n"&gt;client&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="na"&gt;requestAllocationDetails&lt;/span&gt;&lt;span class="o"&gt;();&lt;/span&gt;
+                    &lt;span class="n"&gt;client&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="na"&gt;enableAllocationTracker&lt;/span&gt;&lt;span class="o"&gt;(&lt;/span&gt;&lt;span class="kc"&gt;false&lt;/span&gt;&lt;span class="o"&gt;);&lt;/span&gt;
+                &lt;span class="o"&gt;}&lt;/span&gt;
+        &lt;span class="o"&gt;},&lt;/span&gt; &lt;span class="mi"&gt;3000&lt;/span&gt;&lt;span class="o"&gt;);&lt;/span&gt;
+&lt;span class="o"&gt;}&lt;/span&gt;
 &lt;/pre&gt;&lt;/div&gt;
 
 
@@ -126,15 +344,15 @@
 &lt;li&gt;发起和停止allocation tracker&lt;/li&gt;
 &lt;/ol&gt;
 &lt;p&gt;最后在分析的时候，我们获得了一组&lt;code&gt;AllocationInfo&lt;/code&gt;，存储了申请对象的信息：&lt;/p&gt;
-&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span class="n"&gt;public&lt;/span&gt; &lt;span class="n"&gt;class&lt;/span&gt; &lt;span class="n"&gt;AllocationInfo&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
-    &lt;span class="n"&gt;private&lt;/span&gt; &lt;span class="n"&gt;final&lt;/span&gt; &lt;span class="n"&gt;String&lt;/span&gt; &lt;span class="n"&gt;mAllocatedClass&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
-    &lt;span class="n"&gt;private&lt;/span&gt; &lt;span class="n"&gt;final&lt;/span&gt; &lt;span class="kt"&gt;int&lt;/span&gt; &lt;span class="n"&gt;mAllocNumber&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
-    &lt;span class="n"&gt;private&lt;/span&gt; &lt;span class="n"&gt;final&lt;/span&gt; &lt;span class="kt"&gt;int&lt;/span&gt; &lt;span class="n"&gt;mAllocationSize&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
-    &lt;span class="n"&gt;private&lt;/span&gt; &lt;span class="n"&gt;final&lt;/span&gt; &lt;span class="kt"&gt;short&lt;/span&gt; &lt;span class="n"&gt;mThreadId&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
-    &lt;span class="n"&gt;private&lt;/span&gt; &lt;span class="n"&gt;final&lt;/span&gt; &lt;span class="n"&gt;StackTraceElement&lt;/span&gt;&lt;span class="p"&gt;[]&lt;/span&gt; &lt;span class="n"&gt;mStackTrace&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="kd"&gt;public&lt;/span&gt; &lt;span class="kd"&gt;class&lt;/span&gt; &lt;span class="nc"&gt;AllocationInfo&lt;/span&gt; &lt;span class="o"&gt;{&lt;/span&gt;
+    &lt;span class="kd"&gt;private&lt;/span&gt; &lt;span class="kd"&gt;final&lt;/span&gt; &lt;span class="n"&gt;String&lt;/span&gt; &lt;span class="n"&gt;mAllocatedClass&lt;/span&gt;&lt;span class="o"&gt;;&lt;/span&gt;
+    &lt;span class="kd"&gt;private&lt;/span&gt; &lt;span class="kd"&gt;final&lt;/span&gt; &lt;span class="kt"&gt;int&lt;/span&gt; &lt;span class="n"&gt;mAllocNumber&lt;/span&gt;&lt;span class="o"&gt;;&lt;/span&gt;
+    &lt;span class="kd"&gt;private&lt;/span&gt; &lt;span class="kd"&gt;final&lt;/span&gt; &lt;span class="kt"&gt;int&lt;/span&gt; &lt;span class="n"&gt;mAllocationSize&lt;/span&gt;&lt;span class="o"&gt;;&lt;/span&gt;
+    &lt;span class="kd"&gt;private&lt;/span&gt; &lt;span class="kd"&gt;final&lt;/span&gt; &lt;span class="kt"&gt;short&lt;/span&gt; &lt;span class="n"&gt;mThreadId&lt;/span&gt;&lt;span class="o"&gt;;&lt;/span&gt;
+    &lt;span class="kd"&gt;private&lt;/span&gt; &lt;span class="kd"&gt;final&lt;/span&gt; &lt;span class="n"&gt;StackTraceElement&lt;/span&gt;&lt;span class="o"&gt;[]&lt;/span&gt; &lt;span class="n"&gt;mStackTrace&lt;/span&gt;&lt;span class="o"&gt;;&lt;/span&gt;
 
-   &lt;span class="p"&gt;.....&lt;/span&gt;
-&lt;span class="p"&gt;}&lt;/span&gt;
+   &lt;span class="o"&gt;.....&lt;/span&gt;
+&lt;span class="o"&gt;}&lt;/span&gt;
 &lt;/pre&gt;&lt;/div&gt;
 
 
@@ -148,21 +366,21 @@
 &lt;h3&gt;Android的JVM如何响应allocation tracker请求（Dalvik only now）&lt;/h3&gt;
 &lt;p&gt;我们先来看下Dalvik虚拟机是怎么响应这个请求的，下面仅以4.4.4的代码为例&lt;/p&gt;
 &lt;p&gt;首先，Dalvik虚拟机在收到Allocation Tracker的请求之后，在对JdwpPacket包进行解析之后，最后会在&lt;code&gt;DdmVmInternal&lt;/code&gt;这个类中进行处理，这个类在&lt;code&gt;/libcore/dalvik/src/main/java/org/apache/harmony/dalvik/ddmc/DdmVmInternal.java&lt;/code&gt;当中，其中有这么两个方法：&lt;/p&gt;
-&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span class="cm"&gt;/**&lt;/span&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="cm"&gt;/**&lt;/span&gt;
 &lt;span class="cm"&gt;* Enable or disable &amp;quot;recent allocation&amp;quot; tracking.&lt;/span&gt;
 &lt;span class="cm"&gt;*/&lt;/span&gt;
-&lt;span class="n"&gt;native&lt;/span&gt; &lt;span class="n"&gt;public&lt;/span&gt; &lt;span class="k"&gt;static&lt;/span&gt; &lt;span class="k"&gt;void&lt;/span&gt; &lt;span class="n"&gt;enableRecentAllocations&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;boolean&lt;/span&gt; &lt;span class="n"&gt;enable&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
+&lt;span class="kd"&gt;native&lt;/span&gt; &lt;span class="kd"&gt;public&lt;/span&gt; &lt;span class="kd"&gt;static&lt;/span&gt; &lt;span class="kt"&gt;void&lt;/span&gt; &lt;span class="nf"&gt;enableRecentAllocations&lt;/span&gt;&lt;span class="o"&gt;(&lt;/span&gt;&lt;span class="kt"&gt;boolean&lt;/span&gt; &lt;span class="n"&gt;enable&lt;/span&gt;&lt;span class="o"&gt;);&lt;/span&gt;
 
 &lt;span class="cm"&gt;/*&lt;/span&gt;
 &lt;span class="cm"&gt;* Return a boolean indicating whether or not the &amp;quot;recent allocation&amp;quot;&lt;/span&gt;
 &lt;span class="cm"&gt;* feature is currently enabled.&lt;/span&gt;
 &lt;span class="cm"&gt;*/&lt;/span&gt;
-&lt;span class="n"&gt;native&lt;/span&gt; &lt;span class="n"&gt;public&lt;/span&gt; &lt;span class="k"&gt;static&lt;/span&gt; &lt;span class="n"&gt;boolean&lt;/span&gt; &lt;span class="n"&gt;getRecentAllocationStatus&lt;/span&gt;&lt;span class="p"&gt;();&lt;/span&gt;
+&lt;span class="kd"&gt;native&lt;/span&gt; &lt;span class="kd"&gt;public&lt;/span&gt; &lt;span class="kd"&gt;static&lt;/span&gt; &lt;span class="kt"&gt;boolean&lt;/span&gt; &lt;span class="nf"&gt;getRecentAllocationStatus&lt;/span&gt;&lt;span class="o"&gt;();&lt;/span&gt;
 &lt;/pre&gt;&lt;/div&gt;
 
 
 &lt;p&gt;很明显，这两个方法是用于开启和关闭Allocation Tracker，并且获得申请对象信息的数据的，然而是native的方法，对应的native代码在&lt;code&gt;/dalvik/vm/native/org_apache_harmony_dalvik_ddmc_DdmVmInternal.cpp&lt;/code&gt;这里：&lt;/p&gt;
-&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span class="cm"&gt;/*&lt;/span&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="cm"&gt;/*&lt;/span&gt;
 &lt;span class="cm"&gt; * public static void enableRecentAllocations(boolean enable)&lt;/span&gt;
 &lt;span class="cm"&gt; *&lt;/span&gt;
 &lt;span class="cm"&gt; * Enable or disable recent allocation tracking.&lt;/span&gt;
@@ -197,7 +415,7 @@
 
 
 &lt;p&gt;而&lt;code&gt;dvmEnableAllocTracker&lt;/code&gt;，&lt;code&gt;dvmDisableAllocTracker&lt;/code&gt;，&lt;code&gt;dvmDdmGetRecentAllocations&lt;/code&gt;这几个方法，经过几层的调用之后，最后是调用到了&lt;code&gt;/dalvik/vm/AllocTracker.cpp&lt;/code&gt;这里的方法：&lt;/p&gt;
-&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span class="cm"&gt;/*&lt;/span&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="cm"&gt;/*&lt;/span&gt;
 &lt;span class="cm"&gt; * Enable allocation tracking.  Does nothing if tracking is already enabled.&lt;/span&gt;
 &lt;span class="cm"&gt; *&lt;/span&gt;
 &lt;span class="cm"&gt; * Returns &amp;quot;true&amp;quot; on success.&lt;/span&gt;
@@ -252,7 +470,7 @@
 &lt;p&gt;从上面的代码可以看出，在开启了Allocation Tracker之后，在Dalvik全局变量&lt;code&gt;gDvm&lt;/code&gt;下，将其中的&lt;code&gt;allocRecords&lt;/code&gt;指向了一块新的申请的内存区域，另外&lt;code&gt;allocRecordHead&lt;/code&gt;指向最新申请的对象信息的index，&lt;code&gt;allocRecordCount&lt;/code&gt;则是总的记录的数量，另外&lt;code&gt;allocRecordMax&lt;/code&gt;则是整个Allocation Tracker所允许记录的最大申请对象信息的数目，在4.4.4这个版本下，这个值默认是65536，也可以在手机中的/sytem/build.prop中指定&lt;code&gt;dalvik.vm.allocTrackerMax&lt;/code&gt;项的值。&lt;/p&gt;
 &lt;p&gt;这里很明显看出来，&lt;code&gt;gDvm.allocRecords&lt;/code&gt;是用来记录新申请对象的信息的，而申请对象的时候，只要开启了Allocation Tracker，每次都会往这里添加一个记录，具体代码在这里：&lt;/p&gt;
 &lt;p&gt;首先这里是新申请对象地方，在&lt;code&gt;/dalvik/vm/alloc/Alloc.cpp&lt;/code&gt;中：&lt;/p&gt;
-&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span class="cm"&gt;/*&lt;/span&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="cm"&gt;/*&lt;/span&gt;
 &lt;span class="cm"&gt; * Create an instance of the specified class.&lt;/span&gt;
 &lt;span class="cm"&gt; *&lt;/span&gt;
 &lt;span class="cm"&gt; * Returns NULL and throws an exception on failure.&lt;/span&gt;
@@ -274,7 +492,7 @@
 
 
 &lt;p&gt;而在&lt;code&gt;dvmTrackAllocation&lt;/code&gt;方法，则是在&lt;code&gt;/vm/AllocTracker.h&lt;/code&gt;中定义：&lt;/p&gt;
-&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span class="cm"&gt;/*&lt;/span&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="cm"&gt;/*&lt;/span&gt;
 &lt;span class="cm"&gt; * If allocation tracking is enabled, add a new entry to the set.&lt;/span&gt;
 &lt;span class="cm"&gt; */&lt;/span&gt;
 &lt;span class="cp"&gt;#define dvmTrackAllocation(_clazz, _size)                                   \&lt;/span&gt;
@@ -327,14 +545,14 @@
 &lt;li&gt;后续Dalvik每次新申请对象的时候，只要&lt;code&gt;allocRecords&lt;/code&gt;不为NULL，那就会不断的往&lt;code&gt;allocRecords&lt;/code&gt;指向的内存区域中写入的新申请对象的信息，包括类型，大小，线程号，堆栈&lt;/li&gt;
 &lt;/ol&gt;
 &lt;p&gt;而&lt;code&gt;gDvm&lt;/code&gt;这个变量则具体是一个全局记录Dalvik虚拟机中状态的全局变量，定义和声明都在&lt;code&gt;/dalvik/vm/Globals.h&lt;/code&gt;中：&lt;/p&gt;
-&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span class="k"&gt;struct&lt;/span&gt; &lt;span class="n"&gt;DvmGlobals&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="k"&gt;struct&lt;/span&gt; &lt;span class="n"&gt;DvmGlobals&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
 &lt;span class="p"&gt;....&lt;/span&gt;
     &lt;span class="cm"&gt;/*&lt;/span&gt;
 &lt;span class="cm"&gt;     * Used for tracking allocations that we report to DDMS.  When the feature&lt;/span&gt;
 &lt;span class="cm"&gt;     * is enabled (through a DDMS request) the &amp;quot;allocRecords&amp;quot; pointer becomes&lt;/span&gt;
 &lt;span class="cm"&gt;     * non-NULL.&lt;/span&gt;
 &lt;span class="cm"&gt;     */&lt;/span&gt;
-    &lt;span class="kt"&gt;pthread_mutex_t&lt;/span&gt; &lt;span class="n"&gt;allocTrackerLock&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
+    &lt;span class="n"&gt;pthread_mutex_t&lt;/span&gt; &lt;span class="n"&gt;allocTrackerLock&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
     &lt;span class="n"&gt;AllocRecord&lt;/span&gt;&lt;span class="o"&gt;*&lt;/span&gt;    &lt;span class="n"&gt;allocRecords&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
     &lt;span class="kt"&gt;int&lt;/span&gt;             &lt;span class="n"&gt;allocRecordHead&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;        &lt;span class="cm"&gt;/* most-recently-added entry */&lt;/span&gt;
     &lt;span class="kt"&gt;int&lt;/span&gt;             &lt;span class="n"&gt;allocRecordCount&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;       &lt;span class="cm"&gt;/* #of valid entries */&lt;/span&gt;
@@ -346,7 +564,7 @@
 
 
 &lt;p&gt;而&lt;code&gt;AllocRecord&lt;/code&gt;的定义，则是在&lt;code&gt;/dalvik/vm/AllocTracker.cpp&lt;/code&gt; 中：&lt;/p&gt;
-&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span class="cm"&gt;/*&lt;/span&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="cm"&gt;/*&lt;/span&gt;
 &lt;span class="cm"&gt; * Record the details of an allocation.&lt;/span&gt;
 &lt;span class="cm"&gt; */&lt;/span&gt;
 &lt;span class="k"&gt;struct&lt;/span&gt; &lt;span class="n"&gt;AllocRecord&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
@@ -368,7 +586,7 @@
 &lt;p&gt;另外，可以看到&lt;code&gt;gDvm&lt;/code&gt;的声明是为&lt;code&gt;extern&lt;/code&gt;的，这意味着我们或许可以 &lt;strong&gt;直接&lt;/strong&gt; 获取到这个变量，一颗赛艇！&lt;/p&gt;
 &lt;h4&gt;不影响手机本身性能的情况下获取申请对象信息&lt;/h4&gt;
 &lt;p&gt;从上面的代码分析可以看到，类型为&lt;code&gt;DvmGlobals&lt;/code&gt;的&lt;code&gt;gDvm&lt;/code&gt;这个变量被声明成了extern，并且为非static变量，这意味在dalvik的so中，我们可以直接在符号表中获取到这个变量，简单来说，测试的代码如下：&lt;/p&gt;
-&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span class="cp"&gt;#include &amp;quot;Globals.h&amp;quot;&lt;/span&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="cp"&gt;#include&lt;/span&gt; &lt;span class="cpf"&gt;&amp;quot;Globals.h&amp;quot;&lt;/span&gt;&lt;span class="cp"&gt;&lt;/span&gt;
 &lt;span class="p"&gt;....&lt;/span&gt;
 &lt;span class="kt"&gt;void&lt;/span&gt; &lt;span class="o"&gt;*&lt;/span&gt; &lt;span class="n"&gt;handle&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;dlopen&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s"&gt;&amp;quot;libdvm.so&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;RTLD_NOW&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
 &lt;span class="n"&gt;snprintf&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;buff&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="mi"&gt;1024&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="s"&gt;&amp;quot;handle is 0x%x&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;handle&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
@@ -395,10 +613,10 @@
 &lt;h3&gt;What is it&lt;/h3&gt;
 &lt;p&gt;MemoryFile是android在最开始就引入的一套框架，其内部实际上是封装了android特有的内存共享机制&lt;a href="http://elinux.org/Android_Kernel_Features#ashmem"&gt;Ashmem&lt;/a&gt;匿名共享内存，简单来说，Ashmem在Android内核中是被注册成一个特殊的字符设备，Ashmem驱动通过在内核的一个自定义&lt;a href="https://en.wikipedia.org/wiki/Slab_allocation"&gt;slab&lt;/a&gt;缓冲区中初始化一段内存区域，然后通过mmap把申请的内存映射到用户的进程空间中（通过&lt;a href="https://en.wikipedia.org/wiki/Tmpfs"&gt;tmpfs&lt;/a&gt;），这样子就可以在用户进程中使用这里申请的内存了，另外，Ashmem的一个特性就是可以在系统内存不足的时候，回收掉被标记为"unpin"的内存，这个后面会讲到，另外，MemoryFile也可以通过Binder跨进程调用来让两个进程共享一段内存区域。由于整个申请内存的过程并不再Java层上，可以很明显的看出使用MemoryFile申请的内存实际上是&lt;strong&gt;并不会&lt;/strong&gt;占用Java堆内存的。&lt;/p&gt;
 &lt;p&gt;MemoryFile暴露出来的用户接口可以说跟他的名字一样，基本上跟我们平时的文件的读写基本一致，也可以使用InputStream和OutputStream来对其进行读写等操作：&lt;/p&gt;
-&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span class="n"&gt;MemoryFile&lt;/span&gt; &lt;span class="n"&gt;memoryFile&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;new&lt;/span&gt; &lt;span class="n"&gt;MemoryFile&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;null&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;inputStream&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;available&lt;/span&gt;&lt;span class="p"&gt;());&lt;/span&gt;
-&lt;span class="n"&gt;memoryFile&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;allowPurging&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nb"&gt;false&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
-&lt;span class="n"&gt;OutputStream&lt;/span&gt; &lt;span class="n"&gt;outputStream&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;memoryFile&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;getOutputStream&lt;/span&gt;&lt;span class="p"&gt;();&lt;/span&gt;
-&lt;span class="n"&gt;outputStream&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;write&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="mi"&gt;1024&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="n"&gt;MemoryFile&lt;/span&gt; &lt;span class="n"&gt;memoryFile&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="k"&gt;new&lt;/span&gt; &lt;span class="n"&gt;MemoryFile&lt;/span&gt;&lt;span class="o"&gt;(&lt;/span&gt;&lt;span class="kc"&gt;null&lt;/span&gt;&lt;span class="o"&gt;,&lt;/span&gt; &lt;span class="n"&gt;inputStream&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="na"&gt;available&lt;/span&gt;&lt;span class="o"&gt;());&lt;/span&gt;
+&lt;span class="n"&gt;memoryFile&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="na"&gt;allowPurging&lt;/span&gt;&lt;span class="o"&gt;(&lt;/span&gt;&lt;span class="kc"&gt;false&lt;/span&gt;&lt;span class="o"&gt;);&lt;/span&gt;
+&lt;span class="n"&gt;OutputStream&lt;/span&gt; &lt;span class="n"&gt;outputStream&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;memoryFile&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="na"&gt;getOutputStream&lt;/span&gt;&lt;span class="o"&gt;();&lt;/span&gt;
+&lt;span class="n"&gt;outputStream&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="na"&gt;write&lt;/span&gt;&lt;span class="o"&gt;(&lt;/span&gt;&lt;span class="mi"&gt;1024&lt;/span&gt;&lt;span class="o"&gt;);&lt;/span&gt;
 &lt;/pre&gt;&lt;/div&gt;
 
 
@@ -427,12 +645,12 @@
 &lt;p&gt;在&lt;a href="https://github.com/ragnraok/RxCamera"&gt;RxCamera&lt;/a&gt;的README中已经有关于这个库使用的比较详细介绍了，我在这里再说明一下：&lt;/p&gt;
 &lt;h4&gt;加入依赖&lt;/h4&gt;
 &lt;p&gt;首先你需要在项目中加入对RxCamera项目的依赖:&lt;/p&gt;
-&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span class="n"&gt;repositories&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
-        &lt;span class="n"&gt;jcenter&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt;
-&lt;span class="p"&gt;}&lt;/span&gt;
-&lt;span class="n"&gt;dependencies&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
-    &lt;span class="n"&gt;compile&lt;/span&gt; &lt;span class="err"&gt;&amp;#39;&lt;/span&gt;&lt;span class="n"&gt;com&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;ragnarok&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;rxcamera&lt;/span&gt;&lt;span class="o"&gt;:&lt;/span&gt;&lt;span class="n"&gt;lib&lt;/span&gt;&lt;span class="o"&gt;:&lt;/span&gt;&lt;span class="mf"&gt;0.0.1&lt;/span&gt;&lt;span class="err"&gt;&amp;#39;&lt;/span&gt;
-&lt;span class="p"&gt;}&lt;/span&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;repositories {
+        jcenter()
+}
+dependencies {
+    compile &amp;#39;com.ragnarok.rxcamera:lib:0.0.1&amp;#39;
+}
 &lt;/pre&gt;&lt;/div&gt;
 
 
@@ -441,13 +659,13 @@
 &lt;li&gt;配置camera的参数&lt;/li&gt;
 &lt;/ul&gt;
 &lt;p&gt;android的原生camera api提供了不少的选项来配置打开摄像头时候的参数，例如预览的帧率，预览的分辨率，自动对焦等，在RxCamera中主要是通过一个&lt;code&gt;RxCameraConfig&lt;/code&gt;对象来管理这些对象，并通过&lt;code&gt;RxCameraConfigChooser&lt;/code&gt;来配置对应参数：&lt;/p&gt;
-&lt;div class="highlight"&gt;&lt;pre&gt;    &lt;span class="n"&gt;RxCameraConfig&lt;/span&gt; &lt;span class="n"&gt;config&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;RxCameraConfigChooser&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;obtain&lt;/span&gt;&lt;span class="p"&gt;().&lt;/span&gt;
-        &lt;span class="n"&gt;useBackCamera&lt;/span&gt;&lt;span class="p"&gt;().&lt;/span&gt;
-        &lt;span class="n"&gt;setAutoFocus&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nb"&gt;true&lt;/span&gt;&lt;span class="p"&gt;).&lt;/span&gt;
-        &lt;span class="n"&gt;setPreferPreviewFrameRate&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="mi"&gt;15&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="mi"&gt;30&lt;/span&gt;&lt;span class="p"&gt;).&lt;/span&gt;
-        &lt;span class="n"&gt;setPreferPreviewSize&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;new&lt;/span&gt; &lt;span class="n"&gt;Point&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="mi"&gt;640&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="mi"&gt;480&lt;/span&gt;&lt;span class="p"&gt;)).&lt;/span&gt;
-        &lt;span class="n"&gt;setHandleSurfaceEvent&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nb"&gt;true&lt;/span&gt;&lt;span class="p"&gt;).&lt;/span&gt;
-        &lt;span class="n"&gt;get&lt;/span&gt;&lt;span class="p"&gt;();&lt;/span&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;    RxCameraConfig config = RxCameraConfigChooser.obtain().
+        useBackCamera().
+        setAutoFocus(true).
+        setPreferPreviewFrameRate(15, 30).
+        setPreferPreviewSize(new Point(640, 480)).
+        setHandleSurfaceEvent(true).
+        get();
 &lt;/pre&gt;&lt;/div&gt;
 
 
@@ -455,30 +673,30 @@
 &lt;li&gt;打开摄像头并获取数据&lt;/li&gt;
 &lt;/ul&gt;
 &lt;p&gt;在设置好参数之后，就可以直接打开摄像头了：&lt;/p&gt;
-&lt;div class="highlight"&gt;&lt;pre&gt;    &lt;span class="nx"&gt;RxCamera.open&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nx"&gt;this&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="nx"&gt;config&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;&lt;span class="bp"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;flatMap&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nb"&gt;new&lt;/span&gt; &lt;span class="nx"&gt;Func1&lt;/span&gt;&lt;span class="o"&gt;&amp;lt;&lt;/span&gt;&lt;span class="nx"&gt;RxCamera&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="nx"&gt;Observable&lt;/span&gt;&lt;span class="o"&gt;&amp;lt;&lt;/span&gt;&lt;span class="nx"&gt;RxCamera&lt;/span&gt;&lt;span class="o"&gt;&amp;gt;&amp;gt;&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
-      &lt;span class="p"&gt;@&lt;/span&gt;&lt;span class="nx"&gt;Override&lt;/span&gt;
-      &lt;span class="k"&gt;public&lt;/span&gt; &lt;span class="nf"&gt;Observable&lt;/span&gt;&lt;span class="o"&gt;&amp;lt;&lt;/span&gt;&lt;span class="nx"&gt;RxCamera&lt;/span&gt;&lt;span class="o"&gt;&amp;gt;&lt;/span&gt; &lt;span class="nb"&gt;call&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nx"&gt;RxCamera&lt;/span&gt; &lt;span class="nx"&gt;rxCamera&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
-          &lt;span class="k"&gt;return&lt;/span&gt; &lt;span class="nx"&gt;rxCamera.bindTexture&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nx"&gt;textureView&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
-          &lt;span class="c1"&gt;// or bind a SurfaceView:&lt;/span&gt;
-          &lt;span class="c1"&gt;// rxCamera.bindSurface(SurfaceView)&lt;/span&gt;
-      &lt;span class="p"&gt;}&lt;/span&gt;
-     &lt;span class="p"&gt;})&lt;/span&gt;&lt;span class="bp"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;flatMap&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nb"&gt;new&lt;/span&gt; &lt;span class="nx"&gt;Func1&lt;/span&gt;&lt;span class="o"&gt;&amp;lt;&lt;/span&gt;&lt;span class="nx"&gt;RxCamera&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="nx"&gt;Observable&lt;/span&gt;&lt;span class="o"&gt;&amp;lt;&lt;/span&gt;&lt;span class="nx"&gt;RxCamera&lt;/span&gt;&lt;span class="o"&gt;&amp;gt;&amp;gt;&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
-        &lt;span class="p"&gt;@&lt;/span&gt;&lt;span class="nx"&gt;Override&lt;/span&gt;
-         &lt;span class="k"&gt;public&lt;/span&gt; &lt;span class="nf"&gt;Observable&lt;/span&gt;&lt;span class="o"&gt;&amp;lt;&lt;/span&gt;&lt;span class="nx"&gt;RxCamera&lt;/span&gt;&lt;span class="o"&gt;&amp;gt;&lt;/span&gt; &lt;span class="nb"&gt;call&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nx"&gt;RxCamera&lt;/span&gt; &lt;span class="nx"&gt;rxCamera&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
-            &lt;span class="k"&gt;return&lt;/span&gt; &lt;span class="nx"&gt;rxCamera.startPreview&lt;/span&gt;&lt;span class="p"&gt;();&lt;/span&gt;
-         &lt;span class="p"&gt;}&lt;/span&gt;
-    &lt;span class="p"&gt;});&lt;/span&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;    RxCamera.open(this, config).flatMap(new Func1&amp;lt;RxCamera, Observable&amp;lt;RxCamera&amp;gt;&amp;gt;() {
+      @Override
+      public Observable&amp;lt;RxCamera&amp;gt; call(RxCamera rxCamera) {
+          return rxCamera.bindTexture(textureView);
+          // or bind a SurfaceView:
+          // rxCamera.bindSurface(SurfaceView)
+      }
+     }).flatMap(new Func1&amp;lt;RxCamera, Observable&amp;lt;RxCamera&amp;gt;&amp;gt;() {
+        @Override
+         public Observable&amp;lt;RxCamera&amp;gt; call(RxCamera rxCamera) {
+            return rxCamera.startPreview();
+         }
+    });
 &lt;/pre&gt;&lt;/div&gt;
 
 
 &lt;p&gt;这里包括了设置用于预览的Surface(这里是使用&lt;code&gt;TextureView&lt;/code&gt;进行预览)，然后正式开始预览。&lt;/p&gt;
 &lt;p&gt;只有预览之后才能开始获取摄像头的数据：&lt;/p&gt;
-&lt;div class="highlight"&gt;&lt;pre&gt;    &lt;span class="nx"&gt;camera.request&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt;&lt;span class="bp"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;periodicDataRequest&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="mi"&gt;1000&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;&lt;span class="bp"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;subscribe&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nb"&gt;new&lt;/span&gt; &lt;span class="nx"&gt;Action1&lt;/span&gt;&lt;span class="o"&gt;&amp;lt;&lt;/span&gt;&lt;span class="nx"&gt;RxCameraData&lt;/span&gt;&lt;span class="o"&gt;&amp;gt;&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
-            &lt;span class="p"&gt;@&lt;/span&gt;&lt;span class="nx"&gt;Override&lt;/span&gt;
-            &lt;span class="k"&gt;public&lt;/span&gt; &lt;span class="nf"&gt;void&lt;/span&gt; &lt;span class="nb"&gt;call&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nx"&gt;RxCameraData&lt;/span&gt; &lt;span class="nx"&gt;rxCameraData&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
-                &lt;span class="nx"&gt;showLog&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s2"&gt;&amp;quot;periodic request, cameraData.length: &amp;quot;&lt;/span&gt; &lt;span class="o"&gt;+&lt;/span&gt; &lt;span class="nx"&gt;rxCameraData.cameraData.length&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;    &lt;span class="nt"&gt;camera&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nc"&gt;request&lt;/span&gt;&lt;span class="o"&gt;()&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nc"&gt;periodicDataRequest&lt;/span&gt;&lt;span class="o"&gt;(&lt;/span&gt;&lt;span class="nt"&gt;1000&lt;/span&gt;&lt;span class="o"&gt;)&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nc"&gt;subscribe&lt;/span&gt;&lt;span class="o"&gt;(&lt;/span&gt;&lt;span class="nt"&gt;new&lt;/span&gt; &lt;span class="nt"&gt;Action1&lt;/span&gt;&lt;span class="o"&gt;&amp;lt;&lt;/span&gt;&lt;span class="nt"&gt;RxCameraData&lt;/span&gt;&lt;span class="o"&gt;&amp;gt;()&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
+            &lt;span class="err"&gt;@Override&lt;/span&gt;
+            &lt;span class="err"&gt;public&lt;/span&gt; &lt;span class="err"&gt;void&lt;/span&gt; &lt;span class="err"&gt;call(RxCameraData&lt;/span&gt; &lt;span class="err"&gt;rxCameraData)&lt;/span&gt; &lt;span class="err"&gt;{&lt;/span&gt;
+                &lt;span class="err"&gt;showLog(&amp;quot;periodic&lt;/span&gt; &lt;span class="err"&gt;request,&lt;/span&gt; &lt;span class="err"&gt;cameraData.&lt;/span&gt;&lt;span class="n"&gt;length&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt; &lt;span class="err"&gt;&amp;quot;&lt;/span&gt; &lt;span class="o"&gt;+&lt;/span&gt; &lt;span class="n"&gt;rxCameraData&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;cameraData&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;length&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
             &lt;span class="p"&gt;}&lt;/span&gt;
-    &lt;span class="p"&gt;});&lt;/span&gt;
+    &lt;span class="err"&gt;}&lt;/span&gt;&lt;span class="o"&gt;);&lt;/span&gt;
 &lt;/pre&gt;&lt;/div&gt;
 
 
@@ -545,22 +763,22 @@
 &lt;/li&gt;
 &lt;/ol&gt;
 &lt;p&gt;另外，以上三个类都继承于&lt;a href="http://developer.android.com/intl/zh-cn/reference/android/text/Layout.html"&gt;Layout&lt;/a&gt;类，在此类中统一负责文本的具体绘制，在Layout.draw方法中，会对文本一行一行的进行渲染：&lt;/p&gt;
-&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span class="n"&gt;TextLine&lt;/span&gt; &lt;span class="n"&gt;tl&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;TextLine&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;obtain&lt;/span&gt;&lt;span class="p"&gt;();&lt;/span&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="n"&gt;TextLine&lt;/span&gt; &lt;span class="n"&gt;tl&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;TextLine&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="na"&gt;obtain&lt;/span&gt;&lt;span class="o"&gt;();&lt;/span&gt;
 
 &lt;span class="c1"&gt;// Draw the lines, one at a time.&lt;/span&gt;
 &lt;span class="c1"&gt;// The baseline is the top of the following line minus the current line&amp;#39;s descent.&lt;/span&gt;
-&lt;span class="k"&gt;for&lt;/span&gt; &lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="kt"&gt;int&lt;/span&gt; &lt;span class="n"&gt;i&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;firstLine&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt; &lt;span class="n"&gt;i&lt;/span&gt; &lt;span class="o"&gt;&amp;lt;=&lt;/span&gt; &lt;span class="n"&gt;lastLine&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt; &lt;span class="n"&gt;i&lt;/span&gt;&lt;span class="o"&gt;++&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
-      &lt;span class="p"&gt;....&lt;/span&gt;
-      &lt;span class="n"&gt;Directions&lt;/span&gt; &lt;span class="n"&gt;directions&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;getLineDirections&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;i&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
-      &lt;span class="k"&gt;if&lt;/span&gt; &lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;directions&lt;/span&gt; &lt;span class="o"&gt;==&lt;/span&gt; &lt;span class="n"&gt;DIRS_ALL_LEFT_TO_RIGHT&lt;/span&gt; &lt;span class="o"&gt;&amp;amp;&amp;amp;&lt;/span&gt; &lt;span class="o"&gt;!&lt;/span&gt;&lt;span class="n"&gt;mSpannedText&lt;/span&gt; &lt;span class="o"&gt;&amp;amp;&amp;amp;&lt;/span&gt; &lt;span class="o"&gt;!&lt;/span&gt;&lt;span class="n"&gt;hasTabOrEmoji&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
+&lt;span class="k"&gt;for&lt;/span&gt; &lt;span class="o"&gt;(&lt;/span&gt;&lt;span class="kt"&gt;int&lt;/span&gt; &lt;span class="n"&gt;i&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;firstLine&lt;/span&gt;&lt;span class="o"&gt;;&lt;/span&gt; &lt;span class="n"&gt;i&lt;/span&gt; &lt;span class="o"&gt;&amp;lt;=&lt;/span&gt; &lt;span class="n"&gt;lastLine&lt;/span&gt;&lt;span class="o"&gt;;&lt;/span&gt; &lt;span class="n"&gt;i&lt;/span&gt;&lt;span class="o"&gt;++)&lt;/span&gt; &lt;span class="o"&gt;{&lt;/span&gt;
+      &lt;span class="o"&gt;....&lt;/span&gt;
+      &lt;span class="n"&gt;Directions&lt;/span&gt; &lt;span class="n"&gt;directions&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;getLineDirections&lt;/span&gt;&lt;span class="o"&gt;(&lt;/span&gt;&lt;span class="n"&gt;i&lt;/span&gt;&lt;span class="o"&gt;);&lt;/span&gt;
+      &lt;span class="k"&gt;if&lt;/span&gt; &lt;span class="o"&gt;(&lt;/span&gt;&lt;span class="n"&gt;directions&lt;/span&gt; &lt;span class="o"&gt;==&lt;/span&gt; &lt;span class="n"&gt;DIRS_ALL_LEFT_TO_RIGHT&lt;/span&gt; &lt;span class="o"&gt;&amp;amp;&amp;amp;&lt;/span&gt; &lt;span class="o"&gt;!&lt;/span&gt;&lt;span class="n"&gt;mSpannedText&lt;/span&gt; &lt;span class="o"&gt;&amp;amp;&amp;amp;&lt;/span&gt; &lt;span class="o"&gt;!&lt;/span&gt;&lt;span class="n"&gt;hasTabOrEmoji&lt;/span&gt;&lt;span class="o"&gt;)&lt;/span&gt; &lt;span class="o"&gt;{&lt;/span&gt;
          &lt;span class="c1"&gt;// XXX: assumes there&amp;#39;s nothing additional to be done&lt;/span&gt;
-          &lt;span class="n"&gt;canvas&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;drawText&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;buf&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;start&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;end&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;x&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;lbaseline&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;paint&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
-      &lt;span class="p"&gt;}&lt;/span&gt; &lt;span class="k"&gt;else&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
-          &lt;span class="n"&gt;tl&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;set&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;paint&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;buf&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;start&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;end&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;dir&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;directions&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;hasTabOrEmoji&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;tabStops&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
-          &lt;span class="n"&gt;tl&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;draw&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;canvas&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;x&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;ltop&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;lbaseline&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;lbottom&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
-      &lt;span class="p"&gt;}&lt;/span&gt;
-&lt;span class="p"&gt;}&lt;/span&gt;
-&lt;span class="n"&gt;TextLine&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;recycle&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;tl&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
+          &lt;span class="n"&gt;canvas&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="na"&gt;drawText&lt;/span&gt;&lt;span class="o"&gt;(&lt;/span&gt;&lt;span class="n"&gt;buf&lt;/span&gt;&lt;span class="o"&gt;,&lt;/span&gt; &lt;span class="n"&gt;start&lt;/span&gt;&lt;span class="o"&gt;,&lt;/span&gt; &lt;span class="n"&gt;end&lt;/span&gt;&lt;span class="o"&gt;,&lt;/span&gt; &lt;span class="n"&gt;x&lt;/span&gt;&lt;span class="o"&gt;,&lt;/span&gt; &lt;span class="n"&gt;lbaseline&lt;/span&gt;&lt;span class="o"&gt;,&lt;/span&gt; &lt;span class="n"&gt;paint&lt;/span&gt;&lt;span class="o"&gt;);&lt;/span&gt;
+      &lt;span class="o"&gt;}&lt;/span&gt; &lt;span class="k"&gt;else&lt;/span&gt; &lt;span class="o"&gt;{&lt;/span&gt;
+          &lt;span class="n"&gt;tl&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="na"&gt;set&lt;/span&gt;&lt;span class="o"&gt;(&lt;/span&gt;&lt;span class="n"&gt;paint&lt;/span&gt;&lt;span class="o"&gt;,&lt;/span&gt; &lt;span class="n"&gt;buf&lt;/span&gt;&lt;span class="o"&gt;,&lt;/span&gt; &lt;span class="n"&gt;start&lt;/span&gt;&lt;span class="o"&gt;,&lt;/span&gt; &lt;span class="n"&gt;end&lt;/span&gt;&lt;span class="o"&gt;,&lt;/span&gt; &lt;span class="n"&gt;dir&lt;/span&gt;&lt;span class="o"&gt;,&lt;/span&gt; &lt;span class="n"&gt;directions&lt;/span&gt;&lt;span class="o"&gt;,&lt;/span&gt; &lt;span class="n"&gt;hasTabOrEmoji&lt;/span&gt;&lt;span class="o"&gt;,&lt;/span&gt; &lt;span class="n"&gt;tabStops&lt;/span&gt;&lt;span class="o"&gt;);&lt;/span&gt;
+          &lt;span class="n"&gt;tl&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="na"&gt;draw&lt;/span&gt;&lt;span class="o"&gt;(&lt;/span&gt;&lt;span class="n"&gt;canvas&lt;/span&gt;&lt;span class="o"&gt;,&lt;/span&gt; &lt;span class="n"&gt;x&lt;/span&gt;&lt;span class="o"&gt;,&lt;/span&gt; &lt;span class="n"&gt;ltop&lt;/span&gt;&lt;span class="o"&gt;,&lt;/span&gt; &lt;span class="n"&gt;lbaseline&lt;/span&gt;&lt;span class="o"&gt;,&lt;/span&gt; &lt;span class="n"&gt;lbottom&lt;/span&gt;&lt;span class="o"&gt;);&lt;/span&gt;
+      &lt;span class="o"&gt;}&lt;/span&gt;
+&lt;span class="o"&gt;}&lt;/span&gt;
+&lt;span class="n"&gt;TextLine&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="na"&gt;recycle&lt;/span&gt;&lt;span class="o"&gt;(&lt;/span&gt;&lt;span class="n"&gt;tl&lt;/span&gt;&lt;span class="o"&gt;);&lt;/span&gt;
 &lt;/pre&gt;&lt;/div&gt;
 
 
@@ -570,30 +788,30 @@
 &lt;h3&gt;TextView的预渲染优化&lt;/h3&gt;
 &lt;p&gt;从TextView的渲染原理来看，如果只是单纯的显示文本，我们根本不需要另外设置SpanWatcher来监听span的变化，因此我们可以直接使用BoringLayout或者StaticLayout来直接显示文本内容，但是BoringLayout只能显示单行文本，因此这里最好的选择是直接用StaticLayout&lt;/p&gt;
 &lt;p&gt;我们选择了自定义View，并希望最终有这样的一个接口：&lt;/p&gt;
-&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span class="n"&gt;public&lt;/span&gt; &lt;span class="n"&gt;class&lt;/span&gt; &lt;span class="n"&gt;StaticLayoutView&lt;/span&gt; &lt;span class="n"&gt;extends&lt;/span&gt; &lt;span class="n"&gt;View&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
-    &lt;span class="n"&gt;private&lt;/span&gt; &lt;span class="n"&gt;Layout&lt;/span&gt; &lt;span class="n"&gt;layout&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;null&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
-    &lt;span class="n"&gt;public&lt;/span&gt; &lt;span class="kt"&gt;void&lt;/span&gt; &lt;span class="nf"&gt;setLayout&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;Layout&lt;/span&gt; &lt;span class="n"&gt;layout&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
-        &lt;span class="n"&gt;this&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;layout&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;layout&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
-        &lt;span class="n"&gt;requestLayout&lt;/span&gt;&lt;span class="p"&gt;();&lt;/span&gt;
-    &lt;span class="p"&gt;}&lt;/span&gt; 
-    &lt;span class="err"&gt;@&lt;/span&gt;&lt;span class="n"&gt;Override&lt;/span&gt;
-    &lt;span class="n"&gt;protected&lt;/span&gt; &lt;span class="kt"&gt;void&lt;/span&gt; &lt;span class="n"&gt;onDraw&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;Canvas&lt;/span&gt; &lt;span class="n"&gt;canvas&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
-        &lt;span class="n"&gt;super&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;onDraw&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;canvas&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="kd"&gt;public&lt;/span&gt; &lt;span class="kd"&gt;class&lt;/span&gt; &lt;span class="nc"&gt;StaticLayoutView&lt;/span&gt; &lt;span class="kd"&gt;extends&lt;/span&gt; &lt;span class="n"&gt;View&lt;/span&gt; &lt;span class="o"&gt;{&lt;/span&gt;
+    &lt;span class="kd"&gt;private&lt;/span&gt; &lt;span class="n"&gt;Layout&lt;/span&gt; &lt;span class="n"&gt;layout&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="kc"&gt;null&lt;/span&gt;&lt;span class="o"&gt;;&lt;/span&gt;
+    &lt;span class="kd"&gt;public&lt;/span&gt; &lt;span class="kt"&gt;void&lt;/span&gt; &lt;span class="nf"&gt;setLayout&lt;/span&gt;&lt;span class="o"&gt;(&lt;/span&gt;&lt;span class="n"&gt;Layout&lt;/span&gt; &lt;span class="n"&gt;layout&lt;/span&gt;&lt;span class="o"&gt;)&lt;/span&gt; &lt;span class="o"&gt;{&lt;/span&gt;
+        &lt;span class="k"&gt;this&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="na"&gt;layout&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;layout&lt;/span&gt;&lt;span class="o"&gt;;&lt;/span&gt;
+        &lt;span class="n"&gt;requestLayout&lt;/span&gt;&lt;span class="o"&gt;();&lt;/span&gt;
+    &lt;span class="o"&gt;}&lt;/span&gt; 
+    &lt;span class="nd"&gt;@Override&lt;/span&gt;
+    &lt;span class="kd"&gt;protected&lt;/span&gt; &lt;span class="kt"&gt;void&lt;/span&gt; &lt;span class="nf"&gt;onDraw&lt;/span&gt;&lt;span class="o"&gt;(&lt;/span&gt;&lt;span class="n"&gt;Canvas&lt;/span&gt; &lt;span class="n"&gt;canvas&lt;/span&gt;&lt;span class="o"&gt;)&lt;/span&gt; &lt;span class="o"&gt;{&lt;/span&gt;
+        &lt;span class="kd"&gt;super&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="na"&gt;onDraw&lt;/span&gt;&lt;span class="o"&gt;(&lt;/span&gt;&lt;span class="n"&gt;canvas&lt;/span&gt;&lt;span class="o"&gt;);&lt;/span&gt;
 
-        &lt;span class="n"&gt;canvas&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;save&lt;/span&gt;&lt;span class="p"&gt;();&lt;/span&gt;
-        &lt;span class="k"&gt;if&lt;/span&gt; &lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;layout&lt;/span&gt; &lt;span class="o"&gt;!=&lt;/span&gt; &lt;span class="n"&gt;null&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
-            &lt;span class="n"&gt;layout&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;draw&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;canvas&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;null&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;null&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="mi"&gt;0&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
-        &lt;span class="p"&gt;}&lt;/span&gt;
-        &lt;span class="n"&gt;canvas&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;restore&lt;/span&gt;&lt;span class="p"&gt;();&lt;/span&gt;
-    &lt;span class="p"&gt;}&lt;/span&gt;
-&lt;span class="p"&gt;}&lt;/span&gt;
+        &lt;span class="n"&gt;canvas&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="na"&gt;save&lt;/span&gt;&lt;span class="o"&gt;();&lt;/span&gt;
+        &lt;span class="k"&gt;if&lt;/span&gt; &lt;span class="o"&gt;(&lt;/span&gt;&lt;span class="n"&gt;layout&lt;/span&gt; &lt;span class="o"&gt;!=&lt;/span&gt; &lt;span class="kc"&gt;null&lt;/span&gt;&lt;span class="o"&gt;)&lt;/span&gt; &lt;span class="o"&gt;{&lt;/span&gt;
+            &lt;span class="n"&gt;layout&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="na"&gt;draw&lt;/span&gt;&lt;span class="o"&gt;(&lt;/span&gt;&lt;span class="n"&gt;canvas&lt;/span&gt;&lt;span class="o"&gt;,&lt;/span&gt; &lt;span class="kc"&gt;null&lt;/span&gt;&lt;span class="o"&gt;,&lt;/span&gt; &lt;span class="kc"&gt;null&lt;/span&gt;&lt;span class="o"&gt;,&lt;/span&gt; &lt;span class="mi"&gt;0&lt;/span&gt;&lt;span class="o"&gt;);&lt;/span&gt;
+        &lt;span class="o"&gt;}&lt;/span&gt;
+        &lt;span class="n"&gt;canvas&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="na"&gt;restore&lt;/span&gt;&lt;span class="o"&gt;();&lt;/span&gt;
+    &lt;span class="o"&gt;}&lt;/span&gt;
+&lt;span class="o"&gt;}&lt;/span&gt;
 &lt;/pre&gt;&lt;/div&gt;
 
 
 &lt;p&gt;我们可以直接通过设置这个view的Layout来绘制文本，并在&lt;code&gt;onDraw&lt;/code&gt;方法中直接使用这个Layout对象来绘制文本。在这里我们摒弃了&lt;code&gt;setText&lt;/code&gt;方法，直接通过Layout来绘制文本，而这里的Layout对象，我们可以通过预先创建之后才设置进去（这里可以放到单独的一个线程中创建），这样对比起普通TextView的&lt;code&gt;setText&lt;/code&gt;方法，我们减少了&lt;code&gt;setText&lt;/code&gt;中的许多消耗，可以大幅度的提升效率。&lt;/p&gt;
 &lt;p&gt;StaticLayout的创建非常简单，只需要给定文本，宽度等就能直接创建。另外，为了预先填充TextLayoutCache，我们也可以在创建完StaticLayout对象之后，预先在一个dummy canvas中draw出来：&lt;/p&gt;
-&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span class="n"&gt;StaticLayout&lt;/span&gt; &lt;span class="n"&gt;layout&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;new&lt;/span&gt; &lt;span class="n"&gt;StaticLayout&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;TestSpan&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;getSpanString&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;i&lt;/span&gt;&lt;span class="p"&gt;),&lt;/span&gt; &lt;span class="n"&gt;textPaint&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;hardCodeWidth&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;alignment&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="mf"&gt;1.0f&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="mf"&gt;0f&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="nb"&gt;true&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
-&lt;span class="n"&gt;layout&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;draw&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;dummyCanvas&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="n"&gt;StaticLayout&lt;/span&gt; &lt;span class="n"&gt;layout&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="k"&gt;new&lt;/span&gt; &lt;span class="n"&gt;StaticLayout&lt;/span&gt;&lt;span class="o"&gt;(&lt;/span&gt;&lt;span class="n"&gt;TestSpan&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="na"&gt;getSpanString&lt;/span&gt;&lt;span class="o"&gt;(&lt;/span&gt;&lt;span class="n"&gt;i&lt;/span&gt;&lt;span class="o"&gt;),&lt;/span&gt; &lt;span class="n"&gt;textPaint&lt;/span&gt;&lt;span class="o"&gt;,&lt;/span&gt; &lt;span class="n"&gt;hardCodeWidth&lt;/span&gt;&lt;span class="o"&gt;,&lt;/span&gt; &lt;span class="n"&gt;alignment&lt;/span&gt;&lt;span class="o"&gt;,&lt;/span&gt; &lt;span class="mf"&gt;1.0f&lt;/span&gt;&lt;span class="o"&gt;,&lt;/span&gt; &lt;span class="mf"&gt;0f&lt;/span&gt;&lt;span class="o"&gt;,&lt;/span&gt; &lt;span class="kc"&gt;true&lt;/span&gt;&lt;span class="o"&gt;);&lt;/span&gt;
+&lt;span class="n"&gt;layout&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="na"&gt;draw&lt;/span&gt;&lt;span class="o"&gt;(&lt;/span&gt;&lt;span class="n"&gt;dummyCanvas&lt;/span&gt;&lt;span class="o"&gt;);&lt;/span&gt;
 &lt;/pre&gt;&lt;/div&gt;
 
 
@@ -613,40 +831,40 @@
 &lt;h3&gt;基本语法介绍&lt;/h3&gt;
 &lt;p&gt;Kotlin的语法非常简洁，熟悉Java或者Scala的人都可以快速上手：&lt;/p&gt;
 &lt;h4&gt;函数声明：&lt;/h4&gt;
-&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span class="n"&gt;fun&lt;/span&gt; &lt;span class="n"&gt;foo&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;va&lt;/span&gt;&lt;span class="o"&gt;:&lt;/span&gt; &lt;span class="n"&gt;Int&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;&lt;span class="o"&gt;:&lt;/span&gt; &lt;span class="n"&gt;Int&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
-    &lt;span class="k"&gt;return&lt;/span&gt; &lt;span class="mi"&gt;1&lt;/span&gt;
-&lt;span class="p"&gt;}&lt;/span&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;fun foo(va: Int): Int {
+    return 1
+}
 &lt;/pre&gt;&lt;/div&gt;
 
 
 &lt;p&gt;也可以单行声明：&lt;/p&gt;
-&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span class="n"&gt;fun&lt;/span&gt; &lt;span class="n"&gt;foo&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;va&lt;/span&gt;&lt;span class="o"&gt;:&lt;/span&gt; &lt;span class="n"&gt;Int&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;&lt;span class="o"&gt;:&lt;/span&gt; &lt;span class="n"&gt;Int&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="mi"&gt;1&lt;/span&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;fun foo(va: Int): Int = 1
 &lt;/pre&gt;&lt;/div&gt;
 
 
 &lt;p&gt;lambda当然也是支持的：&lt;/p&gt;
-&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span class="n"&gt;var&lt;/span&gt; &lt;span class="n"&gt;c&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;&lt;span class="n"&gt;foo&lt;/span&gt;&lt;span class="o"&gt;:&lt;/span&gt; &lt;span class="n"&gt;Int&lt;/span&gt; &lt;span class="o"&gt;-&amp;gt;&lt;/span&gt; &lt;span class="n"&gt;println&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;foo&lt;/span&gt;&lt;span class="p"&gt;)}&lt;/span&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;var c = {foo: Int -&amp;gt; println(foo)}
 &lt;/pre&gt;&lt;/div&gt;
 
 
 &lt;p&gt;Kotlin中的函数是一等对象，自然支持高阶函数：&lt;/p&gt;
-&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span class="n"&gt;var&lt;/span&gt; &lt;span class="n"&gt;c&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;&lt;span class="n"&gt;foo&lt;/span&gt;&lt;span class="o"&gt;:&lt;/span&gt; &lt;span class="n"&gt;Int&lt;/span&gt; &lt;span class="o"&gt;-&amp;gt;&lt;/span&gt; &lt;span class="n"&gt;println&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;foo&lt;/span&gt;&lt;span class="p"&gt;)}&lt;/span&gt;
-&lt;span class="n"&gt;fun&lt;/span&gt; &lt;span class="n"&gt;fooTest&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;func&lt;/span&gt;&lt;span class="o"&gt;:&lt;/span&gt; &lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;Int&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;&lt;span class="o"&gt;-&amp;gt;&lt;/span&gt;&lt;span class="p"&gt;())&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;println&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s"&gt;&amp;quot;I&amp;#39;m Groot&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;    
-&lt;span class="n"&gt;fooTest&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;c&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;var c = {foo: Int -&amp;gt; println(foo)}
+fun fooTest(func: (Int)-&amp;gt;()) = println(&amp;quot;I&amp;#39;m Groot&amp;quot;)    
+fooTest(c)
 &lt;/pre&gt;&lt;/div&gt;
 
 
 &lt;p&gt;&lt;br /&gt;&lt;/p&gt;
 &lt;h4&gt;类与接口&lt;/h4&gt;
 &lt;p&gt;类可以这样进行声明：&lt;/p&gt;
-&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span class="n"&gt;class&lt;/span&gt; &lt;span class="nf"&gt;Bar&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;var&lt;/span&gt; &lt;span class="n"&gt;b&lt;/span&gt;&lt;span class="o"&gt;:&lt;/span&gt; &lt;span class="n"&gt;Int&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;&lt;span class="o"&gt;:&lt;/span&gt; &lt;span class="n"&gt;Foo&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
-    &lt;span class="n"&gt;var&lt;/span&gt; &lt;span class="n"&gt;c&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="mi"&gt;1&lt;/span&gt;
-    &lt;span class="n"&gt;init&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
-        &lt;span class="n"&gt;println&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s"&gt;&amp;quot;class initializer&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="kr"&gt;class&lt;/span&gt; &lt;span class="nx"&gt;Bar&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="kd"&gt;var&lt;/span&gt; &lt;span class="nx"&gt;b&lt;/span&gt;: &lt;span class="kt"&gt;Int&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;&lt;span class="o"&gt;:&lt;/span&gt; &lt;span class="nx"&gt;Foo() {&lt;/span&gt;
+    &lt;span class="kd"&gt;var&lt;/span&gt; &lt;span class="nx"&gt;c&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="mi"&gt;1&lt;/span&gt;
+    &lt;span class="nx"&gt;init&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
+        &lt;span class="nx"&gt;println&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s2"&gt;&amp;quot;class initializer&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
     &lt;span class="p"&gt;}&lt;/span&gt;
 
-    &lt;span class="n"&gt;constructor&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt;&lt;span class="o"&gt;:&lt;/span&gt; &lt;span class="n"&gt;this&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="mi"&gt;1&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
-        &lt;span class="n"&gt;println&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s"&gt;&amp;quot;secondary constructor&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+    &lt;span class="kr"&gt;constructor&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt;&lt;span class="o"&gt;:&lt;/span&gt; &lt;span class="k"&gt;this&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="mi"&gt;1&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
+        &lt;span class="nx"&gt;println&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s2"&gt;&amp;quot;secondary constructor&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
     &lt;span class="p"&gt;}&lt;/span&gt;
 &lt;span class="p"&gt;}&lt;/span&gt;
 &lt;/pre&gt;&lt;/div&gt;
@@ -655,8 +873,8 @@
 &lt;p&gt;Bar类在这里继承了Foo类，Bar类有两个构造函数，直接在Bar类头的是primary constructor，另外一个构造函数使用&lt;code&gt;constructor&lt;/code&gt;关键字定义，注意必须要先调用primary constructor，另外，&lt;code&gt;init&lt;/code&gt;标明的是class initializer，每个构造函数都会首先调用class initializer里面的代码，再调用构造函数&lt;/p&gt;
 &lt;p&gt;&lt;br /&gt;&lt;/p&gt;
 &lt;h5&gt;Inner class:&lt;/h5&gt;
-&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span class="n"&gt;class&lt;/span&gt; &lt;span class="n"&gt;Outer&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
-    &lt;span class="n"&gt;class&lt;/span&gt; &lt;span class="n"&gt;Inner&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;      
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="kr"&gt;class&lt;/span&gt; &lt;span class="nx"&gt;Outer&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
+    &lt;span class="kr"&gt;class&lt;/span&gt; &lt;span class="nx"&gt;Inner&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;      
     &lt;span class="p"&gt;}&lt;/span&gt;
 &lt;span class="p"&gt;}&lt;/span&gt;
 &lt;/pre&gt;&lt;/div&gt;
@@ -665,22 +883,22 @@
 &lt;p&gt;Kotlin同样支持嵌套的内部类，不过和Java不一样的是，Kotlin的内部类不会默认包含一个指向外部类对象的引用，也就是说，Kotlin中所有的内部类默认就是&lt;strong&gt;静态&lt;/strong&gt;的，这样可以减少很多内存泄露的问题。另外，如果需要在内部类中引用外部类对象，可以在Inner类的声明前加上&lt;code&gt;inner&lt;/code&gt;关键字，然后在Inner类中使用标记的&lt;code&gt;this&lt;/code&gt;：&lt;code&gt;this@Outer&lt;/code&gt;来指向外部类对象&lt;/p&gt;
 &lt;p&gt;&lt;br /&gt;&lt;/p&gt;
 &lt;h5&gt;Singleton:&lt;/h5&gt;
-&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span class="n"&gt;object&lt;/span&gt; &lt;span class="n"&gt;Single&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
-    &lt;span class="n"&gt;var&lt;/span&gt; &lt;span class="n"&gt;c&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="mi"&gt;1&lt;/span&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;object Single {
+    var c = 1
 
-    &lt;span class="n"&gt;fun&lt;/span&gt; &lt;span class="n"&gt;foo&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;println&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s"&gt;&amp;quot;foo&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
-&lt;span class="p"&gt;}&lt;/span&gt;
+    fun foo() = println(&amp;quot;foo&amp;quot;)
+}
 &lt;/pre&gt;&lt;/div&gt;
 
 
 &lt;p&gt;Kotlin中使用&lt;code&gt;object&lt;/code&gt;关键字声明一个singleton对象，后面这里的方法就可以直接使用&lt;code&gt;Single.foo()&lt;/code&gt;来调用了&lt;/p&gt;
 &lt;p&gt;&lt;br /&gt;&lt;/p&gt;
 &lt;h5&gt;Interface:&lt;/h5&gt;
-&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span class="n"&gt;interface&lt;/span&gt; &lt;span class="n"&gt;Interface&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
-    &lt;span class="n"&gt;fun&lt;/span&gt; &lt;span class="n"&gt;foo&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
-        &lt;span class="n"&gt;println&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="mi"&gt;1&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="kr"&gt;interface&lt;/span&gt; &lt;span class="nx"&gt;Interface&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
+    &lt;span class="nx"&gt;fun&lt;/span&gt; &lt;span class="nx"&gt;foo() {&lt;/span&gt;
+        &lt;span class="nx"&gt;println&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="mi"&gt;1&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
     &lt;span class="p"&gt;}&lt;/span&gt;
-    &lt;span class="n"&gt;fun&lt;/span&gt; &lt;span class="n"&gt;bar&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt;
+    &lt;span class="nx"&gt;fun&lt;/span&gt; &lt;span class="nx"&gt;bar&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt;
 &lt;span class="p"&gt;}&lt;/span&gt;
 &lt;/pre&gt;&lt;/div&gt;
 
@@ -691,35 +909,35 @@
 &lt;h5&gt;Null safe:&lt;/h5&gt;
 &lt;p&gt;在Kotlin中，严格区分了nullable和非nullable对象，甚至在编译期解决了不少潜在的空指针问题:&lt;/p&gt;
 &lt;p&gt;我们先来看下普通的变量声明&lt;/p&gt;
-&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span class="n"&gt;var&lt;/span&gt; &lt;span class="n"&gt;c&lt;/span&gt;&lt;span class="o"&gt;:&lt;/span&gt; &lt;span class="n"&gt;String&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="s"&gt;&amp;quot;12123&amp;quot;&lt;/span&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;var c: String = &amp;quot;12123&amp;quot;
 &lt;/pre&gt;&lt;/div&gt;
 
 
 &lt;p&gt;这里声明了一个String对象，其值为"12123"，我们可以正常的使用这个对象的成员方法：&lt;code&gt;c.length()&lt;/code&gt;&lt;/p&gt;
 &lt;p&gt;但是，如果在初始化的时候，变量c为空的话，这样声明就是错误的，会编译不过：&lt;/p&gt;
-&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span class="n"&gt;var&lt;/span&gt; &lt;span class="n"&gt;c&lt;/span&gt;&lt;span class="o"&gt;:&lt;/span&gt; &lt;span class="n"&gt;String&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;null&lt;/span&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;var c: String = null
 &lt;/pre&gt;&lt;/div&gt;
 
 
 &lt;p&gt;正确的声明应该是这样：&lt;/p&gt;
-&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span class="n"&gt;var&lt;/span&gt; &lt;span class="n"&gt;c&lt;/span&gt;&lt;span class="o"&gt;:&lt;/span&gt; &lt;span class="n"&gt;String&lt;/span&gt;&lt;span class="o"&gt;?&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;null&lt;/span&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;var c: String? = null
 &lt;/pre&gt;&lt;/div&gt;
 
 
 &lt;p&gt;这里在&lt;code&gt;String&lt;/code&gt;后面加多了一个问号，表明这里是一个&lt;strong&gt;Nullable&lt;/strong&gt;的对象，说明这个变量在使用的过程中&lt;strong&gt;可能为空&lt;/strong&gt;，而且，在调用这个变量的成员的时候，必须要使用这种语法：&lt;code&gt;c?.length()&lt;/code&gt;，在调用的时候添加了一个问号，表明，如果&lt;code&gt;c&lt;/code&gt;为空的时候，&lt;code&gt;length()&lt;/code&gt;这个方法就不会调用。coffe-script也有类似的，这种语法糖减少了很多平时用到的Null-checked，简化了代码，而且从编译器开始介入null-checked，大大减少了潜在的&lt;code&gt;NullPointerException&lt;/code&gt;，而事实上，null的确也是一个&lt;strong&gt;&lt;a href="http://www.infoq.com/presentations/Null-References-The-Billion-Dollar-Mistake-Tony-Hoare"&gt;billion dollar mistake&lt;/a&gt;&lt;/strong&gt;&lt;/p&gt;
 &lt;p&gt;常年进行如此的调用语法常常会很恼人，因此在你进行显式的Null-checked的时候，Kotlin的编译器会认为后续的调用已经无需进行Null-checked，可以直接调用了：&lt;/p&gt;
-&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span class="k"&gt;if&lt;/span&gt; &lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;c&lt;/span&gt; &lt;span class="o"&gt;!=&lt;/span&gt; &lt;span class="n"&gt;null&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
-    &lt;span class="n"&gt;c&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;length&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt;
-&lt;span class="p"&gt;}&lt;/span&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;if (c != null) {
+    c.length()
+}
 &lt;/pre&gt;&lt;/div&gt;
 
 
 &lt;p&gt;&lt;br /&gt;&lt;/p&gt;
 &lt;h5&gt;Smart type cast&lt;/h5&gt;
 &lt;p&gt;在Kotlin中，进行强制类型转换可以使用&lt;code&gt;as&lt;/code&gt;关键字，但有可能会抛出异常，因此，Kotlin引入了smart type cast:&lt;/p&gt;
-&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span class="k"&gt;if&lt;/span&gt; &lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;c&lt;/span&gt; &lt;span class="n"&gt;is&lt;/span&gt; &lt;span class="n"&gt;String&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
-    &lt;span class="n"&gt;c&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;length&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt;
-&lt;span class="p"&gt;}&lt;/span&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;if (c is String) {
+    c.length()
+}
 &lt;/pre&gt;&lt;/div&gt;
 
 
@@ -727,31 +945,31 @@
 &lt;p&gt;&lt;br /&gt;&lt;/p&gt;
 &lt;h4&gt;Pattern Matching&lt;/h4&gt;
 &lt;p&gt;Kotlin在一定程度上支持了一些FP的特性，包括强大的Pattern Matching，在Kotlin中可以使用&lt;code&gt;when&lt;/code&gt;关键字：&lt;/p&gt;
-&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span class="n"&gt;var&lt;/span&gt; &lt;span class="n"&gt;x&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="mi"&gt;3&lt;/span&gt;
-&lt;span class="n"&gt;when&lt;/span&gt; &lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;x&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
-    &lt;span class="mi"&gt;1&lt;/span&gt; &lt;span class="o"&gt;-&amp;gt;&lt;/span&gt; &lt;span class="n"&gt;print&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s"&gt;&amp;quot;x == 1&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
-    &lt;span class="mi"&gt;2&lt;/span&gt; &lt;span class="o"&gt;-&amp;gt;&lt;/span&gt; &lt;span class="n"&gt;print&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s"&gt;&amp;quot;x == 2&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
-    &lt;span class="n"&gt;in&lt;/span&gt; &lt;span class="mf"&gt;1..10&lt;/span&gt; &lt;span class="o"&gt;-&amp;gt;&lt;/span&gt; &lt;span class="n"&gt;print&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s"&gt;&amp;quot;x is in the range&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
-    &lt;span class="o"&gt;!&lt;/span&gt;&lt;span class="n"&gt;in&lt;/span&gt; &lt;span class="mf"&gt;10..20&lt;/span&gt; &lt;span class="o"&gt;-&amp;gt;&lt;/span&gt; &lt;span class="n"&gt;print&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s"&gt;&amp;quot;x is outside the range&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
-    &lt;span class="n"&gt;is&lt;/span&gt; &lt;span class="n"&gt;Int&lt;/span&gt; &lt;span class="o"&gt;-&amp;gt;&lt;/span&gt; &lt;span class="n"&gt;println&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s"&gt;&amp;quot;is int&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
-    &lt;span class="k"&gt;else&lt;/span&gt; &lt;span class="o"&gt;-&amp;gt;&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt; &lt;span class="c1"&gt;// Note the block&lt;/span&gt;
-      &lt;span class="n"&gt;print&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s"&gt;&amp;quot;x is neither 1 nor 2&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
-    &lt;span class="p"&gt;}&lt;/span&gt;
-&lt;span class="p"&gt;}&lt;/span&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;var x = 3
+when (x) {
+    1 -&amp;gt; print(&amp;quot;x == 1&amp;quot;)
+    2 -&amp;gt; print(&amp;quot;x == 2&amp;quot;)
+    in 1..10 -&amp;gt; print(&amp;quot;x is in the range&amp;quot;)
+    !in 10..20 -&amp;gt; print(&amp;quot;x is outside the range&amp;quot;)
+    is Int -&amp;gt; println(&amp;quot;is int&amp;quot;)
+    else -&amp;gt; { // Note the block
+      print(&amp;quot;x is neither 1 nor 2&amp;quot;)
+    }
+}
 &lt;/pre&gt;&lt;/div&gt;
 
 
 &lt;p&gt;&lt;br /&gt;&lt;/p&gt;
 &lt;h4&gt;Function Extension&lt;/h4&gt;
 &lt;p&gt;在Java中我们经常需要给系统的类添加一些实用的方法，但苦于不能直接扩展，于是就有了各种的xxxUtils类，导致代码非常恶心，但是在Kotlin中，我们可以直接扩展库里面类的方法，通过function extension:&lt;/p&gt;
-&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span class="n"&gt;fun&lt;/span&gt; &lt;span class="n"&gt;String&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;fucker&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
-    &lt;span class="n"&gt;println&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s"&gt;&amp;quot;a fucker&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
-&lt;span class="p"&gt;}&lt;/span&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;fun String.fucker() {
+    println(&amp;quot;a fucker&amp;quot;)
+}
 &lt;/pre&gt;&lt;/div&gt;
 
 
 &lt;p&gt;上面给&lt;code&gt;String&lt;/code&gt;类添加了一个fucker方法，我们可以直接使用：&lt;/p&gt;
-&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span class="s"&gt;&amp;quot;123123&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;fucker&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&amp;quot;123123&amp;quot;.fucker()
 &lt;/pre&gt;&lt;/div&gt;
 
 
@@ -759,12 +977,12 @@
 &lt;hr /&gt;
 &lt;h3&gt;配置使用Kotlin进行Android开发&lt;/h3&gt;
 &lt;p&gt;使用Kotlin开发Android app的配置非常简单，按照&lt;a href="http://kotlinlang.org/docs/tutorials/kotlin-android.html"&gt;官方给出的配置即可&lt;/a&gt;，直接在Gradle的配置文件build.gradle中添加一个依赖：&lt;/p&gt;
-&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span class="n"&gt;compile&lt;/span&gt; &lt;span class="s"&gt;&amp;quot;org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version&amp;quot;&lt;/span&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;compile &amp;quot;org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version&amp;quot;
 &lt;/pre&gt;&lt;/div&gt;
 
 
 &lt;p&gt;然后添加Kotlin插件的使用：&lt;/p&gt;
-&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span class="n"&gt;apply&lt;/span&gt; &lt;span class="n"&gt;plugin&lt;/span&gt;&lt;span class="o"&gt;:&lt;/span&gt; &lt;span class="err"&gt;&amp;#39;&lt;/span&gt;&lt;span class="n"&gt;kotlin&lt;/span&gt;&lt;span class="o"&gt;-&lt;/span&gt;&lt;span class="n"&gt;android&lt;/span&gt;&lt;span class="err"&gt;&amp;#39;&lt;/span&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;apply plugin: &amp;#39;kotlin-android&amp;#39;
 &lt;/pre&gt;&lt;/div&gt;
 
 
@@ -800,38 +1018,38 @@
 &lt;hr /&gt;
 &lt;h3&gt;Project Anko&lt;/h3&gt;
 &lt;p&gt;&lt;a href="https://github.com/JetBrains/anko"&gt;Anko&lt;/a&gt; 是JetBrains推出的一个简化Android开发的库，同样由Kotlin来编写，主要的革命在于，声明UI的方式，完全抛弃了xml的使用，使用Anko，声明UI是这样做的：&lt;/p&gt;
-&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span class="n"&gt;override&lt;/span&gt; &lt;span class="n"&gt;fun&lt;/span&gt; &lt;span class="nf"&gt;onCreate&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;savedInstanceState&lt;/span&gt;&lt;span class="o"&gt;:&lt;/span&gt; &lt;span class="n"&gt;Bundle&lt;/span&gt;&lt;span class="o"&gt;?&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
-    &lt;span class="n"&gt;super&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;onCreate&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;savedInstanceState&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
-    &lt;span class="n"&gt;val&lt;/span&gt; &lt;span class="n"&gt;customStyle&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt; &lt;span class="n"&gt;v&lt;/span&gt;&lt;span class="o"&gt;:&lt;/span&gt; &lt;span class="n"&gt;Any&lt;/span&gt; &lt;span class="o"&gt;-&amp;gt;&lt;/span&gt;
-        &lt;span class="n"&gt;when&lt;/span&gt; &lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;v&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
-            &lt;span class="n"&gt;is&lt;/span&gt; &lt;span class="n"&gt;Button&lt;/span&gt; &lt;span class="o"&gt;-&amp;gt;&lt;/span&gt; &lt;span class="n"&gt;v&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;textSize&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="mf"&gt;26f&lt;/span&gt;
-            &lt;span class="n"&gt;is&lt;/span&gt; &lt;span class="n"&gt;EditText&lt;/span&gt; &lt;span class="o"&gt;-&amp;gt;&lt;/span&gt; &lt;span class="n"&gt;v&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;textSize&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="mf"&gt;24f&lt;/span&gt;
-        &lt;span class="p"&gt;}&lt;/span&gt;
-    &lt;span class="p"&gt;}&lt;/span&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;override fun onCreate(savedInstanceState: Bundle?) {
+    super.onCreate(savedInstanceState)
+    val customStyle = { v: Any -&amp;gt;
+        when (v) {
+            is Button -&amp;gt; v.textSize = 26f
+            is EditText -&amp;gt; v.textSize = 24f
+        }
+    }
 
-    &lt;span class="n"&gt;verticalLayout&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
+    verticalLayout {
 
-        &lt;span class="n"&gt;padding&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;dip&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="mi"&gt;34&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
-        &lt;span class="n"&gt;imageView&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;android&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;R&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;drawable&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;ic_menu_manage&lt;/span&gt;&lt;span class="p"&gt;).&lt;/span&gt;&lt;span class="n"&gt;layoutParams&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
-            &lt;span class="n"&gt;margin&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;dip&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="mi"&gt;16&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
-            &lt;span class="n"&gt;gravity&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;Gravity&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;CENTER&lt;/span&gt;
-        &lt;span class="p"&gt;}&lt;/span&gt;
+        padding = dip(34)
+        imageView(android.R.drawable.ic_menu_manage).layoutParams {
+            margin = dip(16)
+            gravity = Gravity.CENTER
+        }
 
-         &lt;span class="n"&gt;val&lt;/span&gt; &lt;span class="n"&gt;name&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;editText&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
-             &lt;span class="n"&gt;hintResource&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;R&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;string&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;name&lt;/span&gt;
-        &lt;span class="p"&gt;}&lt;/span&gt;
-        &lt;span class="n"&gt;val&lt;/span&gt; &lt;span class="n"&gt;password&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;editText&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
-            &lt;span class="n"&gt;hintResource&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;R&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;string&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;password&lt;/span&gt;
-            &lt;span class="n"&gt;inputType&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;TYPE_CLASS_TEXT&lt;/span&gt; &lt;span class="n"&gt;or&lt;/span&gt; &lt;span class="n"&gt;TYPE_TEXT_VARIATION_PASSWORD&lt;/span&gt;
-        &lt;span class="p"&gt;}&lt;/span&gt;
+         val name = editText {
+             hintResource = R.string.name
+        }
+        val password = editText {
+            hintResource = R.string.password
+            inputType = TYPE_CLASS_TEXT or TYPE_TEXT_VARIATION_PASSWORD
+        }
 
-        &lt;span class="n"&gt;button&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s"&gt;&amp;quot;Log in&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
-            &lt;span class="n"&gt;onClick&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
-                &lt;span class="n"&gt;tryLogin&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;name&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;text&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;password&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;text&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
-            &lt;span class="p"&gt;}&lt;/span&gt;
-        &lt;span class="p"&gt;}&lt;/span&gt;
-    &lt;span class="p"&gt;}.&lt;/span&gt;&lt;span class="n"&gt;style&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;customStyle&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
-&lt;span class="p"&gt;}&lt;/span&gt;
+        button(&amp;quot;Log in&amp;quot;) {
+            onClick {
+                tryLogin(name.text, password.text)
+            }
+        }
+    }.style(customStyle)
+}
 &lt;/pre&gt;&lt;/div&gt;
 
 
@@ -854,7 +1072,7 @@
 &lt;li&gt;&lt;a href="http://blog.gouline.net/2014/08/31/kotlin-the-swift-of-android/"&gt;Kotlin, the Swift of Android&lt;/a&gt; 这篇文章把Kotlin比喻为Android上的swift，虽然比较老，但是也可以看做Kotlin的介绍性文章&lt;/li&gt;
 &lt;/ul&gt;</summary></entry><entry><title>使用JDK的Parser来解析Java源代码</title><link href="http://ragnraok.github.io/using-jdk-parser.html" rel="alternate"></link><published>2015-04-12T00:00:00+08:00</published><author><name>Ragnarok Zhou</name></author><id>tag:ragnraok.github.io,2015-04-12:using-jdk-parser.html</id><summary type="html">&lt;p&gt;在JDK中，自带了一套相关的编译API，可以在Java中发起编译流程，解析Java源文件然后获取其语法树，在JDK的&lt;code&gt;tools.jar&lt;/code&gt;（OSX下可以在/Library/Java/JavaVirtualMachines/jdk_version/Contents/Home/lib中找到）中包含着这整套API，但是这却不是Oracle和OpenJDK发布中的公开API，因此对于这套API，并没有官方的正式文档来进行说明。但是，也有不少项目利用了这套API来做了不少事情，例如大名鼎鼎的&lt;a href="https://github.com/rzwitserloot/lombok.git"&gt;lombok&lt;/a&gt;使用了这套API在Annotation Processing阶段修改了源代码中的语法树，最终结果相当于直接在源文件中插入了新的代码！&lt;/p&gt;
 &lt;p&gt;由于这套API目前缺少相关文档，使用起来比较困难，例如，解析源代码中的所有变量，并打印出来：&lt;/p&gt;
-&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span class="kr"&gt;public&lt;/span&gt; &lt;span class="kr"&gt;class&lt;/span&gt; &lt;span class="nx"&gt;JavaParser&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="kr"&gt;public&lt;/span&gt; &lt;span class="kr"&gt;class&lt;/span&gt; &lt;span class="nx"&gt;JavaParser&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
 
     &lt;span class="kr"&gt;private&lt;/span&gt; &lt;span class="kr"&gt;static&lt;/span&gt; &lt;span class="kr"&gt;final&lt;/span&gt; &lt;span class="nb"&gt;String&lt;/span&gt; &lt;span class="nx"&gt;path&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="s2"&gt;&amp;quot;User.java&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
 
@@ -912,30 +1130,30 @@
 
 
 &lt;p&gt;其中 &lt;code&gt;User.java&lt;/code&gt;的代码如下：&lt;/p&gt;
-&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span class="n"&gt;package&lt;/span&gt; &lt;span class="n"&gt;com&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;ragnarok&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;javaparser&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="n"&gt;package&lt;/span&gt; &lt;span class="n"&gt;com&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;ragnarok&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;javaparser&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
 
-&lt;span class="n"&gt;import&lt;/span&gt; &lt;span class="n"&gt;com&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;sun&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;istack&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;internal&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;Nullable&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
-&lt;span class="n"&gt;import&lt;/span&gt; &lt;span class="n"&gt;java&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;lang&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;Override&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
+&lt;span class="kn"&gt;import&lt;/span&gt; &lt;span class="nn"&gt;com.sun.istack.internal.Nullable&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
+&lt;span class="kn"&gt;import&lt;/span&gt; &lt;span class="nn"&gt;java.lang.Override&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
 
-&lt;span class="n"&gt;public&lt;/span&gt; &lt;span class="n"&gt;class&lt;/span&gt; &lt;span class="n"&gt;User&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
+&lt;span class="n"&gt;public&lt;/span&gt; &lt;span class="k"&gt;class&lt;/span&gt; &lt;span class="nc"&gt;User&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
 
-    &lt;span class="err"&gt;@&lt;/span&gt;&lt;span class="n"&gt;Nullable&lt;/span&gt;
-    &lt;span class="n"&gt;private&lt;/span&gt; &lt;span class="n"&gt;String&lt;/span&gt; &lt;span class="n"&gt;foo&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="s"&gt;&amp;quot;123123&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
+    &lt;span class="nd"&gt;@Nullable&lt;/span&gt;
+    &lt;span class="n"&gt;private&lt;/span&gt; &lt;span class="n"&gt;String&lt;/span&gt; &lt;span class="n"&gt;foo&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="s2"&gt;&amp;quot;123123&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
     &lt;span class="n"&gt;private&lt;/span&gt; &lt;span class="n"&gt;Foo&lt;/span&gt; &lt;span class="n"&gt;a&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
 
-    &lt;span class="n"&gt;public&lt;/span&gt; &lt;span class="kt"&gt;void&lt;/span&gt; &lt;span class="nf"&gt;UserMethod&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt; &lt;span class="p"&gt;{}&lt;/span&gt;
+    &lt;span class="n"&gt;public&lt;/span&gt; &lt;span class="n"&gt;void&lt;/span&gt; &lt;span class="n"&gt;UserMethod&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt; &lt;span class="p"&gt;{}&lt;/span&gt;
 
-    &lt;span class="k"&gt;static&lt;/span&gt; &lt;span class="n"&gt;class&lt;/span&gt; &lt;span class="n"&gt;Foo&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
-        &lt;span class="n"&gt;private&lt;/span&gt; &lt;span class="n"&gt;String&lt;/span&gt; &lt;span class="n"&gt;fooString&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="s"&gt;&amp;quot;123123&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
+    &lt;span class="n"&gt;static&lt;/span&gt; &lt;span class="k"&gt;class&lt;/span&gt; &lt;span class="nc"&gt;Foo&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
+        &lt;span class="n"&gt;private&lt;/span&gt; &lt;span class="n"&gt;String&lt;/span&gt; &lt;span class="n"&gt;fooString&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="s2"&gt;&amp;quot;123123&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
 
-        &lt;span class="n"&gt;public&lt;/span&gt; &lt;span class="kt"&gt;void&lt;/span&gt; &lt;span class="nf"&gt;FooMethod&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt; &lt;span class="p"&gt;{}&lt;/span&gt;
+        &lt;span class="n"&gt;public&lt;/span&gt; &lt;span class="n"&gt;void&lt;/span&gt; &lt;span class="n"&gt;FooMethod&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt; &lt;span class="p"&gt;{}&lt;/span&gt;
     &lt;span class="p"&gt;}&lt;/span&gt;
 &lt;span class="p"&gt;}&lt;/span&gt;
 &lt;/pre&gt;&lt;/div&gt;
 
 
 &lt;p&gt;执行上面的&lt;code&gt;JavaParser&lt;/code&gt;结果如下：&lt;/p&gt;
-&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span class="n"&gt;variable&lt;/span&gt;&lt;span class="o"&gt;:&lt;/span&gt; &lt;span class="n"&gt;foo&lt;/span&gt;&lt;span class="o"&gt;,&lt;/span&gt; &lt;span class="n"&gt;annotaion&lt;/span&gt;&lt;span class="o"&gt;:&lt;/span&gt; &lt;span class="n"&gt;Nullable&lt;/span&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="n"&gt;variable&lt;/span&gt;&lt;span class="o"&gt;:&lt;/span&gt; &lt;span class="n"&gt;foo&lt;/span&gt;&lt;span class="o"&gt;,&lt;/span&gt; &lt;span class="n"&gt;annotaion&lt;/span&gt;&lt;span class="o"&gt;:&lt;/span&gt; &lt;span class="n"&gt;Nullable&lt;/span&gt;
 &lt;span class="n"&gt;variable&lt;/span&gt; &lt;span class="n"&gt;name&lt;/span&gt;&lt;span class="o"&gt;:&lt;/span&gt; &lt;span class="n"&gt;foo&lt;/span&gt;&lt;span class="o"&gt;,&lt;/span&gt; &lt;span class="n"&gt;type&lt;/span&gt;&lt;span class="o"&gt;:&lt;/span&gt; &lt;span class="n"&gt;String&lt;/span&gt;&lt;span class="o"&gt;,&lt;/span&gt; &lt;span class="n"&gt;kind&lt;/span&gt;&lt;span class="o"&gt;:&lt;/span&gt; &lt;span class="n"&gt;VARIABLE&lt;/span&gt;&lt;span class="o"&gt;,&lt;/span&gt; &lt;span class="kd"&gt;package&lt;/span&gt;&lt;span class="o"&gt;:&lt;/span&gt; &lt;span class="n"&gt;com&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="na"&gt;ragnarok&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="na"&gt;javaparser&lt;/span&gt;
 &lt;span class="n"&gt;variable&lt;/span&gt; &lt;span class="n"&gt;name&lt;/span&gt;&lt;span class="o"&gt;:&lt;/span&gt; &lt;span class="n"&gt;a&lt;/span&gt;&lt;span class="o"&gt;,&lt;/span&gt; &lt;span class="n"&gt;type&lt;/span&gt;&lt;span class="o"&gt;:&lt;/span&gt; &lt;span class="n"&gt;Foo&lt;/span&gt;&lt;span class="o"&gt;,&lt;/span&gt; &lt;span class="n"&gt;kind&lt;/span&gt;&lt;span class="o"&gt;:&lt;/span&gt; &lt;span class="n"&gt;VARIABLE&lt;/span&gt;&lt;span class="o"&gt;,&lt;/span&gt; &lt;span class="kd"&gt;package&lt;/span&gt;&lt;span class="o"&gt;:&lt;/span&gt; &lt;span class="n"&gt;com&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="na"&gt;ragnarok&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="na"&gt;javaparser&lt;/span&gt;
 &lt;/pre&gt;&lt;/div&gt;
@@ -944,7 +1162,7 @@
 &lt;p&gt;这里我们是首先通过&lt;code&gt;JavaCompiler.CompilationTask&lt;/code&gt;解析了源文件之后，再使用自定义的&lt;code&gt;SourceVisitor&lt;/code&gt;（继承自&lt;code&gt;TreeScanner&lt;/code&gt;）来对源代码的结构进行访问，在&lt;code&gt;SourceVisitor&lt;/code&gt;类中，通过重载&lt;code&gt;visitVariable&lt;/code&gt;来对一个编译单元（单个源代码文件）进行解析，访问其中的所有的变量，这里可以看出，我们没有办法拿到这个变量类型的全限定名（包含包名），只能拿到的对应的简单名字，因此，类型的确定需要外部实现&lt;strong&gt;自行确定&lt;/strong&gt;，例如可以通过记录类所在的包名，递归的搜索整个源代码目录来跟踪所有类的全限定名，查找import中是否包含对应的类型等。&lt;/p&gt;
 &lt;p&gt;&lt;code&gt;TreeScanner&lt;/code&gt;中除了&lt;code&gt;visitVariable&lt;/code&gt;方法外，还包含了大量其他的&lt;code&gt;visitXYZ&lt;/code&gt;方法，例如，可以遍历所有的import，方法定义，Annotation等，更具体可以查看OpenJDK中关于这个的源代码&lt;/p&gt;
 &lt;p&gt;这里再来看下另外一个例子，重载&lt;code&gt;visitClass&lt;/code&gt;方法，访问所有的内部类以及类本身：&lt;/p&gt;
-&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span class="err"&gt;@&lt;/span&gt;&lt;span class="nx"&gt;Override&lt;/span&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="err"&gt;@&lt;/span&gt;&lt;span class="nx"&gt;Override&lt;/span&gt;
 &lt;span class="kr"&gt;public&lt;/span&gt; &lt;span class="nx"&gt;Void&lt;/span&gt; &lt;span class="nx"&gt;visitClass&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nx"&gt;ClassTree&lt;/span&gt; &lt;span class="nx"&gt;node&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="nx"&gt;Void&lt;/span&gt; &lt;span class="nx"&gt;aVoid&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
     &lt;span class="nx"&gt;formatPtrln&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s2"&gt;&amp;quot;class name: %s&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="nx"&gt;node&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;getSimpleName&lt;/span&gt;&lt;span class="p"&gt;());&lt;/span&gt;
     &lt;span class="k"&gt;for&lt;/span&gt; &lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nx"&gt;Tree&lt;/span&gt; &lt;span class="nx"&gt;member&lt;/span&gt; &lt;span class="o"&gt;:&lt;/span&gt; &lt;span class="nx"&gt;node&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;getMembers&lt;/span&gt;&lt;span class="p"&gt;())&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
@@ -964,11 +1182,11 @@
 
 
 &lt;p&gt;这里简单的打印了类名以及变量的名称，类型，annotation类型，执行上面的代码，结果如下：&lt;/p&gt;
-&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span class="n"&gt;class&lt;/span&gt; &lt;span class="n"&gt;name&lt;/span&gt;&lt;span class="o"&gt;:&lt;/span&gt; &lt;span class="n"&gt;User&lt;/span&gt;
-&lt;span class="nl"&gt;variable:&lt;/span&gt; &lt;span class="n"&gt;foo&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;annotaion&lt;/span&gt;&lt;span class="o"&gt;:&lt;/span&gt; &lt;span class="n"&gt;Nullable&lt;/span&gt;
-&lt;span class="nl"&gt;variable:&lt;/span&gt; &lt;span class="n"&gt;a&lt;/span&gt;
-&lt;span class="n"&gt;class&lt;/span&gt; &lt;span class="n"&gt;name&lt;/span&gt;&lt;span class="o"&gt;:&lt;/span&gt; &lt;span class="n"&gt;Foo&lt;/span&gt;
-&lt;span class="nl"&gt;variable:&lt;/span&gt; &lt;span class="n"&gt;fooString&lt;/span&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="kr"&gt;class&lt;/span&gt; &lt;span class="nx"&gt;name&lt;/span&gt;: &lt;span class="kt"&gt;User&lt;/span&gt;
+&lt;span class="nx"&gt;variable&lt;/span&gt;: &lt;span class="kt"&gt;foo&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="nx"&gt;annotaion&lt;/span&gt;: &lt;span class="kt"&gt;Nullable&lt;/span&gt;
+&lt;span class="nx"&gt;variable&lt;/span&gt;: &lt;span class="kt"&gt;a&lt;/span&gt;
+&lt;span class="kr"&gt;class&lt;/span&gt; &lt;span class="nx"&gt;name&lt;/span&gt;: &lt;span class="kt"&gt;Foo&lt;/span&gt;
+&lt;span class="nx"&gt;variable&lt;/span&gt;: &lt;span class="kt"&gt;fooString&lt;/span&gt;
 &lt;/pre&gt;&lt;/div&gt;
 
 
@@ -987,32 +1205,32 @@
 &lt;li&gt;上述文章中作者提供了一个FontTools的扩展，叫做&lt;code&gt;sbix_code.zip&lt;/code&gt;，&lt;a href="http://www.kutilek.de/download/sbix_code.zip"&gt;下载&lt;/a&gt;之后解压缩，将里面的文件复制到FontTools在python的site-packages目录下，如果是在OSX上，假设你使用的是python 2.7，那一般是在&lt;code&gt;/Library/Python/2.7/site-packages/FontTools&lt;/code&gt;目录下。&lt;/li&gt;
 &lt;li&gt;该作者还提供了一个使用的demo：&lt;a href="http://www.kutilek.de/download/sbix_demo.zip"&gt;sbix_demo.zip&lt;/a&gt;，解压缩之后编辑里面的&lt;code&gt;extractSbixImages.py&lt;/code&gt;，修改如下：&lt;/li&gt;
 &lt;/ul&gt;
-&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span class="c"&gt;#! /usr/bin/env/python&lt;/span&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="ch"&gt;#! /usr/bin/env/python&lt;/span&gt;
 &lt;span class="kn"&gt;from&lt;/span&gt; &lt;span class="nn"&gt;fontTools.ttLib&lt;/span&gt; &lt;span class="kn"&gt;import&lt;/span&gt; &lt;span class="n"&gt;TTFont&lt;/span&gt;
 &lt;span class="kn"&gt;from&lt;/span&gt; &lt;span class="nn"&gt;os.path&lt;/span&gt; &lt;span class="kn"&gt;import&lt;/span&gt; &lt;span class="n"&gt;exists&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;join&lt;/span&gt;
 &lt;span class="kn"&gt;from&lt;/span&gt; &lt;span class="nn"&gt;os&lt;/span&gt; &lt;span class="kn"&gt;import&lt;/span&gt; &lt;span class="n"&gt;makedirs&lt;/span&gt;
 
 &lt;span class="k"&gt;def&lt;/span&gt; &lt;span class="nf"&gt;main&lt;/span&gt;&lt;span class="p"&gt;():&lt;/span&gt;
-    &lt;span class="n"&gt;f&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;TTFont&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s"&gt;&amp;quot;Apple Color Emoji.ttf&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+    &lt;span class="n"&gt;f&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;TTFont&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s2"&gt;&amp;quot;Apple Color Emoji.ttf&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
 
-    &lt;span class="k"&gt;if&lt;/span&gt; &lt;span class="n"&gt;f&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;has_key&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s"&gt;&amp;quot;sbix&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;):&lt;/span&gt;
-        &lt;span class="n"&gt;sbix&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;f&lt;/span&gt;&lt;span class="p"&gt;[&lt;/span&gt;&lt;span class="s"&gt;&amp;quot;sbix&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;]&lt;/span&gt;
+    &lt;span class="k"&gt;if&lt;/span&gt; &lt;span class="n"&gt;f&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;has_key&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s2"&gt;&amp;quot;sbix&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;):&lt;/span&gt;
+        &lt;span class="n"&gt;sbix&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;f&lt;/span&gt;&lt;span class="p"&gt;[&lt;/span&gt;&lt;span class="s2"&gt;&amp;quot;sbix&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;]&lt;/span&gt;
         &lt;span class="k"&gt;for&lt;/span&gt; &lt;span class="n"&gt;bs&lt;/span&gt; &lt;span class="ow"&gt;in&lt;/span&gt; &lt;span class="n"&gt;sbix&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;bitmapSets&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;itervalues&lt;/span&gt;&lt;span class="p"&gt;():&lt;/span&gt;
-            &lt;span class="n"&gt;setpath&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;join&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s"&gt;&amp;quot;extracted&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="s"&gt;&amp;quot;set_&lt;/span&gt;&lt;span class="si"&gt;%i&lt;/span&gt;&lt;span class="s"&gt;&amp;quot;&lt;/span&gt; &lt;span class="o"&gt;%&lt;/span&gt; &lt;span class="n"&gt;bs&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="kp"&gt;size&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+            &lt;span class="n"&gt;setpath&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;join&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s2"&gt;&amp;quot;extracted&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="s2"&gt;&amp;quot;set_&lt;/span&gt;&lt;span class="si"&gt;%i&lt;/span&gt;&lt;span class="s2"&gt;&amp;quot;&lt;/span&gt; &lt;span class="o"&gt;%&lt;/span&gt; &lt;span class="n"&gt;bs&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;size&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
             &lt;span class="k"&gt;if&lt;/span&gt; &lt;span class="ow"&gt;not&lt;/span&gt; &lt;span class="n"&gt;exists&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;setpath&lt;/span&gt;&lt;span class="p"&gt;):&lt;/span&gt;
                 &lt;span class="n"&gt;makedirs&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;setpath&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
 
-            &lt;span class="k"&gt;print&lt;/span&gt; &lt;span class="s"&gt;&amp;quot;Writing bitmap set to &amp;lt;&lt;/span&gt;&lt;span class="si"&gt;%s&lt;/span&gt;&lt;span class="s"&gt;&amp;gt;&amp;quot;&lt;/span&gt; &lt;span class="o"&gt;%&lt;/span&gt; &lt;span class="n"&gt;setpath&lt;/span&gt;
+            &lt;span class="k"&gt;print&lt;/span&gt; &lt;span class="s2"&gt;&amp;quot;Writing bitmap set to &amp;lt;&lt;/span&gt;&lt;span class="si"&gt;%s&lt;/span&gt;&lt;span class="s2"&gt;&amp;gt;&amp;quot;&lt;/span&gt; &lt;span class="o"&gt;%&lt;/span&gt; &lt;span class="n"&gt;setpath&lt;/span&gt;
             &lt;span class="k"&gt;for&lt;/span&gt; &lt;span class="n"&gt;bm&lt;/span&gt; &lt;span class="ow"&gt;in&lt;/span&gt; &lt;span class="n"&gt;bs&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;bitmaps&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;itervalues&lt;/span&gt;&lt;span class="p"&gt;():&lt;/span&gt;
                 &lt;span class="k"&gt;if&lt;/span&gt; &lt;span class="n"&gt;bm&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;imageFormatTag&lt;/span&gt; &lt;span class="ow"&gt;is&lt;/span&gt; &lt;span class="ow"&gt;not&lt;/span&gt; &lt;span class="bp"&gt;None&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;
-                    &lt;span class="n"&gt;filename&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;join&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;setpath&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="s"&gt;&amp;quot;&lt;/span&gt;&lt;span class="si"&gt;%s&lt;/span&gt;&lt;span class="s"&gt;.png&amp;quot;&lt;/span&gt; &lt;span class="o"&gt;%&lt;/span&gt; &lt;span class="n"&gt;bm&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;glyphName&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
-                    &lt;span class="n"&gt;pf&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="nb"&gt;file&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;filename&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="s"&gt;&amp;quot;wb&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+                    &lt;span class="n"&gt;filename&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;join&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;setpath&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="s2"&gt;&amp;quot;&lt;/span&gt;&lt;span class="si"&gt;%s&lt;/span&gt;&lt;span class="s2"&gt;.png&amp;quot;&lt;/span&gt; &lt;span class="o"&gt;%&lt;/span&gt; &lt;span class="n"&gt;bm&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;glyphName&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+                    &lt;span class="n"&gt;pf&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="nb"&gt;file&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;filename&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="s2"&gt;&amp;quot;wb&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
                     &lt;span class="n"&gt;pf&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;write&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;bm&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;imageData&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
                     &lt;span class="n"&gt;pf&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;close&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt;
     &lt;span class="k"&gt;else&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;
-        &lt;span class="k"&gt;print&lt;/span&gt; &lt;span class="s"&gt;&amp;quot;Font has no sbix table.&amp;quot;&lt;/span&gt;
+        &lt;span class="k"&gt;print&lt;/span&gt; &lt;span class="s2"&gt;&amp;quot;Font has no sbix table.&amp;quot;&lt;/span&gt;
 
-&lt;span class="k"&gt;if&lt;/span&gt; &lt;span class="n"&gt;__name__&lt;/span&gt; &lt;span class="o"&gt;==&lt;/span&gt; &lt;span class="s"&gt;&amp;quot;__main__&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;
+&lt;span class="k"&gt;if&lt;/span&gt; &lt;span class="vm"&gt;__name__&lt;/span&gt; &lt;span class="o"&gt;==&lt;/span&gt; &lt;span class="s2"&gt;&amp;quot;__main__&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;
     &lt;span class="n"&gt;main&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt;
 &lt;/pre&gt;&lt;/div&gt;
 

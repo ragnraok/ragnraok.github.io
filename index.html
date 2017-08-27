@@ -22,6 +22,32 @@
 <section id="content" class="content">
 
         <article class="hentry">
+                <header> <h2 class="entry-title"><a href="http://ragnraok.github.io/android_video_record.html" rel="bookmark" title="Permalink to 谈谈关于Android视频编码的那些坑">谈谈关于Android视频编码的那些坑</a></h2> </header>
+                <div class="entry-content"> <p>Android的视频相关的开发，大概一直是整个Android生态，以及Android API中，最为分裂以及兼容性问题最为突出的一部分。摄像头，以及视频编码相关的API，Google一直对这方面的控制力非常差，导致不同厂商对这两个API的实现有不少差异，而且从API的设计来看，一直以来优化也相当有限，甚至有人认为这是“Android上最难用的API之一”</p>
+<p>以微信为例，我们录制一个540p的mp4文件，对于Android来说，大体上是遵循这么一个流程：</p>
+<hr />
+<p><img alt="" src="static/images/encoderProcess.png" /></p>
+<hr />
+<p>大体上就是从摄像头输出的YUV帧经过预处理之后，送入编码器，获得编码好的h264视频流。</p>
+<p>上面只是针对视频流的编码，另外还需要对音频流单独录制，最后再将视频流和音频流进行合成出最终视频。</p>
+<p>这篇文章主要将会对视频流的编码中两个常见问题进行分析：</p>
+<ol>
+<li>视频编码器的选择（硬编 or 软编）？</li>
+<li>如何对摄像头输出的YUV帧进行快速预处理（镜像，缩放，旋转）？</li>
+</ol>
+<hr />
+<h3>视频编码器的选择</h3>
+<p>对于录制视频的需求，不少app都需要对每一帧数据进行单独处理，因此很少会直接用到<code>MediaRecorder</code>来直接录取视频，一般来说，会有这么两个选择</p>
+<ul>
+<li>MediaCodec</li>
+<li>FFMpeg+x264/openh264</li>
+</ul>
+<p>我们来逐个解析一下</p>
+<hr />
+<h4>MediaCodec</h4>
+<p>MediaCodec是API 16之后Google推出的用于音视频编解码的一套偏底层的API，可以直接利用硬件加速进行视频的编解码。调用的时候需要先初始化MediaCodec作为视频的编码器 ...</p> </div><!-- entry-content -->
+        </article>
+        <article class="hentry">
                 <header> <h2 class="entry-title"><a href="http://ragnraok.github.io/get_android_alloc_object_info.html" rel="bookmark" title="Permalink to 如何获取Android系统中申请对象的信息">如何获取Android系统中申请对象的信息</a></h2> </header>
                 <div class="entry-content"> <p>最近一直在做有关内存方面的优化工作，在做优化的过程，除了关注内存的申请量以及GC的情况之外，我们经常需要想方法找出是那些对象占用了大量内存，以及他们是如何导致GC的，这意味着我们需要获取对象申请的信息（大小，类型，堆栈等），我们这篇文章来介绍下几种获取对象申请信息的方法</p>
 <h3>Allocation Tracker</h3>
@@ -42,9 +68,9 @@
 <h3>What is it</h3>
 <p>MemoryFile是android在最开始就引入的一套框架，其内部实际上是封装了android特有的内存共享机制<a href="http://elinux.org/Android_Kernel_Features#ashmem">Ashmem</a>匿名共享内存，简单来说，Ashmem在Android内核中是被注册成一个特殊的字符设备，Ashmem驱动通过在内核的一个自定义<a href="https://en.wikipedia.org/wiki/Slab_allocation">slab</a>缓冲区中初始化一段内存区域，然后通过mmap把申请的内存映射到用户的进程空间中（通过<a href="https://en.wikipedia.org/wiki/Tmpfs">tmpfs</a>），这样子就可以在用户进程中使用这里申请的内存了，另外，Ashmem的一个特性就是可以在系统内存不足的时候，回收掉被标记为"unpin"的内存，这个后面会讲到，另外，MemoryFile也可以通过Binder跨进程调用来让两个进程共享一段内存区域。由于整个申请内存的过程并不再Java层上，可以很明显的看出使用MemoryFile申请的内存实际上是<strong>并不会</strong>占用Java堆内存的。</p>
 <p>MemoryFile暴露出来的用户接口可以说跟他的名字一样，基本上跟我们平时的文件的读写基本一致，也可以使用InputStream和OutputStream来对其进行读写等操作：</p>
-<div class="highlight"><pre><span class="n">MemoryFile</span> <span class="n">memoryFile</span> <span class="o">=</span> <span class="n">new</span> <span class="n">MemoryFile</span><span class="p">(</span><span class="n">null</span><span class="p">,</span> <span class="n">inputStream</span><span class="p">.</span><span class="n">available</span><span class="p">());</span>
-<span class="n">memoryFile</span><span class="p">.</span><span class="n">allowPurging</span><span class="p">(</span><span class="nb">false</span><span class="p">);</span>
-<span class="n">OutputStream</span> <span class="n">outputStream</span> <span class="o">=</span> <span class="n">memoryFile</span><span class="p">.</span><span class="n">getOutputStream</span><span class="p">();</span>
+<div class="highlight"><pre><span></span><span class="n">MemoryFile</span> <span class="n">memoryFile</span> <span class="o">=</span> <span class="k">new</span> <span class="n">MemoryFile</span><span class="o">(</span><span class="kc">null</span><span class="o">,</span> <span class="n">inputStream</span><span class="o">.</span><span class="na">available</span><span class="o">());</span>
+<span class="n">memoryFile</span><span class="o">.</span><span class="na">allowPurging</span><span class="o">(</span><span class="kc">false</span><span class="o">);</span>
+<span class="n">OutputStream</span> <span class="n">outputStream</span> <span class="o">=</span> <span class="n">memoryFile</span><span class="o">.</span><span class="na">getOutputStream</span><span class="o">();</span>
 <span class="n">outputStream ...</span></pre></div> </div><!-- entry-content -->
         </article>
         <article class="hentry">
@@ -56,12 +82,12 @@
 <p>在<a href="https://github.com/ragnraok/RxCamera">RxCamera</a>的README中已经有关于这个库使用的比较详细介绍了，我在这里再说明一下：</p>
 <h4>加入依赖</h4>
 <p>首先你需要在项目中加入对RxCamera项目的依赖:</p>
-<div class="highlight"><pre><span class="n">repositories</span> <span class="p">{</span>
-        <span class="n">jcenter</span><span class="p">()</span>
-<span class="p">}</span>
-<span class="n">dependencies</span> <span class="p">{</span>
-    <span class="n">compile</span> <span class="err">&#39;</span><span class="n">com</span><span class="p">.</span><span class="n">ragnarok</span><span class="p">.</span><span class="n">rxcamera</span><span class="o">:</span><span class="n">lib</span><span class="o">:</span><span class="mf">0.0.1</span><span class="err">&#39;</span>
-<span class="p">}</span>
+<div class="highlight"><pre><span></span>repositories {
+        jcenter()
+}
+dependencies {
+    compile &#39;com.ragnarok.rxcamera:lib:0.0.1&#39;
+}
 </pre></div>
 
 
@@ -79,27 +105,6 @@
 <p>于是，后续我就逐渐开始想方法实现有一个类似Annotation Processor的API的工具，但并不需要拉起Javac进行编译，只需要输入源码即可，然后由开发者自行定义生成代码的规则，即可完成APT的功能。</p>
 <h3>Research</h3>
 <p>要实现这样的一个工具，最先迫切的就是需要一个语法解析器，这样子才能从源码中提取出所需要的信息。当时候的想法是自己来实现Tokenizer和Parser（真庆幸大学的时候教编译原理的灭绝大法师的训练，我还记得怎么写哈哈哈哈），但很快我就找到了<a href="https://javacc.java.net/">JavaCC</a>这个工具，这玩意可以说是Java编译器的生成工具，实际上Javac的前端也是这个东西来生成的。但是JavaCC生成的代码非常乱并且其API并不是很好用。当时候我想当JDK中一定是有单独Javac前端独立出来的，于是我又找到了JDK中的<code>tools ...</code></p> </div><!-- entry-content -->
-        </article>
-        <article class="hentry">
-                <header> <h2 class="entry-title"><a href="http://ragnraok.github.io/textview-pre-render-research.html" rel="bookmark" title="Permalink to TextView预渲染研究">TextView预渲染研究</a></h2> </header>
-                <div class="entry-content"> <p>Android中的TextView是整个framework中最复杂的控件之一，负责Android中显示文本的大部分工作，framwork中的许多控件也直接或者间接的继承于TextView，例如Button，EditText等。其内部实现也相当复杂，单论代码行数来说，android-22中TextView有足足9509行，另外，TextView中许多操作都非常繁重，例如<code>setText</code>操作，需要设置SpanWatcher，或者需要重现创建一个SpannableString，还需要根据情况重新创建Text Layout，这些操作加起来之后令一次setText操作非常耗时。为了提升TextView的渲染效率，最近研究了一下预渲染的方法，接下来给大家讲解一下原理。</p>
-<h3>TextView渲染基本原理</h3>
-<p>首先来介绍下TextView的基本渲染原理，总的来说，TextView中负责渲染文字的主要是这三个类：</p>
-<ol>
-<li>
-<p><a href="http://developer.android.com/intl/zh-cn/reference/android/text/BoringLayout.html">BoringLayout</a> <br />
-    主要负责显示单行文本，并提供了isBoring方法来判断是否满足单行文本的条件。</p>
-</li>
-<li>
-<p><a href="http://developer.android.com/intl/zh-cn/reference/android/text/DynamicLayout.html">DynamicLayout</a> <br />
-    当文本为Spannable的时候，TextView就会使用它来负责文本的显示，在内部设置了SpanWatcher，当检测到span改变的时候，会进行reflow，重新计算布局。</p>
-</li>
-<li>
-<p><a href="http://developer.android.com/intl/zh-cn/reference/android/text/StaticLayout.html">StaticLayout</a> <br />
-    当文本为非单行文本，且非Spannable的时候，就会使用StaticLayout，内部并不会监听span的变化，因此效率上会比DynamicLayout高，只需一次布局的创建即可，但其实内部也能显示SpannableString，只是不能在span变化之后重新进行布局而已。</p>
-</li>
-</ol>
-<p>另外，以上三个类都继承于<a href="http://developer.android.com/intl/zh-cn/reference/android/text/Layout.html">Layout</a>类，在此类中统一负责文本的具体绘制，在Layout ...</p> </div><!-- entry-content -->
         </article>
 <div class="pager">
       <ul>

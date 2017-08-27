@@ -36,12 +36,12 @@
 <p>在<a href="https://github.com/ragnraok/RxCamera">RxCamera</a>的README中已经有关于这个库使用的比较详细介绍了，我在这里再说明一下：</p>
 <h4>加入依赖</h4>
 <p>首先你需要在项目中加入对RxCamera项目的依赖:</p>
-<div class="highlight"><pre><span class="n">repositories</span> <span class="p">{</span>
-        <span class="n">jcenter</span><span class="p">()</span>
-<span class="p">}</span>
-<span class="n">dependencies</span> <span class="p">{</span>
-    <span class="n">compile</span> <span class="err">&#39;</span><span class="n">com</span><span class="p">.</span><span class="n">ragnarok</span><span class="p">.</span><span class="n">rxcamera</span><span class="o">:</span><span class="n">lib</span><span class="o">:</span><span class="mf">0.0.1</span><span class="err">&#39;</span>
-<span class="p">}</span>
+<div class="highlight"><pre><span></span>repositories {
+        jcenter()
+}
+dependencies {
+    compile &#39;com.ragnarok.rxcamera:lib:0.0.1&#39;
+}
 </pre></div>
 
 
@@ -50,13 +50,13 @@
 <li>配置camera的参数</li>
 </ul>
 <p>android的原生camera api提供了不少的选项来配置打开摄像头时候的参数，例如预览的帧率，预览的分辨率，自动对焦等，在RxCamera中主要是通过一个<code>RxCameraConfig</code>对象来管理这些对象，并通过<code>RxCameraConfigChooser</code>来配置对应参数：</p>
-<div class="highlight"><pre>    <span class="n">RxCameraConfig</span> <span class="n">config</span> <span class="o">=</span> <span class="n">RxCameraConfigChooser</span><span class="p">.</span><span class="n">obtain</span><span class="p">().</span>
-        <span class="n">useBackCamera</span><span class="p">().</span>
-        <span class="n">setAutoFocus</span><span class="p">(</span><span class="nb">true</span><span class="p">).</span>
-        <span class="n">setPreferPreviewFrameRate</span><span class="p">(</span><span class="mi">15</span><span class="p">,</span> <span class="mi">30</span><span class="p">).</span>
-        <span class="n">setPreferPreviewSize</span><span class="p">(</span><span class="n">new</span> <span class="n">Point</span><span class="p">(</span><span class="mi">640</span><span class="p">,</span> <span class="mi">480</span><span class="p">)).</span>
-        <span class="n">setHandleSurfaceEvent</span><span class="p">(</span><span class="nb">true</span><span class="p">).</span>
-        <span class="n">get</span><span class="p">();</span>
+<div class="highlight"><pre><span></span>    RxCameraConfig config = RxCameraConfigChooser.obtain().
+        useBackCamera().
+        setAutoFocus(true).
+        setPreferPreviewFrameRate(15, 30).
+        setPreferPreviewSize(new Point(640, 480)).
+        setHandleSurfaceEvent(true).
+        get();
 </pre></div>
 
 
@@ -64,30 +64,30 @@
 <li>打开摄像头并获取数据</li>
 </ul>
 <p>在设置好参数之后，就可以直接打开摄像头了：</p>
-<div class="highlight"><pre>    <span class="nx">RxCamera.open</span><span class="p">(</span><span class="nx">this</span><span class="p">,</span> <span class="nx">config</span><span class="p">)</span><span class="bp">.</span><span class="nx">flatMap</span><span class="p">(</span><span class="nb">new</span> <span class="nx">Func1</span><span class="o">&lt;</span><span class="nx">RxCamera</span><span class="p">,</span> <span class="nx">Observable</span><span class="o">&lt;</span><span class="nx">RxCamera</span><span class="o">&gt;&gt;</span><span class="p">()</span> <span class="p">{</span>
-      <span class="p">@</span><span class="nx">Override</span>
-      <span class="k">public</span> <span class="nf">Observable</span><span class="o">&lt;</span><span class="nx">RxCamera</span><span class="o">&gt;</span> <span class="nb">call</span><span class="p">(</span><span class="nx">RxCamera</span> <span class="nx">rxCamera</span><span class="p">)</span> <span class="p">{</span>
-          <span class="k">return</span> <span class="nx">rxCamera.bindTexture</span><span class="p">(</span><span class="nx">textureView</span><span class="p">);</span>
-          <span class="c1">// or bind a SurfaceView:</span>
-          <span class="c1">// rxCamera.bindSurface(SurfaceView)</span>
-      <span class="p">}</span>
-     <span class="p">})</span><span class="bp">.</span><span class="nx">flatMap</span><span class="p">(</span><span class="nb">new</span> <span class="nx">Func1</span><span class="o">&lt;</span><span class="nx">RxCamera</span><span class="p">,</span> <span class="nx">Observable</span><span class="o">&lt;</span><span class="nx">RxCamera</span><span class="o">&gt;&gt;</span><span class="p">()</span> <span class="p">{</span>
-        <span class="p">@</span><span class="nx">Override</span>
-         <span class="k">public</span> <span class="nf">Observable</span><span class="o">&lt;</span><span class="nx">RxCamera</span><span class="o">&gt;</span> <span class="nb">call</span><span class="p">(</span><span class="nx">RxCamera</span> <span class="nx">rxCamera</span><span class="p">)</span> <span class="p">{</span>
-            <span class="k">return</span> <span class="nx">rxCamera.startPreview</span><span class="p">();</span>
-         <span class="p">}</span>
-    <span class="p">});</span>
+<div class="highlight"><pre><span></span>    RxCamera.open(this, config).flatMap(new Func1&lt;RxCamera, Observable&lt;RxCamera&gt;&gt;() {
+      @Override
+      public Observable&lt;RxCamera&gt; call(RxCamera rxCamera) {
+          return rxCamera.bindTexture(textureView);
+          // or bind a SurfaceView:
+          // rxCamera.bindSurface(SurfaceView)
+      }
+     }).flatMap(new Func1&lt;RxCamera, Observable&lt;RxCamera&gt;&gt;() {
+        @Override
+         public Observable&lt;RxCamera&gt; call(RxCamera rxCamera) {
+            return rxCamera.startPreview();
+         }
+    });
 </pre></div>
 
 
 <p>这里包括了设置用于预览的Surface(这里是使用<code>TextureView</code>进行预览)，然后正式开始预览。</p>
 <p>只有预览之后才能开始获取摄像头的数据：</p>
-<div class="highlight"><pre>    <span class="nx">camera.request</span><span class="p">()</span><span class="bp">.</span><span class="nx">periodicDataRequest</span><span class="p">(</span><span class="mi">1000</span><span class="p">)</span><span class="bp">.</span><span class="nx">subscribe</span><span class="p">(</span><span class="nb">new</span> <span class="nx">Action1</span><span class="o">&lt;</span><span class="nx">RxCameraData</span><span class="o">&gt;</span><span class="p">()</span> <span class="p">{</span>
-            <span class="p">@</span><span class="nx">Override</span>
-            <span class="k">public</span> <span class="nf">void</span> <span class="nb">call</span><span class="p">(</span><span class="nx">RxCameraData</span> <span class="nx">rxCameraData</span><span class="p">)</span> <span class="p">{</span>
-                <span class="nx">showLog</span><span class="p">(</span><span class="s2">&quot;periodic request, cameraData.length: &quot;</span> <span class="o">+</span> <span class="nx">rxCameraData.cameraData.length</span><span class="p">);</span>
+<div class="highlight"><pre><span></span>    <span class="nt">camera</span><span class="p">.</span><span class="nc">request</span><span class="o">()</span><span class="p">.</span><span class="nc">periodicDataRequest</span><span class="o">(</span><span class="nt">1000</span><span class="o">)</span><span class="p">.</span><span class="nc">subscribe</span><span class="o">(</span><span class="nt">new</span> <span class="nt">Action1</span><span class="o">&lt;</span><span class="nt">RxCameraData</span><span class="o">&gt;()</span> <span class="p">{</span>
+            <span class="err">@Override</span>
+            <span class="err">public</span> <span class="err">void</span> <span class="err">call(RxCameraData</span> <span class="err">rxCameraData)</span> <span class="err">{</span>
+                <span class="err">showLog(&quot;periodic</span> <span class="err">request,</span> <span class="err">cameraData.</span><span class="n">length</span><span class="p">:</span> <span class="err">&quot;</span> <span class="o">+</span> <span class="n">rxCameraData</span><span class="o">.</span><span class="n">cameraData</span><span class="o">.</span><span class="n">length</span><span class="p">);</span>
             <span class="p">}</span>
-    <span class="p">});</span>
+    <span class="err">}</span><span class="o">);</span>
 </pre></div>
 
 

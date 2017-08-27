@@ -23,6 +23,32 @@
 <h2>Articles in the Android category</h2>
 
         <article class="hentry">
+                <header> <h2 class="entry-title"><a href="http://ragnraok.github.io/android_video_record.html" rel="bookmark" title="Permalink to 谈谈关于Android视频编码的那些坑">谈谈关于Android视频编码的那些坑</a></h2> </header>
+                <div class="entry-content"> <p>Android的视频相关的开发，大概一直是整个Android生态，以及Android API中，最为分裂以及兼容性问题最为突出的一部分。摄像头，以及视频编码相关的API，Google一直对这方面的控制力非常差，导致不同厂商对这两个API的实现有不少差异，而且从API的设计来看，一直以来优化也相当有限，甚至有人认为这是“Android上最难用的API之一”</p>
+<p>以微信为例，我们录制一个540p的mp4文件，对于Android来说，大体上是遵循这么一个流程：</p>
+<hr />
+<p><img alt="" src="static/images/encoderProcess.png" /></p>
+<hr />
+<p>大体上就是从摄像头输出的YUV帧经过预处理之后，送入编码器，获得编码好的h264视频流。</p>
+<p>上面只是针对视频流的编码，另外还需要对音频流单独录制，最后再将视频流和音频流进行合成出最终视频。</p>
+<p>这篇文章主要将会对视频流的编码中两个常见问题进行分析：</p>
+<ol>
+<li>视频编码器的选择（硬编 or 软编）？</li>
+<li>如何对摄像头输出的YUV帧进行快速预处理（镜像，缩放，旋转）？</li>
+</ol>
+<hr />
+<h3>视频编码器的选择</h3>
+<p>对于录制视频的需求，不少app都需要对每一帧数据进行单独处理，因此很少会直接用到<code>MediaRecorder</code>来直接录取视频，一般来说，会有这么两个选择</p>
+<ul>
+<li>MediaCodec</li>
+<li>FFMpeg+x264/openh264</li>
+</ul>
+<p>我们来逐个解析一下</p>
+<hr />
+<h4>MediaCodec</h4>
+<p>MediaCodec是API 16之后Google推出的用于音视频编解码的一套偏底层的API，可以直接利用硬件加速进行视频的编解码。调用的时候需要先初始化MediaCodec作为视频的编码器 ...</p> </div><!-- entry-content -->
+        </article>
+        <article class="hentry">
                 <header> <h2 class="entry-title"><a href="http://ragnraok.github.io/get_android_alloc_object_info.html" rel="bookmark" title="Permalink to 如何获取Android系统中申请对象的信息">如何获取Android系统中申请对象的信息</a></h2> </header>
                 <div class="entry-content"> <p>最近一直在做有关内存方面的优化工作，在做优化的过程，除了关注内存的申请量以及GC的情况之外，我们经常需要想方法找出是那些对象占用了大量内存，以及他们是如何导致GC的，这意味着我们需要获取对象申请的信息（大小，类型，堆栈等），我们这篇文章来介绍下几种获取对象申请信息的方法</p>
 <h3>Allocation Tracker</h3>
@@ -43,9 +69,9 @@
 <h3>What is it</h3>
 <p>MemoryFile是android在最开始就引入的一套框架，其内部实际上是封装了android特有的内存共享机制<a href="http://elinux.org/Android_Kernel_Features#ashmem">Ashmem</a>匿名共享内存，简单来说，Ashmem在Android内核中是被注册成一个特殊的字符设备，Ashmem驱动通过在内核的一个自定义<a href="https://en.wikipedia.org/wiki/Slab_allocation">slab</a>缓冲区中初始化一段内存区域，然后通过mmap把申请的内存映射到用户的进程空间中（通过<a href="https://en.wikipedia.org/wiki/Tmpfs">tmpfs</a>），这样子就可以在用户进程中使用这里申请的内存了，另外，Ashmem的一个特性就是可以在系统内存不足的时候，回收掉被标记为"unpin"的内存，这个后面会讲到，另外，MemoryFile也可以通过Binder跨进程调用来让两个进程共享一段内存区域。由于整个申请内存的过程并不再Java层上，可以很明显的看出使用MemoryFile申请的内存实际上是<strong>并不会</strong>占用Java堆内存的。</p>
 <p>MemoryFile暴露出来的用户接口可以说跟他的名字一样，基本上跟我们平时的文件的读写基本一致，也可以使用InputStream和OutputStream来对其进行读写等操作：</p>
-<div class="highlight"><pre><span class="n">MemoryFile</span> <span class="n">memoryFile</span> <span class="o">=</span> <span class="n">new</span> <span class="n">MemoryFile</span><span class="p">(</span><span class="n">null</span><span class="p">,</span> <span class="n">inputStream</span><span class="p">.</span><span class="n">available</span><span class="p">());</span>
-<span class="n">memoryFile</span><span class="p">.</span><span class="n">allowPurging</span><span class="p">(</span><span class="nb">false</span><span class="p">);</span>
-<span class="n">OutputStream</span> <span class="n">outputStream</span> <span class="o">=</span> <span class="n">memoryFile</span><span class="p">.</span><span class="n">getOutputStream</span><span class="p">();</span>
+<div class="highlight"><pre><span></span><span class="n">MemoryFile</span> <span class="n">memoryFile</span> <span class="o">=</span> <span class="k">new</span> <span class="n">MemoryFile</span><span class="o">(</span><span class="kc">null</span><span class="o">,</span> <span class="n">inputStream</span><span class="o">.</span><span class="na">available</span><span class="o">());</span>
+<span class="n">memoryFile</span><span class="o">.</span><span class="na">allowPurging</span><span class="o">(</span><span class="kc">false</span><span class="o">);</span>
+<span class="n">OutputStream</span> <span class="n">outputStream</span> <span class="o">=</span> <span class="n">memoryFile</span><span class="o">.</span><span class="na">getOutputStream</span><span class="o">();</span>
 <span class="n">outputStream ...</span></pre></div> </div><!-- entry-content -->
         </article>
         <article class="hentry">
@@ -57,12 +83,12 @@
 <p>在<a href="https://github.com/ragnraok/RxCamera">RxCamera</a>的README中已经有关于这个库使用的比较详细介绍了，我在这里再说明一下：</p>
 <h4>加入依赖</h4>
 <p>首先你需要在项目中加入对RxCamera项目的依赖:</p>
-<div class="highlight"><pre><span class="n">repositories</span> <span class="p">{</span>
-        <span class="n">jcenter</span><span class="p">()</span>
-<span class="p">}</span>
-<span class="n">dependencies</span> <span class="p">{</span>
-    <span class="n">compile</span> <span class="err">&#39;</span><span class="n">com</span><span class="p">.</span><span class="n">ragnarok</span><span class="p">.</span><span class="n">rxcamera</span><span class="o">:</span><span class="n">lib</span><span class="o">:</span><span class="mf">0.0.1</span><span class="err">&#39;</span>
-<span class="p">}</span>
+<div class="highlight"><pre><span></span>repositories {
+        jcenter()
+}
+dependencies {
+    compile &#39;com.ragnarok.rxcamera:lib:0.0.1&#39;
+}
 </pre></div>
 
 
@@ -92,29 +118,6 @@
 </li>
 </ol>
 <p>另外，以上三个类都继承于<a href="http://developer.android.com/intl/zh-cn/reference/android/text/Layout.html">Layout</a>类，在此类中统一负责文本的具体绘制，在Layout ...</p> </div><!-- entry-content -->
-        </article>
-        <article class="hentry">
-                <header> <h2 class="entry-title"><a href="http://ragnraok.github.io/using-kotlin-to-write-android-app.html" rel="bookmark" title="Permalink to 使用Kotlin进行Android开发">使用Kotlin进行Android开发</a></h2> </header>
-                <div class="entry-content"> <h3>What is Kotlin</h3>
-<p>Kotlin，原意是在俄罗斯的一个<a href="https://zh.wikipedia.org/wiki/%E7%A7%91%E7%89%B9%E6%9E%97%E5%B3%B6">小岛</a>，JetBrain在2011年推出了以这个来命名的一个运行在JVM上的语言， 看上去有点类似C#和Scala的结合，并且同为静态类型，作为一门JVM上的语言，可以轻松兼容Java，并且整个语言设计的非常轻量。目前的版本为<code>0.12.200</code>，尚未发布正式版。</p>
-<hr />
-<p>Kotlin的下载和配置在其<a href="http://kotlinlang.org/docs/tutorials/getting-started.html">官网</a>上有，在这里就不再赘述了，值得一提的是，作为JetBrains家出品的语言，自家的IDEA当然全力支持！</p>
-<h3>基本语法介绍</h3>
-<p>Kotlin的语法非常简洁，熟悉Java或者Scala的人都可以快速上手：</p>
-<h4>函数声明：</h4>
-<div class="highlight"><pre><span class="n">fun</span> <span class="n">foo</span><span class="p">(</span><span class="n">va</span><span class="o">:</span> <span class="n">Int</span><span class="p">)</span><span class="o">:</span> <span class="n">Int</span> <span class="p">{</span>
-    <span class="k">return</span> <span class="mi">1</span>
-<span class="p">}</span>
-</pre></div>
-
-
-<p>也可以单行声明：</p>
-<div class="highlight"><pre><span class="n">fun</span> <span class="n">foo</span><span class="p">(</span><span class="n">va</span><span class="o">:</span> <span class="n">Int</span><span class="p">)</span><span class="o">:</span> <span class="n">Int</span> <span class="o">=</span> <span class="mi">1</span>
-</pre></div>
-
-
-<p>lambda当然也是支持的：</p>
-<div class="highlight"><pre><span class="n">var</span> <span class="n">c</span> <span class="o">=</span> <span class="p">{</span><span class="n">foo</span><span class="o">:</span> <span class="n">Int</span> <span class="o">-&gt;</span> <span class="n">println</span><span class="p">(</span><span class="n">foo ...</span></pre></div> </div><!-- entry-content -->
         </article>
 <div class="pager">
       <ul>

@@ -31,7 +31,7 @@
   <div class="entry-content">
     <p>在JDK中，自带了一套相关的编译API，可以在Java中发起编译流程，解析Java源文件然后获取其语法树，在JDK的<code>tools.jar</code>（OSX下可以在/Library/Java/JavaVirtualMachines/jdk_version/Contents/Home/lib中找到）中包含着这整套API，但是这却不是Oracle和OpenJDK发布中的公开API，因此对于这套API，并没有官方的正式文档来进行说明。但是，也有不少项目利用了这套API来做了不少事情，例如大名鼎鼎的<a href="https://github.com/rzwitserloot/lombok.git">lombok</a>使用了这套API在Annotation Processing阶段修改了源代码中的语法树，最终结果相当于直接在源文件中插入了新的代码！</p>
 <p>由于这套API目前缺少相关文档，使用起来比较困难，例如，解析源代码中的所有变量，并打印出来：</p>
-<div class="highlight"><pre><span class="kr">public</span> <span class="kr">class</span> <span class="nx">JavaParser</span> <span class="p">{</span>
+<div class="highlight"><pre><span></span><span class="kr">public</span> <span class="kr">class</span> <span class="nx">JavaParser</span> <span class="p">{</span>
 
     <span class="kr">private</span> <span class="kr">static</span> <span class="kr">final</span> <span class="nb">String</span> <span class="nx">path</span> <span class="o">=</span> <span class="s2">&quot;User.java&quot;</span><span class="p">;</span>
 
@@ -89,30 +89,30 @@
 
 
 <p>其中 <code>User.java</code>的代码如下：</p>
-<div class="highlight"><pre><span class="n">package</span> <span class="n">com</span><span class="p">.</span><span class="n">ragnarok</span><span class="p">.</span><span class="n">javaparser</span><span class="p">;</span>
+<div class="highlight"><pre><span></span><span class="n">package</span> <span class="n">com</span><span class="o">.</span><span class="n">ragnarok</span><span class="o">.</span><span class="n">javaparser</span><span class="p">;</span>
 
-<span class="n">import</span> <span class="n">com</span><span class="p">.</span><span class="n">sun</span><span class="p">.</span><span class="n">istack</span><span class="p">.</span><span class="n">internal</span><span class="p">.</span><span class="n">Nullable</span><span class="p">;</span>
-<span class="n">import</span> <span class="n">java</span><span class="p">.</span><span class="n">lang</span><span class="p">.</span><span class="n">Override</span><span class="p">;</span>
+<span class="kn">import</span> <span class="nn">com.sun.istack.internal.Nullable</span><span class="p">;</span>
+<span class="kn">import</span> <span class="nn">java.lang.Override</span><span class="p">;</span>
 
-<span class="n">public</span> <span class="n">class</span> <span class="n">User</span> <span class="p">{</span>
+<span class="n">public</span> <span class="k">class</span> <span class="nc">User</span> <span class="p">{</span>
 
-    <span class="err">@</span><span class="n">Nullable</span>
-    <span class="n">private</span> <span class="n">String</span> <span class="n">foo</span> <span class="o">=</span> <span class="s">&quot;123123&quot;</span><span class="p">;</span>
+    <span class="nd">@Nullable</span>
+    <span class="n">private</span> <span class="n">String</span> <span class="n">foo</span> <span class="o">=</span> <span class="s2">&quot;123123&quot;</span><span class="p">;</span>
     <span class="n">private</span> <span class="n">Foo</span> <span class="n">a</span><span class="p">;</span>
 
-    <span class="n">public</span> <span class="kt">void</span> <span class="nf">UserMethod</span><span class="p">()</span> <span class="p">{}</span>
+    <span class="n">public</span> <span class="n">void</span> <span class="n">UserMethod</span><span class="p">()</span> <span class="p">{}</span>
 
-    <span class="k">static</span> <span class="n">class</span> <span class="n">Foo</span> <span class="p">{</span>
-        <span class="n">private</span> <span class="n">String</span> <span class="n">fooString</span> <span class="o">=</span> <span class="s">&quot;123123&quot;</span><span class="p">;</span>
+    <span class="n">static</span> <span class="k">class</span> <span class="nc">Foo</span> <span class="p">{</span>
+        <span class="n">private</span> <span class="n">String</span> <span class="n">fooString</span> <span class="o">=</span> <span class="s2">&quot;123123&quot;</span><span class="p">;</span>
 
-        <span class="n">public</span> <span class="kt">void</span> <span class="nf">FooMethod</span><span class="p">()</span> <span class="p">{}</span>
+        <span class="n">public</span> <span class="n">void</span> <span class="n">FooMethod</span><span class="p">()</span> <span class="p">{}</span>
     <span class="p">}</span>
 <span class="p">}</span>
 </pre></div>
 
 
 <p>执行上面的<code>JavaParser</code>结果如下：</p>
-<div class="highlight"><pre><span class="n">variable</span><span class="o">:</span> <span class="n">foo</span><span class="o">,</span> <span class="n">annotaion</span><span class="o">:</span> <span class="n">Nullable</span>
+<div class="highlight"><pre><span></span><span class="n">variable</span><span class="o">:</span> <span class="n">foo</span><span class="o">,</span> <span class="n">annotaion</span><span class="o">:</span> <span class="n">Nullable</span>
 <span class="n">variable</span> <span class="n">name</span><span class="o">:</span> <span class="n">foo</span><span class="o">,</span> <span class="n">type</span><span class="o">:</span> <span class="n">String</span><span class="o">,</span> <span class="n">kind</span><span class="o">:</span> <span class="n">VARIABLE</span><span class="o">,</span> <span class="kd">package</span><span class="o">:</span> <span class="n">com</span><span class="o">.</span><span class="na">ragnarok</span><span class="o">.</span><span class="na">javaparser</span>
 <span class="n">variable</span> <span class="n">name</span><span class="o">:</span> <span class="n">a</span><span class="o">,</span> <span class="n">type</span><span class="o">:</span> <span class="n">Foo</span><span class="o">,</span> <span class="n">kind</span><span class="o">:</span> <span class="n">VARIABLE</span><span class="o">,</span> <span class="kd">package</span><span class="o">:</span> <span class="n">com</span><span class="o">.</span><span class="na">ragnarok</span><span class="o">.</span><span class="na">javaparser</span>
 </pre></div>
@@ -121,7 +121,7 @@
 <p>这里我们是首先通过<code>JavaCompiler.CompilationTask</code>解析了源文件之后，再使用自定义的<code>SourceVisitor</code>（继承自<code>TreeScanner</code>）来对源代码的结构进行访问，在<code>SourceVisitor</code>类中，通过重载<code>visitVariable</code>来对一个编译单元（单个源代码文件）进行解析，访问其中的所有的变量，这里可以看出，我们没有办法拿到这个变量类型的全限定名（包含包名），只能拿到的对应的简单名字，因此，类型的确定需要外部实现<strong>自行确定</strong>，例如可以通过记录类所在的包名，递归的搜索整个源代码目录来跟踪所有类的全限定名，查找import中是否包含对应的类型等。</p>
 <p><code>TreeScanner</code>中除了<code>visitVariable</code>方法外，还包含了大量其他的<code>visitXYZ</code>方法，例如，可以遍历所有的import，方法定义，Annotation等，更具体可以查看OpenJDK中关于这个的源代码</p>
 <p>这里再来看下另外一个例子，重载<code>visitClass</code>方法，访问所有的内部类以及类本身：</p>
-<div class="highlight"><pre><span class="err">@</span><span class="nx">Override</span>
+<div class="highlight"><pre><span></span><span class="err">@</span><span class="nx">Override</span>
 <span class="kr">public</span> <span class="nx">Void</span> <span class="nx">visitClass</span><span class="p">(</span><span class="nx">ClassTree</span> <span class="nx">node</span><span class="p">,</span> <span class="nx">Void</span> <span class="nx">aVoid</span><span class="p">)</span> <span class="p">{</span>
     <span class="nx">formatPtrln</span><span class="p">(</span><span class="s2">&quot;class name: %s&quot;</span><span class="p">,</span> <span class="nx">node</span><span class="p">.</span><span class="nx">getSimpleName</span><span class="p">());</span>
     <span class="k">for</span> <span class="p">(</span><span class="nx">Tree</span> <span class="nx">member</span> <span class="o">:</span> <span class="nx">node</span><span class="p">.</span><span class="nx">getMembers</span><span class="p">())</span> <span class="p">{</span>
@@ -141,11 +141,11 @@
 
 
 <p>这里简单的打印了类名以及变量的名称，类型，annotation类型，执行上面的代码，结果如下：</p>
-<div class="highlight"><pre><span class="n">class</span> <span class="n">name</span><span class="o">:</span> <span class="n">User</span>
-<span class="nl">variable:</span> <span class="n">foo</span><span class="p">,</span> <span class="n">annotaion</span><span class="o">:</span> <span class="n">Nullable</span>
-<span class="nl">variable:</span> <span class="n">a</span>
-<span class="n">class</span> <span class="n">name</span><span class="o">:</span> <span class="n">Foo</span>
-<span class="nl">variable:</span> <span class="n">fooString</span>
+<div class="highlight"><pre><span></span><span class="kr">class</span> <span class="nx">name</span>: <span class="kt">User</span>
+<span class="nx">variable</span>: <span class="kt">foo</span><span class="p">,</span> <span class="nx">annotaion</span>: <span class="kt">Nullable</span>
+<span class="nx">variable</span>: <span class="kt">a</span>
+<span class="kr">class</span> <span class="nx">name</span>: <span class="kt">Foo</span>
+<span class="nx">variable</span>: <span class="kt">fooString</span>
 </pre></div>
 
 
