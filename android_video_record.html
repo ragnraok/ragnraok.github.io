@@ -4,25 +4,25 @@
         <title>谈谈关于Android视频编码的那些坑 - Ragnarok Note</title>
         <meta charset="utf-8" />
         <link href="//netdna.bootstrapcdn.com/bootstrap/3.0.0/css/bootstrap.min.css" rel="stylesheet" />
-        <link href="http://ragnraok.github.io/theme/static/css/style.css" rel="stylesheet" />
+        <link href="/theme/static/css/style.css" rel="stylesheet" />
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-        <link href="http://ragnraok.github.io/feeds/atom.xml" type="application/atom+xml" rel="alternate" title="Ragnarok Note Full Atom Feed" />
+        <link href="/feeds/atom.xml" type="application/atom+xml" rel="alternate" title="Ragnarok Note Full Atom Feed" />
     </head>
 
     <body id="index" class="archive">
         <div class="container">
             <div class="header">
                 <ul class="nav nav-pills pull-right">
-                    <li class=""><a href="http://ragnraok.github.io">Home</a></li>
-                    <li><a href="http://ragnraok.github.io/archives.html">Archives</a></li>
+                    <li class=""><a href="">Home</a></li>
+                    <li><a href="/archives.html">Archives</a></li>
                 </ul>
-                <h3 class="text-muted"><a href="http://ragnraok.github.io">Ragnarok Note</a></h3>
+                <h3 class="text-muted"><a href="">Ragnarok Note</a></h3>
 				<h2 class="text-muted"></h2>
              </div>
 <section id="content" class="article content">
   <header>
     <h2 class="entry-title">
-      <a href="http://ragnraok.github.io/android_video_record.html" rel="bookmark"
+      <a href="/android_video_record.html" rel="bookmark"
          title="Permalink to 谈谈关于Android视频编码的那些坑">谈谈关于Android视频编码的那些坑</a></h2>
  
   </header>
@@ -93,60 +93,52 @@
 <p>颜色格式问题</p>
 <p>MediaCodec在初始化的时候，在<code>configure</code>的时候，需要传入一个MediaFormat对象，当作为编码器使用的时候，我们一般需要在MediaFormat中指定视频的宽高，帧率，码率，I帧间隔等基本信息，除此之外，还有一个重要的信息就是，指定编码器接受的YUV帧的颜色格式。这个是因为由于YUV根据其采样比例，UV分量的排列顺序有很多种不同的颜色格式，而对于Android的摄像头在<code>onPreviewFrame</code>输出的YUV帧格式，如果没有配置任何参数的情况下，基本上都是NV21格式，但Google对MediaCodec的API在设计和规范的时候，显得很不厚道，过于贴近Android的HAL层了，导致了NV21格式并不是所有机器的MediaCodec都支持这种格式作为编码器的输入格式！
 因此，在初始化MediaCodec的时候，我们需要通过<code>codecInfo.getCapabilitiesForType</code>来查询机器上的MediaCodec实现具体支持哪些YUV格式作为输入格式，一般来说，起码在4.4+的系统上，这两种格式在大部分机器都有支持：</p>
+<div class="highlight"><pre><span></span>MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420Planar
+MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420SemiPlanar
+</pre></div>
+
+
+<p>两种格式分别是YUV420P和NV21，如果机器上只支持YUV420P格式的情况下，则需要先将摄像头输出的NV21格式先转换成YUV420P，才能送入编码器进行编码，否则最终出来的视频就会花屏，或者颜色出现错乱</p>
+<p>这个算是一个不大不小的坑，基本上用上了MediaCodec进行视频编码都会遇上这个问题</p>
 </li>
-</ol>
-<div class="highlight"><pre><span></span><span class="n">MediaCodecInfo</span><span class="o">.</span><span class="na">CodecCapabilities</span><span class="o">.</span><span class="na">COLOR_FormatYUV420Planar</span>
-<span class="n">MediaCodecInfo</span><span class="o">.</span><span class="na">CodecCapabilities</span><span class="o">.</span><span class="na">COLOR_FormatYUV420SemiPlanar</span>
-</pre></div>
-
-
-<div class="highlight"><pre><span></span>两种格式分别是YUV420P和NV21，如果机器上只支持YUV420P格式的情况下，则需要先将摄像头输出的NV21格式先转换成YUV420P，才能送入编码器进行编码，否则最终出来的视频就会花屏，或者颜色出现错乱
-
-这个算是一个不大不小的坑，基本上用上了MediaCodec进行视频编码都会遇上这个问题
-</pre></div>
-
-
-<ol>
 <li>
 <p>编码器支持特性相当有限</p>
 <p>如果使用MediaCodec来编码H264视频流，对于H264格式来说，会有一些针对压缩率以及码率相关的视频质量设置，典型的诸如Profile(baseline, main, high)，Profile Level, Bitrate mode(CBR, CQ, VBR)，合理配置这些参数可以让我们在同等的码率下，获得更高的压缩率，从而提升视频的质量，Android也提供了对应的API进行设置，可以设置到MediaFormat中这些设置项:</p>
-<p><code>Java
-MediaFormat.KEY_BITRATE_MODE
+<div class="highlight"><pre><span></span>MediaFormat.KEY_BITRATE_MODE
 MediaFormat.KEY_PROFILE
-MediaFormat.KEY_LEVEL</code></p>
-</li>
-</ol>
+MediaFormat.KEY_LEVEL
+</pre></div>
+
+
 <p>但问题是，对于Profile，Level, Bitrate mode这些设置，在大部分手机上都是不支持的，即使是设置了最终也不会生效，例如设置了Profile为high，最后出来的视频依然还会是Baseline，Shit....</p>
 <p>这个问题，在7.0以下的机器几乎是必现的，其中一个可能的原因是，Android在源码层级<a href="http://androidxref.com/6.0.1_r10/xref/frameworks/av/media/libstagefright/ACodec.cpp">hardcode</a>了profile的的设置：</p>
-<div class="highlight"><pre><span></span>```cpp
-// XXX
+<div class="highlight"><pre><span></span>// XXX
 if (h264type.eProfile != OMX_VIDEO_AVCProfileBaseline) {
     ALOGW(&quot;Use baseline profile instead of %d for AVC recording&quot;,
-        h264type.eProfile);
+            h264type.eProfile);
     h264type.eProfile = OMX_VIDEO_AVCProfileBaseline;
 }
-```
 </pre></div>
 
 
 <p>Android直到<a href="http://androidxref.com/7.0.0_r1/xref/frameworks/av/media/libstagefright/ACodec.cpp">7.0</a>之后才取消了这段地方的Hardcode</p>
-<div class="highlight"><pre><span></span>```Java
-if (h264type.eProfile == OMX_VIDEO_AVCProfileBaseline) {
+<div class="highlight"><pre><span></span>if (h264type.eProfile == OMX_VIDEO_AVCProfileBaseline) {
     ....
 } else if (h264type.eProfile == OMX_VIDEO_AVCProfileMain ||
-        h264type.eProfile == OMX_VIDEO_AVCProfileHigh) {
+            h264type.eProfile == OMX_VIDEO_AVCProfileHigh) {
     .....
 }
-```
 </pre></div>
 
 
 <p>这个问题可以说间接导致了MediaCodec编码出来的视频质量偏低，同等码率下，难以获得跟软编码甚至iOS那样的视频质量。   </p>
-<ol>
-<li>16位对齐要求</li>
-</ol>
+</li>
+<li>
+<p>16位对齐要求</p>
 <p>前面说到，MediaCodec这个API在设计的时候，过于贴近HAL层，这在很多Soc的实现上，是直接把传入MediaCodec的buffer，在不经过任何前置处理的情况下就直接送入了Soc中。而在编码h264视频流的时候，由于h264的编码块大小一般是16x16，于是乎在一开始设置视频的宽高的时候，如果设置了一个没有对齐16的大小，例如960x540，在某些cpu上，最终编码出来的视频就会直接<strong>花屏</strong>！</p>
 <p>很明显这还是因为厂商在实现这个API的时候，对传入的数据缺少校验以及前置处理导致的，目前来看，华为，三星的Soc出现这个问题会比较频繁，其他厂商的一些早期Soc也有这种问题，一般来说解决方法还是在设置视频宽高的时候，统一设置成对齐16位之后的大小就好了。</p>
+</li>
+</ol>
 <hr />
 <h4>FFMpeg+x264/openh264</h4>
 <p>除了使用MediaCodec进行编码之外，另外一种比较流行的方案就是使用ffmpeg+x264/openh264进行软编码，ffmpeg是用于一些视频帧的预处理。这里主要是使用x264/openh264作为视频的编码器。</p>
@@ -270,8 +262,8 @@ if (h264type.eProfile == OMX_VIDEO_AVCProfileBaseline) {
       日 27 八月 2017
     </abbr>
     <address class="vcard author">
-      by <a class="url fn" href="http://ragnraok.github.io/author/ragnarok-zhou.html">Ragnarok Zhou</a>
-    </address> in <a href="http://ragnraok.github.io/category/android.html">Android</a> Tagged   </footer><!-- /.post-info -->
+      by <a class="url fn" href="/author/ragnarok-zhou.html">Ragnarok Zhou</a>
+    </address> in <a href="/category/android.html">Android</a> Tagged   </footer><!-- /.post-info -->
 </section>
     <div class="comment">
         <div id="disqus_thread"></div> <!-- comment app container -->
@@ -291,10 +283,10 @@ if (h264type.eProfile == OMX_VIDEO_AVCProfileBaseline) {
      <!-- Comment END -->
             <footer id="contentinfo" class="footer">
                     <nav class="pull-right bottom-nav">
-                        <a href="http://ragnraok.github.io/feeds/atom.xml">RSS</a>
+                        <a href="/feeds/atom.xml">RSS</a>
                     </nav>
                     <address id="about" class="vcard body">
-                    &copy; <a href="http://ragnraok.github.io">Ragnarok Note</a> Proudly powered by <a href="http://getpelican.com/">Pelican</a>
+                    &copy; <a href="">Ragnarok Note</a> Proudly powered by <a href="http://getpelican.com/">Pelican</a>
                     </address><!-- /#about -->
             </footer><!-- /#contentinfo -->
         </div><!-- container -->
