@@ -28,14 +28,14 @@
 <hr />
 <p>从原来上讲，Android的 <a href="https://developer.android.com/reference/android/view/Surface">Surface</a> 可以认为是目前图形架构中，作为 <a href="https://source.android.com/devices/graphics/arch-bq-gralloc">BufferQueue</a> 的生产者端，Android会首先把内容渲染到Surface上，填充数据到GraphicBuffer上。而作为消费者端则为系统的<a href="https://source.android.com/devices/graphics/arch-sf-hwc">SurfaceFlinger</a> ，取出BufferQueue中的GraphicBuffer，并配合vysnc将数据送给HWC合成到屏幕上。</p>
 <p>一般来说，Android会把所有可见的View渲染到一个由SurfaceFlinger创建的Surface上，但是这个Surface并不能由开发者直接操作，从App的开发角度来看，大部分情况下我们直接操作的Surface一般会从以下两个地方获取</p>
-<ol>
-<li><a href="https://developer.android.com/reference/android/view/SurfaceView">SurfaceView</a> / <a href="https://kapeli.com/dash_share?docset_file=Android&amp;docset_name=Android&amp;path=developer.android.com/reference/android/opengl/GLSurfaceView.html&amp;platform=android&amp;repo=Main&amp;source=https://developer.android.com/reference/android/opengl/GLSurfaceView.html&amp;version=8.1.0">GLSurfaceView</a></li>
-</ol>
+<ul>
+<li>
+<p><a href="https://developer.android.com/reference/android/view/SurfaceView">SurfaceView</a> / <a href="https://kapeli.com/dash_share?docset_file=Android&amp;docset_name=Android&amp;path=developer.android.com/reference/android/opengl/GLSurfaceView.html&amp;platform=android&amp;repo=Main&amp;source=https://developer.android.com/reference/android/opengl/GLSurfaceView.html&amp;version=8.1.0">GLSurfaceView</a></p>
 <p>这两个组件是结合了Surface跟View的实现，特别的是，这两个view系统为其单独提供一层了Surface，并直接由SurfaceFlinger进行管理合成，因此实际显示在屏幕上的时候，并没有完全从属在当前的View的布局层次上，在布局对应的位置上，只是一个透明的占位符。而GLSurfaceView，则在SurfaceView的基础上提供了EGL的上下文，以便可以直接使用GLES在Surface上绘制内容</p>
-<ol>
-<li><a href="https://developer.android.com/reference/android/graphics/SurfaceTexture">SurfaceTexture</a> / <a href="https://developer.android.com/reference/android/view/TextureView">TextureView</a></li>
-</ol>
-<p>SurfaceTexture是从Android 3 ...</p> </div><!-- entry-content -->
+</li>
+<li>
+<p><a href="https://developer.android.com/reference/android/graphics/SurfaceTexture">SurfaceTexture</a> / <a href="https://developer.android.com/reference/android/view/TextureView">TextureView</a></p>
+<p>SurfaceTexture是从Android 3 ...</p></li></ul> </div><!-- entry-content -->
         </article>
         <article class="hentry">
                 <header> <h2 class="entry-title"><a href="http://ragnraok.github.io/android_video_record.html" rel="bookmark" title="Permalink to 谈谈关于Android视频编码的那些坑">谈谈关于Android视频编码的那些坑</a></h2> </header>
