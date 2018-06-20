@@ -108,17 +108,17 @@
 <p><strong>当我们渲染一帧的时间过长的时候，我们又怎么能够保证在对应的时间点上在屏幕上显示对应的内容呢？</strong></p>
 <p>如果没有解决这个问题，那么在游戏渲染，或者在视频播放渲染的时候，就很容易出现音视频不同步的情况。而Android对于这个问题的解决方式就是，让App去告诉SurfaceFlinger某一帧想要在哪个时间点显示到屏幕上，也就是说引入了帧时间戳的概念。当SurfaceFlinger提交到HWC超过这个时间戳的时候，就丢掉这一帧，如果还没达到对应帧的时间戳，就继续显示当前帧</p>
 <p>而在实现上，Android提供了一个单独的EGL扩展：<a href="https://www.khronos.org/registry/EGL/extensions/ANDROID/EGL_ANDROID_presentation_time.txt">eglPresentationTimeANDROID</a> ，在swapBuffer之前调用，提交当前帧的想要的显示时间戳，至于时间戳的具体含义，在不同的场景中可能会有不同的表达，例如：</p>
-<ol>
+<ul>
 <li>
 <p>如果是显示到屏幕上的时候，时间戳就是一个绝对时间值，例如系统的启动时间</p>
 </li>
 <li>
 <p>如果是视频编码的场景，例如使用MediaCodec的InputSurface来编码视频的时候，这个时候时间戳的含义就是当前视频帧的 <a href="https://en.wikipedia.org/wiki/Presentation_timestamp">pts</a>，事实上，当你想在MediaCodec的InputSurface上渲染完内容之后，如果不调用这个函数控制当前这一帧的pts，除非合成器有额外控制，否则最后编码出来的视频fps将会相当大，具体这里的实现，可以参考下BigFlake这里的<a href="https://bigflake.com/mediacodec/EncodeAndMuxTest.java.txt">代码</a></p>
 </li>
-</ol>
+</ul>
 <p><em>btw, 这个扩展对应的Android上层接口定义在<a href="https://developer.android.com/reference/android/opengl/EGLExt.html">这里</a></em></p>
 <p>因此，通过对 <code>eglPresentationTimeANDROID</code> 的调用，结合BufferQueue，SurfaceFlinger就可以针对上屏的每一帧数据延迟做精确的控制了，假设说，我们设置了某一帧显示时间戳为<strong>T</strong>，然后提交到BufferQueue中：</p>
-<ol>
+<ul>
 <li>
 <p>当在<strong>T-1</strong>的时间点，当前队首为这一帧的时候，SurfaceFlinger会继续hold住当前帧，也就是说这个时候显示的还是前一帧的数据</p>
 </li>
@@ -128,7 +128,7 @@
 <li>
 <p>当达到了<strong>T+1</strong>时间点，当前队首为这一帧的时候，因为已经超过了这一帧设置的时间戳<strong>T</strong>，因此SurfaceFlinger便直接<strong>丢弃</strong>这一帧，继续处理队列剩余的帧数据</p>
 </li>
-</ol>
+</ul>
 <p>总体来看，在通过帧时间戳控制之后，Android就可以解决Surface的渲染上屏延迟问题，但渲染过长的时候，就势必带来丢帧，因此根本的解决方案，还是得尽量在16ms内，渲染完一帧数据</p>
 <p>文笔一般，水平有限，仅做抛砖引玉之用，欢迎更加仔细的讨论!</p>
 <h3>References</h3>
