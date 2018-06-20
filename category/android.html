@@ -23,6 +23,22 @@
 <h2>Articles in the Android category</h2>
 
         <article class="hentry">
+                <header> <h2 class="entry-title"><a href="http://ragnraok.github.io/surface_display_lag.html" rel="bookmark" title="Permalink to 浅谈Android中Surface显示延迟处理">浅谈Android中Surface显示延迟处理</a></h2> </header>
+                <div class="entry-content"> <p>最近在使用GLES在Surface上渲染结果的时候，遇到了一个显示延迟的问题，当渲染时间过长，同时帧率要求比较高的时候，如果不加控制，就会造成显示的延迟，如果界面没有交互，倒是不会看出什么问题，如果是强交互的场景，这种情况下就会造成可感知的用户使用延迟了。处理这种情况的其中一种方式是给渲染的一帧赋予一个时间戳，用于给SurfaceFlinger进行对应的丢帧控制，具体什么原理呢，让我们一步一步来说明一下</p>
+<h3>Surface是什么？</h3>
+<hr />
+<p>从原来上讲，Android的 <a href="https://developer.android.com/reference/android/view/Surface">Surface</a> 可以认为是目前图形架构中，作为 <a href="https://source.android.com/devices/graphics/arch-bq-gralloc">BufferQueue</a> 的生产者端，Android会首先把内容渲染到Surface上，填充数据到GraphicBuffer上。而作为消费者端则为系统的<a href="https://source.android.com/devices/graphics/arch-sf-hwc">SurfaceFlinger</a> ，取出BufferQueue中的GraphicBuffer，并配合vysnc将数据送给HWC合成到屏幕上。</p>
+<p>一般来说，Android会把所有可见的View渲染到一个由SurfaceFlinger创建的Surface上，但是这个Surface并不能由开发者直接操作，从App的开发角度来看，大部分情况下我们直接操作的Surface一般会从以下两个地方获取</p>
+<ol>
+<li><a href="https://developer.android.com/reference/android/view/SurfaceView">SurfaceView</a> / <a href="https://kapeli.com/dash_share?docset_file=Android&amp;docset_name=Android&amp;path=developer.android.com/reference/android/opengl/GLSurfaceView.html&amp;platform=android&amp;repo=Main&amp;source=https://developer.android.com/reference/android/opengl/GLSurfaceView.html&amp;version=8.1.0">GLSurfaceView</a></li>
+</ol>
+<p>这两个组件是结合了Surface跟View的实现，特别的是，这两个view系统为其单独提供一层了Surface，并直接由SurfaceFlinger进行管理合成，因此实际显示在屏幕上的时候，并没有完全从属在当前的View的布局层次上，在布局对应的位置上，只是一个透明的占位符。而GLSurfaceView，则在SurfaceView的基础上提供了EGL的上下文，以便可以直接使用GLES在Surface上绘制内容</p>
+<ol>
+<li><a href="https://developer.android.com/reference/android/graphics/SurfaceTexture">SurfaceTexture</a> / <a href="https://developer.android.com/reference/android/view/TextureView">TextureView</a></li>
+</ol>
+<p>SurfaceTexture是从Android 3 ...</p> </div><!-- entry-content -->
+        </article>
+        <article class="hentry">
                 <header> <h2 class="entry-title"><a href="http://ragnraok.github.io/android_video_record.html" rel="bookmark" title="Permalink to 谈谈关于Android视频编码的那些坑">谈谈关于Android视频编码的那些坑</a></h2> </header>
                 <div class="entry-content"> <p>Android的视频相关的开发，大概一直是整个Android生态，以及Android API中，最为分裂以及兼容性问题最为突出的一部分。摄像头，以及视频编码相关的API，Google一直对这方面的控制力非常差，导致不同厂商对这两个API的实现有不少差异，而且从API的设计来看，一直以来优化也相当有限，甚至有人认为这是“Android上最难用的API之一”</p>
 <p>以微信为例，我们录制一个540p的mp4文件，对于Android来说，大体上是遵循这么一个流程：</p>
@@ -97,27 +113,6 @@ dependencies {
 <li>配置camera的参数</li>
 </ul>
 <p>android的原生camera api提供了不少的选项来配置打开摄像头时候的参数，例如预览的帧率，预览的分辨率，自动对焦等，在RxCamera中主要是通过一个<code>RxCameraConfig</code>对象来管理这些对象 ...</p> </div><!-- entry-content -->
-        </article>
-        <article class="hentry">
-                <header> <h2 class="entry-title"><a href="http://ragnraok.github.io/textview-pre-render-research.html" rel="bookmark" title="Permalink to TextView预渲染研究">TextView预渲染研究</a></h2> </header>
-                <div class="entry-content"> <p>Android中的TextView是整个framework中最复杂的控件之一，负责Android中显示文本的大部分工作，framwork中的许多控件也直接或者间接的继承于TextView，例如Button，EditText等。其内部实现也相当复杂，单论代码行数来说，android-22中TextView有足足9509行，另外，TextView中许多操作都非常繁重，例如<code>setText</code>操作，需要设置SpanWatcher，或者需要重现创建一个SpannableString，还需要根据情况重新创建Text Layout，这些操作加起来之后令一次setText操作非常耗时。为了提升TextView的渲染效率，最近研究了一下预渲染的方法，接下来给大家讲解一下原理。</p>
-<h3>TextView渲染基本原理</h3>
-<p>首先来介绍下TextView的基本渲染原理，总的来说，TextView中负责渲染文字的主要是这三个类：</p>
-<ol>
-<li>
-<p><a href="http://developer.android.com/intl/zh-cn/reference/android/text/BoringLayout.html">BoringLayout</a> <br />
-    主要负责显示单行文本，并提供了isBoring方法来判断是否满足单行文本的条件。</p>
-</li>
-<li>
-<p><a href="http://developer.android.com/intl/zh-cn/reference/android/text/DynamicLayout.html">DynamicLayout</a> <br />
-    当文本为Spannable的时候，TextView就会使用它来负责文本的显示，在内部设置了SpanWatcher，当检测到span改变的时候，会进行reflow，重新计算布局。</p>
-</li>
-<li>
-<p><a href="http://developer.android.com/intl/zh-cn/reference/android/text/StaticLayout.html">StaticLayout</a> <br />
-    当文本为非单行文本，且非Spannable的时候，就会使用StaticLayout，内部并不会监听span的变化，因此效率上会比DynamicLayout高，只需一次布局的创建即可，但其实内部也能显示SpannableString，只是不能在span变化之后重新进行布局而已。</p>
-</li>
-</ol>
-<p>另外，以上三个类都继承于<a href="http://developer.android.com/intl/zh-cn/reference/android/text/Layout.html">Layout</a>类，在此类中统一负责文本的具体绘制，在Layout ...</p> </div><!-- entry-content -->
         </article>
 <div class="pager">
       <ul>
