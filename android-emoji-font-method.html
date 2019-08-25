@@ -75,7 +75,7 @@
 <p>其中<code>"Apple Color Emoji.ttf"</code>请改成Apple Color Emoji.ttf这个文件对应的目录</p>
 <ul>
 <li>执行脚本，然后我们看到在同目录下多了一个叫做<code>extracted</code>文件夹，里面分别存放着不同分辨率的Emoji表情图片：<br />
-<img alt="" src="static/images/emojiFontList.png" /> </li>
+<img alt="" src="static/images/emojiFontList.png"> </li>
 </ul>
 <p><code>set_**</code>目录分辨对应不同的分辨率，可以看出，<code>Apple Color Emoji.ttf</code>这个字体内嵌了多达8中不同分辨率的Emoji图片，难怪这个字体文件的大小达到了34M。</p>
 <p>非常感谢这位程序员的工作，使得我们能够一窥这个字体的大致实现，但是很可惜，这个实现是苹果自己的私有标准，没有合入到OpenType的正式标准中，而苹果官方对这里的实现也没有更多的资料，所以具体的技术标准，目前暂时找不到更加详细的资料。</p>
@@ -96,9 +96,9 @@
 <p>其中，这个项目的freetype以及skia的实现被带入了Android 4.4中，也就是说，在Android 4.4之后的版本，我们终于可以像iOS一样使用Color Emoji Font了！！</p>
 <h3>Using in Android</h3>
 <p>上文提到，在Android 4.4之后，Google终于支持了Color Emoji Font，实际上，如果你用的是Google输入法，则可以发现在这个面板上输入到所有Google Style的Emoji表情：</p>
-<p><img alt="" src="static/images/googleIME.png" /> </p>
+<p><img alt="" src="static/images/googleIME.png"> </p>
 <p>但是，很明显，Google提供的Emoji字体的样式实在是太丑了，很多人还是喜欢原来苹果的Emoji样式：</p>
-<p><img alt="" src="static/images/iosEmoji.jpg" /> </p>
+<p><img alt="" src="static/images/iosEmoji.jpg"> </p>
 <p>既然Android 4.4之后新增了Color Emoji Font的支持，根据上面的叙述，我们是否可以自己制作一个iOS Style Emoji字体给我们使用呢，答案当然是可以了，在xda论坛上，已经有人进行了这种<a href="http://forum.xda-developers.com/showthread.php?t=2563757">尝试</a>，原理是利用OSX中的<code>Apple Color Emoji.ttf</code>提取出来的图片，然后使用FontTools以及<a href="https://code.google.com/p/color-emoji/">color-emoji</a>项目中的相关脚本即可生成对应的ttf文件。</p>
 <p>由于整个生成过程比较复杂，涉及比较多的依赖，有兴趣的可以看下color-emoji项目中的example的Makefile文件的内容，可以看到每一步是怎么生成的，在这里由于篇幅有限就不再赘述了。根据此方法生成的ttf文件，大家可以在这里<a href="http://pan.baidu.com/s/1kTLyqSB">下载</a></p>
 <p>在生成了这个emoji字体文件之后，我们就可以直接在android中使用了，有以下两种方式：</p>
@@ -109,7 +109,7 @@
 <h4>性能对比</h4>
 <p>对比起使用SpannableString那一套，直接通过setTypeface来显示emoji文字的性能差距究竟有多少呢？接下来我们来简单的测试一下。</p>
 <p>在测试用例的选择方面，我们选择一条3000多行的emoji表情字符串，算是一个非常极端例子（每个表情后面跟上一个换行符）：</p>
-<p><img alt="" src="static/images/emojiFontTestCase.png" /></p>
+<p><img alt="" src="static/images/emojiFontTestCase.png"></p>
 <p>测试基准为，从<code>startActivity</code>开始，到包含表情的Activity的中展示emoji的TextView第一次调用<code>dispatchDraw</code>方法为止所消耗的时间，测试的环境为Nexus 5，Android 5.0，测试10次，计算平均时间：</p>
 <ul>
 <li>使用Emoji Font，平均时间为<strong>433ms</strong></li>
@@ -124,7 +124,7 @@
 <li>重造TextView，自行解析emoji符号，不使用SpannableString，而是直接画出来。使用这个方案之后，Emoji Font就不是必须的了，但重造TextView的成本也是太高了。</li>
 </ul>
 <p>因此，最终的结论仍然是开头中所说的，在android4.4以前，无法使用像iOS/OSX那样的Emoji Font，最简单的解决方案是使用ImageSpan配合SpannableString，而在4.4及之后的版本，则可以直接采用类似iOS/OSX的方案进行快速渲染。</p>
-<hr />
+<hr>
 <p>最后，祝愿Lollipop的光芒能够早日照亮天朝。</p>
   </div><!-- /.entry-content -->
    <footer class="post-info text-muted">

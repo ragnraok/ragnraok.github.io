@@ -22,10 +22,42 @@
 <section id="content" class="content">
 
         <article class="hentry">
+                <header> <h2 class="entry-title"><a href="http://ragnraok.github.io/try_android_implement_pbr_thery_direct_light.html" rel="bookmark" title="Permalink to 尝试在Android中实现PBR管线——基本原理以及直接光照明">尝试在Android中实现PBR管线——基本原理以及直接光照明</a></h2> </header>
+                <div class="entry-content"> <p>从本个世代起，基于物理的渲染（Physically Based Rendering，简称PBR）基本上就成为了事实上当下3A大作的渲染标准，自从迪士尼在在SIGGRAPH 2012上提出的著名的“迪士尼原则的BRDF”以及基于金属工作流来实现的方案，由于高度的易用性，美术设计师可以根据现实物理的参数来构建表面材质，可以实现惊人的显示效果，目前已经被广泛的在业界中使用</p>
+<p>这篇文章将会尝试在Android中基于Kotlin来实现PBR管线，在正式开始代码实现之前，我们先来讨论下PBR管线的基础理论。</p>
+<hr>
+<h2>Before PBR</h2>
+<p>首先我们来看看，在PBR出现之前，传统的Blinn-Phong光照是怎么做的，我们先来看看渲染方程：</p>
+<p><img alt="" src="static/images/Blinn_Phong.png"></p>
+<p>我们可以看到，光照颜色的输出，主要有两部分构成，<strong>漫反射</strong>项以及<strong>高光项</strong>，在渲染方程中：</p>
+<ul>
+<li>
+<p>Diffuse是漫反射颜色</p>
+</li>
+<li>
+<p>Specular是高光颜色，或者叫做镜面反射的颜色</p>
+</li>
+<li>
+<p><img alt="" src="static/images/NdotL.png"> 是表面法向量跟光线方向向量的点乘</p>
+</li>
+<li>
+<p><img alt="" src="static/images/NdotH.png"> 是表面法向量跟半程向量（光线方向向量跟视角向量的中间向量）的点乘</p>
+</li>
+<li>
+<p>shiness是高光度的反光度参数，值越大，高光点越集中</p>
+</li>
+</ul>
+<p>这个是经典的Blinn-Phong光照模型的，除了这个基本公式以外，后续也有针对这个模型一些改进项，使其更加符合物理上的直觉效果</p>
+<p>这个光照模型并不复杂，但终究并非基于真实的物理参数进行材质的构建，实际渲染的时候往往得不到令人信服的效果。</p>
+<hr>
+<h2>PBR基础理论</h2>
+<p>接下来 …</p> </div><!-- entry-content -->
+        </article>
+        <article class="hentry">
                 <header> <h2 class="entry-title"><a href="http://ragnraok.github.io/surface_display_lag.html" rel="bookmark" title="Permalink to 浅谈Android中Surface显示延迟处理">浅谈Android中Surface显示延迟处理</a></h2> </header>
                 <div class="entry-content"> <p>最近在使用GLES在Surface上渲染结果的时候，遇到了一个显示延迟的问题，当渲染时间过长，同时帧率要求比较高的时候，如果不加控制，就会造成显示的延迟，如果界面没有交互，倒是不会看出什么问题，如果是强交互的场景，这种情况下就会造成可感知的用户使用延迟了。处理这种情况的其中一种方式是给渲染的一帧赋予一个时间戳，用于给SurfaceFlinger进行对应的丢帧控制，具体什么原理呢，让我们一步一步来说明一下</p>
 <h3>Surface是什么？</h3>
-<hr />
+<hr>
 <p>从原来上讲，Android的 <a href="https://developer.android.com/reference/android/view/Surface">Surface</a> 可以认为是目前图形架构中，作为 <a href="https://source.android.com/devices/graphics/arch-bq-gralloc">BufferQueue</a> 的生产者端，Android会首先把内容渲染到Surface上，填充数据到GraphicBuffer上。而作为消费者端则为系统的<a href="https://source.android.com/devices/graphics/arch-sf-hwc">SurfaceFlinger</a> ，取出BufferQueue中的GraphicBuffer，并配合vysnc将数据送给HWC合成到屏幕上。</p>
 <p>一般来说，Android会把所有可见的View渲染到一个由SurfaceFlinger创建的Surface上，但是这个Surface并不能由开发者直接操作，从App的开发角度来看，大部分情况下我们直接操作的Surface一般会从以下两个地方获取</p>
 <ul>
@@ -35,15 +67,15 @@
 </li>
 <li>
 <p><a href="https://developer.android.com/reference/android/graphics/SurfaceTexture">SurfaceTexture</a> / <a href="https://developer.android.com/reference/android/view/TextureView">TextureView</a></p>
-<p>SurfaceTexture是从Android 3 ...</p></li></ul> </div><!-- entry-content -->
+<p>SurfaceTexture是从Android 3 …</p></li></ul> </div><!-- entry-content -->
         </article>
         <article class="hentry">
                 <header> <h2 class="entry-title"><a href="http://ragnraok.github.io/android_video_record.html" rel="bookmark" title="Permalink to 谈谈关于Android视频编码的那些坑">谈谈关于Android视频编码的那些坑</a></h2> </header>
                 <div class="entry-content"> <p>Android的视频相关的开发，大概一直是整个Android生态，以及Android API中，最为分裂以及兼容性问题最为突出的一部分。摄像头，以及视频编码相关的API，Google一直对这方面的控制力非常差，导致不同厂商对这两个API的实现有不少差异，而且从API的设计来看，一直以来优化也相当有限，甚至有人认为这是“Android上最难用的API之一”</p>
 <p>以微信为例，我们录制一个540p的mp4文件，对于Android来说，大体上是遵循这么一个流程：</p>
-<hr />
-<p><img alt="" src="static/images/encoderProcess.png" /></p>
-<hr />
+<hr>
+<p><img alt="" src="static/images/encoderProcess.png"></p>
+<hr>
 <p>大体上就是从摄像头输出的YUV帧经过预处理之后，送入编码器，获得编码好的h264视频流。</p>
 <p>上面只是针对视频流的编码，另外还需要对音频流单独录制，最后再将视频流和音频流进行合成出最终视频。</p>
 <p>这篇文章主要将会对视频流的编码中两个常见问题进行分析：</p>
@@ -51,7 +83,7 @@
 <li>视频编码器的选择（硬编 or 软编）？</li>
 <li>如何对摄像头输出的YUV帧进行快速预处理（镜像，缩放，旋转）？</li>
 </ol>
-<hr />
+<hr>
 <h3>视频编码器的选择</h3>
 <p>对于录制视频的需求，不少app都需要对每一帧数据进行单独处理，因此很少会直接用到<code>MediaRecorder</code>来直接录取视频，一般来说，会有这么两个选择</p>
 <ul>
@@ -59,24 +91,24 @@
 <li>FFMpeg+x264/openh264</li>
 </ul>
 <p>我们来逐个解析一下</p>
-<hr />
+<hr>
 <h4>MediaCodec</h4>
-<p>MediaCodec是API 16之后Google推出的用于音视频编解码的一套偏底层的API，可以直接利用硬件加速进行视频的编解码。调用的时候需要先初始化MediaCodec作为视频的编码器 ...</p> </div><!-- entry-content -->
+<p>MediaCodec是API 16之后Google推出的用于音视频编解码的一套偏底层的API，可以直接利用硬件加速进行视频的编解码。调用的时候需要先初始化MediaCodec作为视频的编码器 …</p> </div><!-- entry-content -->
         </article>
         <article class="hentry">
                 <header> <h2 class="entry-title"><a href="http://ragnraok.github.io/get_android_alloc_object_info.html" rel="bookmark" title="Permalink to 如何获取Android系统中申请对象的信息">如何获取Android系统中申请对象的信息</a></h2> </header>
                 <div class="entry-content"> <p>最近一直在做有关内存方面的优化工作，在做优化的过程，除了关注内存的申请量以及GC的情况之外，我们经常需要想方法找出是那些对象占用了大量内存，以及他们是如何导致GC的，这意味着我们需要获取对象申请的信息（大小，类型，堆栈等），我们这篇文章来介绍下几种获取对象申请信息的方法</p>
 <h3>Allocation Tracker</h3>
 <p>Allocation Tracker是android studio自带的一个功能，我们可以在MemoryMonitor中打开使用：</p>
-<p><img alt="" src="static/images/memorymonitor_1.jpeg" /></p>
+<p><img alt="" src="static/images/memorymonitor_1.jpeg"></p>
 <p>如上图，点击红框按钮，然后操作app，开始allocation tracking，当认为需要结束的时候，再次点击按钮，稍等片刻，即可以在android studio中dump出在 <strong>这段时间</strong> 内 <strong>新申请</strong> 对象的信息：</p>
-<p><img alt="" src="static/images/memorymonitor_2.png" /></p>
+<p><img alt="" src="static/images/memorymonitor_2.png"></p>
 <p>这种使用方式相当直观，可以看到申请对象大小，数量，还有堆栈等，通过这些信息，我们可以作为我们接下来进行内存优化的参考</p>
 <p>但是，对于这种获取申请对象信息的方法，会存在几个问题：</p>
 <ol>
 <li>获取的信息过于分散，中间夹杂着不少其他的信息，不完全是app申请的，可能需要进行不少查找才能定位到具体的问题</li>
 <li>跟TraceView一样，无法做到自动化分析，每次都需要开发者手工开始/结束，对于某些问题的分析可能会造成不便，而且对于批量分析来说也比较困难</li>
-<li>虽然在allocation ...</li></ol> </div><!-- entry-content -->
+<li>虽然在allocation …</li></ol> </div><!-- entry-content -->
         </article>
         <article class="hentry">
                 <header> <h2 class="entry-title"><a href="http://ragnraok.github.io/tricking-android-memoryfile.html" rel="bookmark" title="Permalink to Tricking Android MemoryFile">Tricking Android MemoryFile</a></h2> </header>
@@ -87,31 +119,7 @@
 <div class="highlight"><pre><span></span><span class="n">MemoryFile</span> <span class="n">memoryFile</span> <span class="o">=</span> <span class="k">new</span> <span class="n">MemoryFile</span><span class="o">(</span><span class="kc">null</span><span class="o">,</span> <span class="n">inputStream</span><span class="o">.</span><span class="na">available</span><span class="o">());</span>
 <span class="n">memoryFile</span><span class="o">.</span><span class="na">allowPurging</span><span class="o">(</span><span class="kc">false</span><span class="o">);</span>
 <span class="n">OutputStream</span> <span class="n">outputStream</span> <span class="o">=</span> <span class="n">memoryFile</span><span class="o">.</span><span class="na">getOutputStream</span><span class="o">();</span>
-<span class="n">outputStream ...</span></pre></div> </div><!-- entry-content -->
-        </article>
-        <article class="hentry">
-                <header> <h2 class="entry-title"><a href="http://ragnraok.github.io/rxcamera-introduce.html" rel="bookmark" title="Permalink to RxCamera, 一个RxJava风格的android camera封装">RxCamera,  一个RxJava风格的android camera封装</a></h2> </header>
-                <div class="entry-content"> <p>事实上这个库写了已经有一段时间了，由于最近工作上比较忙，所以现在才写一篇文章来总结</p>
-<h3>What's this</h3>
-<p>正如标题所说，<a href="https://github.com/ragnraok/RxCamera">RxCamera</a>是一个基于RxJava而构建的一套<a href="http://developer.android.com/intl/es/reference/android/hardware/Camera.html">android.hardware.camera</a>封装的库。最初写这个库的目的是为了熟悉RxJava，并且而且也看到虽然在android开发已经有不少基于RxJava的库，但是关于音视频相关却少之又少，于是就动手实现了一下。目前这个库还处于非常早期的状态，API比较简陋，并且关于camera的设置还有很多没有做</p>
-<h3>How to use</h3>
-<p>在<a href="https://github.com/ragnraok/RxCamera">RxCamera</a>的README中已经有关于这个库使用的比较详细介绍了，我在这里再说明一下：</p>
-<h4>加入依赖</h4>
-<p>首先你需要在项目中加入对RxCamera项目的依赖:</p>
-<div class="highlight"><pre><span></span>repositories {
-        jcenter()
-}
-dependencies {
-    compile &#39;com.ragnarok.rxcamera:lib:0.0.1&#39;
-}
-</pre></div>
-
-
-<h4>基本的使用</h4>
-<ul>
-<li>配置camera的参数</li>
-</ul>
-<p>android的原生camera api提供了不少的选项来配置打开摄像头时候的参数，例如预览的帧率，预览的分辨率，自动对焦等，在RxCamera中主要是通过一个<code>RxCameraConfig</code>对象来管理这些对象 ...</p> </div><!-- entry-content -->
+<span class="n">outputStream …</span></pre></div> </div><!-- entry-content -->
         </article>
 <div class="pager">
       <ul>

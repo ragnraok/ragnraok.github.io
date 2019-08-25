@@ -31,9 +31,9 @@
   <div class="entry-content">
     <p>Android的视频相关的开发，大概一直是整个Android生态，以及Android API中，最为分裂以及兼容性问题最为突出的一部分。摄像头，以及视频编码相关的API，Google一直对这方面的控制力非常差，导致不同厂商对这两个API的实现有不少差异，而且从API的设计来看，一直以来优化也相当有限，甚至有人认为这是“Android上最难用的API之一”</p>
 <p>以微信为例，我们录制一个540p的mp4文件，对于Android来说，大体上是遵循这么一个流程：</p>
-<hr />
-<p><img alt="" src="static/images/encoderProcess.png" /></p>
-<hr />
+<hr>
+<p><img alt="" src="static/images/encoderProcess.png"></p>
+<hr>
 <p>大体上就是从摄像头输出的YUV帧经过预处理之后，送入编码器，获得编码好的h264视频流。</p>
 <p>上面只是针对视频流的编码，另外还需要对音频流单独录制，最后再将视频流和音频流进行合成出最终视频。</p>
 <p>这篇文章主要将会对视频流的编码中两个常见问题进行分析：</p>
@@ -41,7 +41,7 @@
 <li>视频编码器的选择（硬编 or 软编）？</li>
 <li>如何对摄像头输出的YUV帧进行快速预处理（镜像，缩放，旋转）？</li>
 </ol>
-<hr />
+<hr>
 <h3>视频编码器的选择</h3>
 <p>对于录制视频的需求，不少app都需要对每一帧数据进行单独处理，因此很少会直接用到<code>MediaRecorder</code>来直接录取视频，一般来说，会有这么两个选择</p>
 <ul>
@@ -49,10 +49,10 @@
 <li>FFMpeg+x264/openh264</li>
 </ul>
 <p>我们来逐个解析一下</p>
-<hr />
+<hr>
 <h4>MediaCodec</h4>
 <p>MediaCodec是API 16之后Google推出的用于音视频编解码的一套偏底层的API，可以直接利用硬件加速进行视频的编解码。调用的时候需要先初始化MediaCodec作为视频的编码器，然后只需要不停传入原始的YUV数据进入编码器就可以直接输出编码好的h264流，整个API设计模型来看，就是同时包含了输入端和输出端的两条队列：</p>
-<p><img alt="" src="static/images/mediacodec_buffers.png" /></p>
+<p><img alt="" src="static/images/mediacodec_buffers.png"></p>
 <p>因此，作为编码器，输入端队列存放的就是原始YUV数据，输出端队列输出的就是编码好的h264流，作为解码器则对应相反。在调用的时候，MediaCodec提供了同步和异步两种调用方式，但是异步使用Callback的方式是在API 21之后才加入的，以同步调用为例，一般来说调用方式大概是这样（摘自官方例子）：</p>
 <div class="highlight"><pre><span></span> <span class="n">MediaCodec</span> <span class="n">codec</span> <span class="o">=</span> <span class="n">MediaCodec</span><span class="o">.</span><span class="na">createByCodecName</span><span class="o">(</span><span class="n">name</span><span class="o">);</span>
  <span class="n">codec</span><span class="o">.</span><span class="na">configure</span><span class="o">(</span><span class="n">format</span><span class="o">,</span> <span class="err">…</span><span class="o">);</span>
@@ -139,7 +139,7 @@ if (h264type.eProfile != OMX_VIDEO_AVCProfileBaseline) {
 <p>很明显这还是因为厂商在实现这个API的时候，对传入的数据缺少校验以及前置处理导致的，目前来看，华为，三星的Soc出现这个问题会比较频繁，其他厂商的一些早期Soc也有这种问题，一般来说解决方法还是在设置视频宽高的时候，统一设置成对齐16位之后的大小就好了。</p>
 </li>
 </ol>
-<hr />
+<hr>
 <h4>FFMpeg+x264/openh264</h4>
 <p>除了使用MediaCodec进行编码之外，另外一种比较流行的方案就是使用ffmpeg+x264/openh264进行软编码，ffmpeg是用于一些视频帧的预处理。这里主要是使用x264/openh264作为视频的编码器。</p>
 <p>x264基本上被认为是当今市面上最快的商用视频编码器，而且基本上所有h264的特性都支持，通过合理配置各种参数还是能够得到较好的压缩率和编码速度的，限于篇幅，这里不再阐述h264的参数配置，有兴趣可以看下<a href="https://www.nmm-hd.org/d/index.php?title=X264%E4%BD%BF%E7%94%A8%E4%BB%8B%E7%BB%8D&amp;variant=zh-cn">这里</a>和<a href="http://www.cnblogs.com/wainiwann/p/5647521.html">这里</a>对x264编码参数的调优。</p>
@@ -152,7 +152,7 @@ if (h264type.eProfile != OMX_VIDEO_AVCProfileBaseline) {
 <p>从编码效率上来看，openh264的速度也并不会比x264快，不过其最大的好处，还是能够直接免费使用吧。</p>
 <h4>软硬编对比</h4>
 <p>从上面的分析来看，硬编的好处主要在于速度快，而且系统自带不需要引入外部的库，但是特性支持有限，而且硬编的压缩率一般偏低，而对于软编码来说，虽然速度较慢，但是压缩率比较高，而且支持的H264特性也会比硬编码多很多，相对来说比较可控。就可用性而言，在4.4+的系统上，MediaCodec的可用性是能够基本保证的，但是不同等级的机器的编码器能力会有不少差别，建议可以根据机器的配置，选择不同的编码器配置。</p>
-<hr />
+<hr>
 <h3>YUV帧的预处理</h3>
 <p>根据最开始给出的流程，在送入编码器之前，我们需要先对摄像头输出的YUV帧进行一些前置处理</p>
 <p>1.缩放</p>
@@ -176,7 +176,7 @@ if (h264type.eProfile != OMX_VIDEO_AVCProfileBaseline) {
 
 <p>在nexus 6p上，直接使用ffmpeg来进行缩放的时间基本上都需要<strong>40ms+</strong>，对于我们需要录制30fps的来说，每帧处理时间最多就30ms左右，如果光是缩放就消耗了如此多的时间，基本上录制出来的视频只能在15fps上下了。</p>
 <p>很明显，直接使用ffmpeg进行缩放是在是太慢了，不得不说swsscale简直就是ffmpeg里面的渣渣，在对比了几种业界常用的算之后，我们最后考虑实现使用这种快速缩放的算法：</p>
-<p><img alt="" src="static/images/frame_compress.png" /></p>
+<p><img alt="" src="static/images/frame_compress.png"></p>
 <p>我们选择一种叫做的<strong>局部均值</strong>算法，前后两行四个临近点算出最终图片的四个像素点，对于源图片的每行像素，我们可以使用Neon直接实现，以缩放Y分量为例：</p>
 <div class="highlight"><pre><span></span>    <span class="nf">const</span> <span class="no">uint8</span><span class="p">*</span> <span class="no">src_next</span> <span class="err">=</span> <span class="no">src_ptr</span> <span class="err">+</span> <span class="no">src_stride</span><span class="c">;</span>
     <span class="no">asm</span> <span class="no">volatile</span> <span class="p">(</span>
@@ -244,11 +244,11 @@ if (h264type.eProfile != OMX_VIDEO_AVCProfileBaseline) {
 
 
 <p>同样，剩余的数据用纯C代码实现就好了， 在nexus6p上，这种镜像翻转一帧1080x1920 YUV数据大概只要不到<strong>5ms</strong></p>
-<hr />
+<hr>
 <p>在编码好h264视频流之后，最终处理就是把音频流跟视频流合流然后包装到mp4文件，这部分我们可以通过系统的<a href="https://developer.android.com/reference/android/media/MediaMuxer.html">MediaMuxer</a>，<a href="https://code.google.com/archive/p/mp4v2/">mp4v2</a>，或者ffmpeg来实现，这部分比较简单，在这里就不再阐述了</p>
-<hr />
+<hr>
 <p>注：本文亦被发表在《程序员》以及WeMobileDev公众号上</p>
-<hr />
+<hr>
 <h3>References</h3>
 <ol>
 <li><a href="http://blog.csdn.net/leixiaohua1020">雷霄骅(leixiaohua1020)的专栏</a> ，大名鼎鼎雷神的博客，里面有非常多关于音视频编码/ffmpeg相关的学习资料，入门必备。也祝愿他能够在天堂安息吧</li>

@@ -44,10 +44,10 @@
 <h3>Tricks</h3>
 <p>MemoryFile是一个非常trickly的东西，由于并不占用Java堆内存，我们可以将一些对象用MemoryFile来保存起来避免GC，另外，这里可能android上有个BUG：</p>
 <p>在4.4及其以上的系统中，如果在应用中使用了MemoryFile，那么在dumpsys meminfo的时候，可以看到多了一项Ashmem的值：</p>
-<p><img alt="" src="static/images/memoryfile_1.jpg" /></p>
+<p><img alt="" src="static/images/memoryfile_1.jpg"></p>
 <p>可以看出来虽然MemoryFile申请的内存不计入Java堆也不计入Native堆中，但是占用了Ashmem的内存，这个实际上是算入了app当前占用的内存当中</p>
 <p>但是在4.4以下的机器中时，使用MemoryFile申请的内存居然是<strong>不算入</strong>app的内存中的：</p>
-<p><img alt="" src="static/images/memoryfile_2.jpg" /></p>
+<p><img alt="" src="static/images/memoryfile_2.jpg"></p>
 <p>而且这里我也算过，也是不算入Native Heap中的，另外，这个时候去系统设置里面看进程的内存占用，也可以看出来其实并没有计入Ashmem的内存的</p>
 <p>这个应该是android的一个BUG，但是我搜了一下并没有搜到对应的issue，搞不好这里也可能是一个feature</p>
 <p>而在大名鼎鼎的Fresco当中，他们也有用到这个bug来避免在decode bitmap的时候，将文件的字节读到Java堆中，使用了MemoryFile，并利用了这个BUG然这部分内存不算入app中，这里分别对应了Fresco中的<a href="https://github.com/facebook/fresco/blob/master/imagepipeline/src/main/java/com/facebook/imagepipeline/platform/GingerbreadPurgeableDecoder.java">GingerbreadPurgeableDecoder</a>和<a href="https://github.com/facebook/fresco/blob/master/imagepipeline/src/main/java/com/facebook/imagepipeline/platform/KitKatPurgeableDecoder.java">KitKatPurgeableDecoder</a>，Fresco在decode图片的时候会在4.4和4.4以下的系统中分别使用这两个不同的decoder</p>
@@ -57,7 +57,7 @@
 <h3>References</h3>
 <ol>
 <li><a href="http://blog.csdn.net/luoshengyang/article/details/6664554">Android系统匿名共享内存Ashmem（Anonymous Shared Memory）驱动程序源代码分析</a></li>
-<li><a href="http://elinux.org/Android_Kernel_Features#ashmem">Android Kernel Features(Ashmem)</a></li>
+<li><a href="http://elinux.org/Android_Kernel_Features#ashmem">Android Kernel Features(Ashmem)</a>``</li>
 </ol>
   </div><!-- /.entry-content -->
    <footer class="post-info text-muted">

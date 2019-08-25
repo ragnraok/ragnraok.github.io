@@ -104,7 +104,7 @@
 <p>testcase的内容为，在一个ListView中，显示300个Item，每个item都是一段纯文本，里面全都是包含有大量ImageSpan的SpannableString，进行两边的对比，一边是直接使用StaticLayout，一边是使用普通的TextView，并且这300段文本不全相同，长度不同，随机生成，在StaticLayout的testcase中，StaticLayout都是预先在另外一个线程创建好之后才设置进去的，另外SpannableString也是预先生成好的。</p>
 <p>另外，在这里为了模拟真实app繁重的后台工作，另外创建了3个线程，不停在做浮点预算以尝试抢占CPU资源。</p>
 <p>测量性能的指标为，ListView连续向下滚动，测量其平均帧率为多少，分别测量五次，计算其平均值，最终性能测试结果如下：</p>
-<p><img alt="" src="static/images/staticLayoutPerformance.png" /></p>
+<p><img alt="" src="static/images/staticLayoutPerformance.png"></p>
 <p>这里测试的机器是MX3，左侧是直接使用StaticLayout的方案，右侧是系统的默认方案，Y轴是FPS，可以看出来，使用优化之后的方案，帧率提升了许多。</p>
 <h3>References</h3>
 <p><a href="http://instagram-engineering.tumblr.com/post/114508858967/improving-comment-rendering-on-android">Improving Comment Rendering on Android</a>   <br />

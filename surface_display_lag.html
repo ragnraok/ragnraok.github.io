@@ -31,7 +31,7 @@
   <div class="entry-content">
     <p>最近在使用GLES在Surface上渲染结果的时候，遇到了一个显示延迟的问题，当渲染时间过长，同时帧率要求比较高的时候，如果不加控制，就会造成显示的延迟，如果界面没有交互，倒是不会看出什么问题，如果是强交互的场景，这种情况下就会造成可感知的用户使用延迟了。处理这种情况的其中一种方式是给渲染的一帧赋予一个时间戳，用于给SurfaceFlinger进行对应的丢帧控制，具体什么原理呢，让我们一步一步来说明一下</p>
 <h3>Surface是什么？</h3>
-<hr />
+<hr>
 <p>从原来上讲，Android的 <a href="https://developer.android.com/reference/android/view/Surface">Surface</a> 可以认为是目前图形架构中，作为 <a href="https://source.android.com/devices/graphics/arch-bq-gralloc">BufferQueue</a> 的生产者端，Android会首先把内容渲染到Surface上，填充数据到GraphicBuffer上。而作为消费者端则为系统的<a href="https://source.android.com/devices/graphics/arch-sf-hwc">SurfaceFlinger</a> ，取出BufferQueue中的GraphicBuffer，并配合vysnc将数据送给HWC合成到屏幕上。</p>
 <p>一般来说，Android会把所有可见的View渲染到一个由SurfaceFlinger创建的Surface上，但是这个Surface并不能由开发者直接操作，从App的开发角度来看，大部分情况下我们直接操作的Surface一般会从以下两个地方获取</p>
 <ul>
@@ -45,7 +45,7 @@
 </li>
 </ul>
 <h3>使用GLES在Surface中显示内容</h3>
-<hr />
+<hr>
 <p>上面说到，Surface作为BufferQueue的生产方，开发者可以在上面绘制画面，而在SurfaceView/TextureView上，系统都提供了对应的<code>lockCanvas</code>方法，返回一个<code>Canvas</code>对象允许在对应的Surface上绘制内容。除了这个方法以外，我们也可以使用GLES在Surface上绘制内容。</p>
 <p>无论是使用GLSurfaceView，还是TextureView，使用GLES在Surface上绘制内容，我们都必须在单独线程进行GLES的上下文初始化（因为GL Context是跟线程绑定的），创建对应的<a href="https://source.android.com/devices/graphics/arch-egl-opengl">EGLSurface</a> ，一般来说，实现的代码如下（如果用的是GLSurfaceView，下面的初始化逻辑内部已经给你做好了）：</p>
 <div class="highlight"><pre><span></span><span class="n">mEGLDisplay</span> <span class="p">=</span> <span class="n">EGL14</span><span class="p">.</span><span class="n">eglGetDisplay</span><span class="p">(</span><span class="n">EGL14</span><span class="p">.</span><span class="n">EGL_DEFAULT_DISPLAY</span><span class="p">)</span>
@@ -86,7 +86,7 @@
 
 
 <p>以上代码摘自<a href="https://bigflake.com/mediacodec/CameraToMpegTest.java.txt">这里</a>，并转换成了kotlin</p>
-<p>大概流程就是先选择好需要的EGL配置，然后初始化EGLConfig跟EGLContext，最终，调用<code>eglCreatexxxSurface</code>创建一个EGLSurface，这这个例子中调用的是<code>eglCreateWindowSurface</code>，并在函数中传入了SurfaceView/TextureView中的Surface对象</p>
+<p>大概流程就是先选择好需要的EGL配置，然后初始化EGLConfig跟EGLContext，最终，调用<code>eglCreatexxxSurface</code>创建一个EGLSurface，这这个例子中调用的是<code>eglCreateWindowSurface</code>，并在函数中传入了SurfaceView/TextureView中的Surface对象````</p>
 <p>另外，在<code>eglCreateWindowSurface</code>函数中传入的Surface对象，如果不是需要渲染到屏幕上的话，除了直接使用上面的两个Surface对象以外，在很多处理视频特效的应用中，另外一种方式是传入MediaCodec的Surface，也就是这个方法的返回结果</p>
 <div class="highlight"><pre><span></span><span class="n">MediaCodec</span><span class="o">.</span><span class="na">getInputSurface</span>
 </pre></div>
@@ -101,7 +101,7 @@
 <p><strong>Surface -&gt; EGL renderer -&gt; swap buffer -&gt; BufferQueue deque -&gt; SurfaceFlinger -&gt; HWC -&gt; Display</strong></p>
 <p>更具体的GraphicBuffer/BufferQueue同步机制，推荐看下<a href="https://blog.csdn.net/jinzhuojun/article/details/39698317">这篇</a>文章的分析</p>
 <h3>Surface渲染上屏时间戳</h3>
-<hr />
+<hr>
 <p>上面大体分析了Surface原理，以及对应渲染上屏的步骤，但是，直到SurfaceFlinger，到Hareware Composer这一步，我们还有一个关键的问题没有解决：</p>
 <p><strong>我们在渲染好一帧之后，如何能够保证这一帧的内容能够及时显示到屏幕上呢？</strong></p>
 <p>或者换一个问法：</p>
@@ -132,7 +132,7 @@
 <p>总体来看，在通过帧时间戳控制之后，Android就可以解决Surface的渲染上屏延迟问题，但渲染过长的时候，就势必带来丢帧，因此根本的解决方案，还是得尽量在16ms内，渲染完一帧数据</p>
 <p>文笔一般，水平有限，仅做抛砖引玉之用，欢迎更加仔细的讨论!</p>
 <h3>References</h3>
-<hr />
+<hr>
 <ul>
 <li>
 <p><a href="https://stackoverflow.com/questions/26317132/minimize-android-glsurfaceview-lag/">StackOverFlow—Minimize Android GLSurfaceView Lag</a></p>
@@ -147,7 +147,7 @@
 <p><a href="https://source.android.com/devices/graphics/">Android图形架构</a></p>
 </li>
 <li>
-<p><a href="https://bigflake.com/mediacodec/">Android MediaCodec Stuff</a></p>
+<p><a href="https://bigflake.com/mediacodec/">Android MediaCodec Stuff</a>````</p>
 </li>
 </ul>
   </div><!-- /.entry-content -->

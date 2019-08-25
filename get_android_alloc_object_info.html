@@ -32,9 +32,9 @@
     <p>最近一直在做有关内存方面的优化工作，在做优化的过程，除了关注内存的申请量以及GC的情况之外，我们经常需要想方法找出是那些对象占用了大量内存，以及他们是如何导致GC的，这意味着我们需要获取对象申请的信息（大小，类型，堆栈等），我们这篇文章来介绍下几种获取对象申请信息的方法</p>
 <h3>Allocation Tracker</h3>
 <p>Allocation Tracker是android studio自带的一个功能，我们可以在MemoryMonitor中打开使用：</p>
-<p><img alt="" src="static/images/memorymonitor_1.jpeg" /></p>
+<p><img alt="" src="static/images/memorymonitor_1.jpeg"></p>
 <p>如上图，点击红框按钮，然后操作app，开始allocation tracking，当认为需要结束的时候，再次点击按钮，稍等片刻，即可以在android studio中dump出在 <strong>这段时间</strong> 内 <strong>新申请</strong> 对象的信息：</p>
-<p><img alt="" src="static/images/memorymonitor_2.png" /></p>
+<p><img alt="" src="static/images/memorymonitor_2.png"></p>
 <p>这种使用方式相当直观，可以看到申请对象大小，数量，还有堆栈等，通过这些信息，我们可以作为我们接下来进行内存优化的参考</p>
 <p>但是，对于这种获取申请对象信息的方法，会存在几个问题：</p>
 <ol>
@@ -414,7 +414,7 @@
 
 
 <p>上面的<code>#include "Globals.h"</code>是指Dalvik源码中的<code>Globals.h</code>头文件， 另外这段Native的代码需要打包在某个app当中，然后在开启Allocation Tracker之后（之前介绍的随便一种方法都可以），运行这段代码，那么<code>t_gDvm-&gt;allocRecords</code>中就是申请对象的数据了，可以直接读取里面的字段，打印出来大概是这样的：</p>
-<p><img alt="" src="static/images/allocrecordjni.png" /></p>
+<p><img alt="" src="static/images/allocrecordjni.png"></p>
 <p>由于是直接读取Dalvik本身记录对象信息的结构，没有了结束Allocation Tracker时候把数据dump出来的请求，这意味着完全不会影响手机本身的性能，而且对于对象信息的获取，也能够更加的及时，例如说每隔10s把数据拿出来分析。相对来说，对于之前使用ddmlib的方案，10s定时请求这么高的频率，很有可能跑一会直接就把手机卡死了。</p>
 <p>但是对于这种方案，会存在兼容性问题，这里可以看到，我们获取<code>gDvm</code>变量的方式是用<code>dlsym</code>系统调用直接拿出来，然后强转成<code>DvmGlobals</code>类型，然而由于不同版本的Dalvik虚拟机中的<code>DvmGlobals</code>的定义不一样，可能会造成拿出<code>gDvm</code>这个符号之后，对应的<code>allocRecords</code>字段并不是真正的在这台机器上的<code>allocRecords</code>字段，出现数据的错乱，或者<code>gDvm-&gt;allocRecords</code>压根为NULL 。就目前的简单测试来，暂时只有MX3 4.4.4系统的flyme os能够正常操作，估计这里要适配大部分机器的话，工作量应该不少。</p>
 <h3>Notes:</h3>

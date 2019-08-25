@@ -1,7 +1,295 @@
 <?xml version="1.0" encoding="utf-8"?>
-<feed xmlns="http://www.w3.org/2005/Atom"><title>Ragnarok Note</title><link href="http://ragnraok.github.io/" rel="alternate"></link><link href="http://ragnraok.github.io/feeds/atom.xml" rel="self"></link><id>http://ragnraok.github.io/</id><updated>2018-06-20T00:00:00+08:00</updated><entry><title>浅谈Android中Surface显示延迟处理</title><link href="http://ragnraok.github.io/surface_display_lag.html" rel="alternate"></link><published>2018-06-20T00:00:00+08:00</published><author><name>Ragnarok Zhou</name></author><id>tag:ragnraok.github.io,2018-06-20:surface_display_lag.html</id><summary type="html">&lt;p&gt;最近在使用GLES在Surface上渲染结果的时候，遇到了一个显示延迟的问题，当渲染时间过长，同时帧率要求比较高的时候，如果不加控制，就会造成显示的延迟，如果界面没有交互，倒是不会看出什么问题，如果是强交互的场景，这种情况下就会造成可感知的用户使用延迟了。处理这种情况的其中一种方式是给渲染的一帧赋予一个时间戳，用于给SurfaceFlinger进行对应的丢帧控制，具体什么原理呢，让我们一步一步来说明一下&lt;/p&gt;
+<feed xmlns="http://www.w3.org/2005/Atom"><title>Ragnarok Note</title><link href="http://ragnraok.github.io/" rel="alternate"></link><link href="http://ragnraok.github.io/feeds/atom.xml" rel="self"></link><id>http://ragnraok.github.io/</id><updated>2019-08-18T00:00:00+08:00</updated><entry><title>尝试在Android中实现PBR管线——基本原理以及直接光照明</title><link href="http://ragnraok.github.io/try_android_implement_pbr_thery_direct_light.html" rel="alternate"></link><published>2019-08-18T00:00:00+08:00</published><updated>2019-08-18T00:00:00+08:00</updated><author><name>Ragnarok Zhou</name></author><id>tag:ragnraok.github.io,2019-08-18:/try_android_implement_pbr_thery_direct_light.html</id><summary type="html">&lt;p&gt;从本个世代起，基于物理的渲染（Physically Based Rendering，简称PBR）基本上就成为了事实上当下3A大作的渲染标准，自从迪士尼在在SIGGRAPH 2012上提出的著名的“迪士尼原则的BRDF”以及基于金属工作流来实现的方案，由于高度的易用性，美术设计师可以根据现实物理的参数来构建表面材质，可以实现惊人的显示效果，目前已经被广泛的在业界中使用&lt;/p&gt;
+&lt;p&gt;这篇文章将会尝试在Android中基于Kotlin来实现PBR管线，在正式开始代码实现之前，我们先来讨论下PBR管线的基础理论。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2&gt;Before PBR&lt;/h2&gt;
+&lt;p&gt;首先我们来看看，在PBR出现之前，传统的Blinn-Phong光照是怎么做的，我们先来看看渲染方程：&lt;/p&gt;
+&lt;p&gt;&lt;img alt="" src="static/images/Blinn_Phong.png"&gt;&lt;/p&gt;
+&lt;p&gt;我们可以看到，光照颜色的输出，主要有两部分构成，&lt;strong&gt;漫反射&lt;/strong&gt;项以及&lt;strong&gt;高光项&lt;/strong&gt;，在渲染方程中：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;Diffuse是漫反射颜色&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;Specular是高光颜色，或者叫做镜面反射的颜色&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;img alt="" src="static/images/NdotL.png"&gt; 是表面法向量跟光线方向向量的点乘&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;img alt="" src="static/images/NdotH.png"&gt; 是表面法向量跟半程向量（光线方向向量跟视角向量的中间向量）的点乘&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;shiness是高光度的反光度参数，值越大，高光点越集中&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;这个是经典的Blinn-Phong光照模型的，除了这个基本公式以外，后续也有针对这个模型一些改进项，使其更加符合物理上的直觉效果&lt;/p&gt;
+&lt;p&gt;这个光照模型并不复杂，但终究并非基于真实的物理参数进行材质的构建，实际渲染的时候往往得不到令人信服的效果。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2&gt;PBR基础理论&lt;/h2&gt;
+&lt;p&gt;接下来 …&lt;/p&gt;</summary><content type="html">&lt;p&gt;从本个世代起，基于物理的渲染（Physically Based Rendering，简称PBR）基本上就成为了事实上当下3A大作的渲染标准，自从迪士尼在在SIGGRAPH 2012上提出的著名的“迪士尼原则的BRDF”以及基于金属工作流来实现的方案，由于高度的易用性，美术设计师可以根据现实物理的参数来构建表面材质，可以实现惊人的显示效果，目前已经被广泛的在业界中使用&lt;/p&gt;
+&lt;p&gt;这篇文章将会尝试在Android中基于Kotlin来实现PBR管线，在正式开始代码实现之前，我们先来讨论下PBR管线的基础理论。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2&gt;Before PBR&lt;/h2&gt;
+&lt;p&gt;首先我们来看看，在PBR出现之前，传统的Blinn-Phong光照是怎么做的，我们先来看看渲染方程：&lt;/p&gt;
+&lt;p&gt;&lt;img alt="" src="static/images/Blinn_Phong.png"&gt;&lt;/p&gt;
+&lt;p&gt;我们可以看到，光照颜色的输出，主要有两部分构成，&lt;strong&gt;漫反射&lt;/strong&gt;项以及&lt;strong&gt;高光项&lt;/strong&gt;，在渲染方程中：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;Diffuse是漫反射颜色&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;Specular是高光颜色，或者叫做镜面反射的颜色&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;img alt="" src="static/images/NdotL.png"&gt; 是表面法向量跟光线方向向量的点乘&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;img alt="" src="static/images/NdotH.png"&gt; 是表面法向量跟半程向量（光线方向向量跟视角向量的中间向量）的点乘&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;shiness是高光度的反光度参数，值越大，高光点越集中&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;这个是经典的Blinn-Phong光照模型的，除了这个基本公式以外，后续也有针对这个模型一些改进项，使其更加符合物理上的直觉效果&lt;/p&gt;
+&lt;p&gt;这个光照模型并不复杂，但终究并非基于真实的物理参数进行材质的构建，实际渲染的时候往往得不到令人信服的效果。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2&gt;PBR基础理论&lt;/h2&gt;
+&lt;p&gt;接下来，我们再来介绍PBR的基础理论，以下内容以及图片参考自：&lt;a href="[https://learnopengl-cn.github.io/07%20PBR/01%20Theory](https://learnopengl-cn.github.io/07%20PBR/01%20Theory)"&gt;PBR理论&lt;/a&gt;&lt;/p&gt;
+&lt;h3&gt;微平面模型&lt;/h3&gt;
+&lt;p&gt;所有的PBR理论都基于一种叫做微平面模型的理论，这个理论认为在微观尺度上，所有物体的表面都可以使用所谓的微平面（Microfacets）的细小镜面来进行描述，根据表面粗糙度的不同，这些微平面的排列可以相当不一致：&lt;/p&gt;
+&lt;p&gt;&lt;img alt="" src="static/images/microfacets.png"&gt;&lt;/p&gt;
+&lt;p&gt;因此，这些微平面的排列则极大的影响了光线的反射：&lt;/p&gt;
+&lt;p&gt;&lt;img alt="" src="static/images/microfacets_light_rays.png"&gt;&lt;/p&gt;
+&lt;p&gt;因此，粗糙度越高的表面，表面光线反射越分散，反之则越集中：&lt;/p&gt;
+&lt;p&gt;&lt;img alt="" src="static/images/ndf.png"&gt;&lt;/p&gt;
+&lt;p&gt;在实际的PBR实现中，粗糙度（Roughness）是用来调整PBR效果的一个重要参数之一&lt;/p&gt;
+&lt;h3&gt;能量守恒&lt;/h3&gt;
+&lt;p&gt;在PBR中，能量守恒定律认为，出射的光线能量，永远不能超过入射光线的能量。在微平面模型中，对于一束光进入到进入到物体表面之后，我们分成了几个部分：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;折射部分，指的是被吸收到物体表面的那部分光线能量，具体表现出来就是物体的漫反射（Diffuse）&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;反射部分，指的是光线反射出来离开物体表面的那部分光照，具体指的就是镜面高光（Specular）&lt;/p&gt;
+&lt;p&gt;对于非金属物质来说，光线射进物体都会产生折射跟反射部分，而对于金属物质来说，微平面理论认为金属表面不会显示出漫反射部分，所有光线都会被处理成镜面高光&lt;/p&gt;
+&lt;p&gt;而能量守恒的要求，则是要求漫反射+高光部分占比加起来为1，实际实现中，我们往往先算出高光部分占比，然后在算出漫反射部分占比：&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;  &lt;span class="k"&gt;float&lt;/span&gt; &lt;span class="n"&gt;kS&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;calculateSpecularComponent&lt;/span&gt;&lt;span class="p"&gt;();&lt;/span&gt; &lt;span class="c1"&gt;// 反射/镜面 部分&lt;/span&gt;
+  &lt;span class="k"&gt;float&lt;/span&gt; &lt;span class="n"&gt;kD&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="mf"&gt;1.0&lt;/span&gt; &lt;span class="o"&gt;-&lt;/span&gt; &lt;span class="n"&gt;ks&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt; &lt;span class="c1"&gt;// 折射/漫反射 部分&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;p&gt;对比传统的Blinn-Phong模型，由于起没有考虑能量守恒，所以往往很难得出令人信服的效果&lt;/p&gt;
+&lt;h3&gt;基于物理的BRDF&lt;/h3&gt;
+&lt;p&gt;BRDF（Bidirectional Reflectance Distribution Function），即为双向反射分布函数，是整个PBR管线中最为重要的函数之一，可以用来求出每条光线对了一个给定材质属性的表面上，最终反射出来的光线的贡献程度。类比Blinn-Phong模型来说，我们拿漫反射项颜色乘以NdotL，其实也是一种BRDF计算方式，只是没有基于物理理论来建模，所以没有办法得出令人信服的效果。&lt;/p&gt;
+&lt;p&gt;类似Blinn-Phong模型，PBR的BRDF也是接受入射光方向Wi，反射光方向Wo，以及一个跟微平面理论相关的物理参数粗糙度（Roughness），实际实现中，最为常用的则是被称为Cook-Torrance的BRDF模型，同时兼具漫反射以及镜面反射两部分：&lt;/p&gt;
+&lt;p&gt;&lt;img alt="" src="static/images/brdf.png"&gt;&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;其中Kd表示漫反射光照的能量占比，Ks则表示镜面反射的能量占比，两项加起来为1，而对于漫反射中的Lambert项，我们经常用这个公式计算：&lt;/p&gt;
+&lt;p&gt;&lt;img alt="" src="static/images/brdf_diffuse.png"&gt;&lt;/p&gt;
+&lt;p&gt;我们将漫反射颜色除以PI，作为BRDF公式的漫反射部分。这部分并没有什么特别的，实际上在Blinn-Phong模型的改进版本中，也有将漫反射颜色除以PI的做法，用于得到更加真实的效果&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;而BRDF公式的镜面高光部分则比较复杂：&lt;/p&gt;
+&lt;p&gt;&lt;img alt="" src="static/images/brdf_specular.png"&gt;&lt;/p&gt;
+&lt;p&gt;这里包含了三个主要的参数，D/F/G分别代表三种不同种类的函数，分别用来模拟反射的不同部分的特性，分母则为一个配平参数用来作为标准化因子。D/F/G三个函数则分别为：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;法线分布函数（Normal Distribution Function）：用于估算在收到表面粗糙度的影响下，取向方向与半程向量一致的微平面向量&lt;/li&gt;
+&lt;li&gt;几何函数（Geometry Function）：用于描述微平面自成阴影的的函数，在表面粗糙度比较大的时候，平面上的微表面可能挡住了其他微表面的光线&lt;/li&gt;
+&lt;li&gt;菲涅尔方程（Fresnel Rquation）：用于描述光线在不同的入射角度下表面反射光线所占的比率&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;以上每一种函数都描述了对应不同的物理现象，而实际渲染中，我们都会采用某种近似的函数，接下来我们来说下这几种近似函数的公式：&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;hr&gt;
+&lt;h3&gt;BRDF近似项计算&lt;/h3&gt;
+&lt;p&gt;这里BRDF近似项的选择，同样参照自：&lt;a href="[https://learnopengl-cn.github.io/07%20PBR/01%20Theory](https://learnopengl-cn.github.io/07%20PBR/01%20Theory)"&gt;PBR理论&lt;/a&gt;&lt;/p&gt;
+&lt;h4&gt;法线分布函数（Normal Distribution Function）的近似&lt;/h4&gt;
+&lt;p&gt;法线分布函数从统计学的角度，描述了微平面模型对半程向量H的扰动程度，如果说给定H向量，NDF返回0.35，我们就认为整个平面中有35%的H向量与给定的向量一致，NDF的返回受表面粗糙度的影响，不同NDF的返回对镜面高光的区域影响很大：&lt;/p&gt;
+&lt;p&gt;&lt;img alt="" src="static/images/ndf.png"&gt;&lt;/p&gt;
+&lt;p&gt;可以看到到NDF返回值越小，镜面高光区域越小&lt;/p&gt;
+&lt;p&gt;实际渲染中，我们所使用的NDF方程为Trowbridge-Reitz GGX分布：&lt;/p&gt;
+&lt;p&gt;&lt;img alt="" src="static/images/brdf_ndf.png"&gt;&lt;/p&gt;
+&lt;p&gt;这里参数a取为粗糙度的平方&lt;/p&gt;
+&lt;p&gt;使用glsl的实现则如下：&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="k"&gt;float&lt;/span&gt; &lt;span class="n"&gt;DistributionGGX&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="k"&gt;vec3&lt;/span&gt; &lt;span class="n"&gt;N&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="k"&gt;vec3&lt;/span&gt; &lt;span class="n"&gt;H&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="k"&gt;float&lt;/span&gt; &lt;span class="n"&gt;roughness&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;span class="p"&gt;{&lt;/span&gt;
+  &lt;span class="k"&gt;float&lt;/span&gt; &lt;span class="n"&gt;a&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;roughness&lt;/span&gt;&lt;span class="o"&gt;*&lt;/span&gt;&lt;span class="n"&gt;roughness&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
+  &lt;span class="k"&gt;float&lt;/span&gt; &lt;span class="n"&gt;a2&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;a&lt;/span&gt;&lt;span class="o"&gt;*&lt;/span&gt;&lt;span class="n"&gt;a&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
+  &lt;span class="k"&gt;float&lt;/span&gt; &lt;span class="n"&gt;NdotH&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;max&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;dot&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;N&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;H&lt;/span&gt;&lt;span class="p"&gt;),&lt;/span&gt; &lt;span class="mf"&gt;0.0&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
+  &lt;span class="k"&gt;float&lt;/span&gt; &lt;span class="n"&gt;NdotH2&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;NdotH&lt;/span&gt;&lt;span class="o"&gt;*&lt;/span&gt;&lt;span class="n"&gt;NdotH&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
+
+  &lt;span class="k"&gt;float&lt;/span&gt; &lt;span class="n"&gt;nom&lt;/span&gt;   &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;a2&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
+  &lt;span class="k"&gt;float&lt;/span&gt; &lt;span class="n"&gt;denom&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;NdotH2&lt;/span&gt; &lt;span class="o"&gt;*&lt;/span&gt; &lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;a2&lt;/span&gt; &lt;span class="o"&gt;-&lt;/span&gt; &lt;span class="mf"&gt;1.0&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="o"&gt;+&lt;/span&gt; &lt;span class="mf"&gt;1.0&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
+  &lt;span class="n"&gt;denom&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;PI&lt;/span&gt; &lt;span class="o"&gt;*&lt;/span&gt; &lt;span class="n"&gt;denom&lt;/span&gt; &lt;span class="o"&gt;*&lt;/span&gt; &lt;span class="n"&gt;denom&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
+
+  &lt;span class="k"&gt;return&lt;/span&gt; &lt;span class="n"&gt;saturateMediump&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;nom&lt;/span&gt; &lt;span class="o"&gt;/&lt;/span&gt; &lt;span class="n"&gt;denom&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
+&lt;span class="p"&gt;}&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;p&gt;&lt;br/&gt;&lt;/p&gt;
+&lt;h4&gt;几何函数（Geometry Function）的近似&lt;/h4&gt;
+&lt;p&gt;几何函数描述了微平面中互相被遮蔽的比率，跟法线分布函数类似，都是从统计学的角度描述了微平面的属性：&lt;/p&gt;
+&lt;p&gt;&lt;img alt="" src="static/images/geometry_shadowing.png"&gt;&lt;/p&gt;
+&lt;p&gt;这里我们使用的几何函数为Schlick-GGX近似：&lt;/p&gt;
+&lt;p&gt;&lt;img alt="" src="static/images/brdf_g.png"&gt;&lt;/p&gt;
+&lt;p&gt;其中参数k在计算直接光的时候为：&lt;/p&gt;
+&lt;p&gt;&lt;img alt="" src="static/images/brdf_g_k_direct.png"&gt;&lt;/p&gt;
+&lt;p&gt;这里参数a同样也是取为粗糙度的平方&lt;/p&gt;
+&lt;p&gt;而在实际渲染中，我们还将需要光线的方向向量来将两者纳入其中：&lt;/p&gt;
+&lt;p&gt;&lt;img alt="" src="static/images/brdf_g_smith.png"&gt;&lt;/p&gt;
+&lt;p&gt;通过以上公式，在不同的粗糙度下可以得到如下的效果：&lt;/p&gt;
+&lt;p&gt;&lt;img alt="" src="static/images/geometry.png"&gt;&lt;/p&gt;
+&lt;p&gt;以上方程使用glsl的实现如下：&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="k"&gt;float&lt;/span&gt; &lt;span class="n"&gt;GeometrySchlickGGX&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="k"&gt;float&lt;/span&gt; &lt;span class="n"&gt;NdotV&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="k"&gt;float&lt;/span&gt; &lt;span class="n"&gt;roughness&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;span class="p"&gt;{&lt;/span&gt;
+  &lt;span class="k"&gt;float&lt;/span&gt; &lt;span class="n"&gt;r&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;roughness&lt;/span&gt; &lt;span class="o"&gt;+&lt;/span&gt; &lt;span class="mf"&gt;1.0&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
+  &lt;span class="k"&gt;float&lt;/span&gt; &lt;span class="n"&gt;k&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;r&lt;/span&gt;&lt;span class="o"&gt;*&lt;/span&gt;&lt;span class="n"&gt;r&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="o"&gt;/&lt;/span&gt; &lt;span class="mf"&gt;8.0&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
+
+  &lt;span class="k"&gt;float&lt;/span&gt; &lt;span class="n"&gt;nom&lt;/span&gt;   &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;NdotV&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
+  &lt;span class="k"&gt;float&lt;/span&gt; &lt;span class="n"&gt;denom&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;NdotV&lt;/span&gt; &lt;span class="o"&gt;*&lt;/span&gt; &lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="mf"&gt;1.0&lt;/span&gt; &lt;span class="o"&gt;-&lt;/span&gt; &lt;span class="n"&gt;k&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="o"&gt;+&lt;/span&gt; &lt;span class="n"&gt;k&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
+
+  &lt;span class="k"&gt;return&lt;/span&gt; &lt;span class="n"&gt;saturateMediump&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;nom&lt;/span&gt; &lt;span class="o"&gt;/&lt;/span&gt; &lt;span class="n"&gt;denom&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
+&lt;span class="p"&gt;}&lt;/span&gt;
+&lt;span class="c1"&gt;// ----------------------------------------------------------------------------&lt;/span&gt;
+&lt;span class="k"&gt;float&lt;/span&gt; &lt;span class="n"&gt;GeometrySmith&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="k"&gt;vec3&lt;/span&gt; &lt;span class="n"&gt;N&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="k"&gt;vec3&lt;/span&gt; &lt;span class="n"&gt;V&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="k"&gt;vec3&lt;/span&gt; &lt;span class="n"&gt;L&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="k"&gt;float&lt;/span&gt; &lt;span class="n"&gt;roughness&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;span class="p"&gt;{&lt;/span&gt;
+  &lt;span class="k"&gt;float&lt;/span&gt; &lt;span class="n"&gt;NdotV&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;max&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;dot&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;N&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;V&lt;/span&gt;&lt;span class="p"&gt;),&lt;/span&gt; &lt;span class="mf"&gt;0.0&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
+  &lt;span class="k"&gt;float&lt;/span&gt; &lt;span class="n"&gt;NdotL&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;max&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;dot&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;N&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;L&lt;/span&gt;&lt;span class="p"&gt;),&lt;/span&gt; &lt;span class="mf"&gt;0.0&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
+  &lt;span class="k"&gt;float&lt;/span&gt; &lt;span class="n"&gt;ggx2&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;GeometrySchlickGGX&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;NdotV&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;roughness&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
+  &lt;span class="k"&gt;float&lt;/span&gt; &lt;span class="n"&gt;ggx1&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;GeometrySchlickGGX&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;NdotL&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;roughness&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
+
+  &lt;span class="k"&gt;return&lt;/span&gt; &lt;span class="n"&gt;saturateMediump&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;ggx1&lt;/span&gt; &lt;span class="o"&gt;*&lt;/span&gt; &lt;span class="n"&gt;ggx2&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
+&lt;span class="p"&gt;}&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;p&gt;&lt;br/&gt;&lt;/p&gt;
+&lt;h4&gt;菲涅尔方程（Fresnel Rquation）的近似&lt;/h4&gt;
+&lt;p&gt;菲涅尔方程描述了光线被反射部分的比率，因而会受到观察方向的影响，结合能量守恒，我们可以得出剩下的漫反射的比率。而要计算出菲涅尔方程，我们需要一个基础反射率（F0）的参数，描述的是在表面的掠射角方向望过去（此时表面法线跟视线方向成90度），不同材料的表面反射率都不太一样：&lt;/p&gt;
+&lt;p&gt;&lt;img alt="" src="static/images/brdf_f_f0.jpg"&gt;&lt;/p&gt;
+&lt;p&gt;我们这里取0.04作为近似的基础反射率，另外，这里我们还需要额外引入一个叫做金属度（Metallic）的参数，结合F0，一般我们这样子来计算出材质的真实F0：&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="k"&gt;vec3&lt;/span&gt; &lt;span class="n"&gt;F0&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="k"&gt;vec3&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="mf"&gt;0.04&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
+&lt;span class="n"&gt;F0&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;mix&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;F0&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;albedo&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;metallic&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;p&gt;有了F0之后，我们使用Fresnel-Schlick近似来计算菲涅尔方程的近似：&lt;/p&gt;
+&lt;p&gt;&lt;img alt="" src="static/images/brdf_f_eq.png"&gt;&lt;/p&gt;
+&lt;p&gt;终于，我们计算出了BRDF公式中的所有近似项，并且，我们有了两项粗糙度（Roughness）以及金属度（Metallic）两项额外的参数可以用于调整渲染效果，这两个参数的取值范围均为[0, 1]&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2&gt;直接光照明&lt;/h2&gt;
+&lt;p&gt;接下来，在得到了BRDF的真实公式之后，我们尝试基于公式直接计算直接光的照明，我们会在场景中添加若干个点光源，以及一个方向光源，首先我们定义光源的一些基本变量：&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="cp"&gt;#define POINT_LIGHT_NUMBER ${PointLightPositions.size}&lt;/span&gt;
+&lt;span class="c1"&gt;// lights&lt;/span&gt;
+&lt;span class="k"&gt;uniform&lt;/span&gt; &lt;span class="k"&gt;vec3&lt;/span&gt; &lt;span class="n"&gt;pointLightPositions&lt;/span&gt;&lt;span class="p"&gt;[&lt;/span&gt;&lt;span class="n"&gt;POINT_LIGHT_NUMBER&lt;/span&gt;&lt;span class="p"&gt;];&lt;/span&gt;
+&lt;span class="k"&gt;uniform&lt;/span&gt; &lt;span class="k"&gt;vec3&lt;/span&gt; &lt;span class="n"&gt;pointLightColors&lt;/span&gt;&lt;span class="p"&gt;[&lt;/span&gt;&lt;span class="n"&gt;POINT_LIGHT_NUMBER&lt;/span&gt;&lt;span class="p"&gt;];&lt;/span&gt;
+
+&lt;span class="k"&gt;uniform&lt;/span&gt; &lt;span class="k"&gt;vec3&lt;/span&gt; &lt;span class="n"&gt;directionLightDir&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
+&lt;span class="k"&gt;uniform&lt;/span&gt; &lt;span class="k"&gt;vec3&lt;/span&gt; &lt;span class="n"&gt;directionLightColor&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;p&gt;我们将点光源的位置以及颜色分别存储在数组中，而对于方向光源，则分别需要声明起方向以及颜色，而实际在光照计算，我们需要对遍历每一个光源，分别使用BRDF函数计算其最终反射的颜色并相加起来&lt;/p&gt;
+&lt;p&gt;我们首先来看下点光源的计算，由于点光源强度会随着距离而进行衰减，这里我们使用&lt;a href="https://learnopengl-cn.github.io/02%20Lighting/05%20Light%20casters/#_3"&gt;这里教程&lt;/a&gt;介绍到的平方衰减函数，单个点光源的完整计算逻辑如下&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="c1"&gt;// calculate per-light radiance&lt;/span&gt;
+&lt;span class="k"&gt;vec3&lt;/span&gt; &lt;span class="n"&gt;L&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;normalize&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;pointLightPositions&lt;/span&gt;&lt;span class="p"&gt;[&lt;/span&gt;&lt;span class="n"&gt;i&lt;/span&gt;&lt;span class="p"&gt;]&lt;/span&gt; &lt;span class="o"&gt;-&lt;/span&gt; &lt;span class="n"&gt;WorldPos&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
+&lt;span class="k"&gt;vec3&lt;/span&gt; &lt;span class="n"&gt;H&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;normalize&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;V&lt;/span&gt; &lt;span class="o"&gt;+&lt;/span&gt; &lt;span class="n"&gt;L&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
+&lt;span class="k"&gt;float&lt;/span&gt; &lt;span class="n"&gt;distance&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;length&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;pointLightPositions&lt;/span&gt;&lt;span class="p"&gt;[&lt;/span&gt;&lt;span class="n"&gt;i&lt;/span&gt;&lt;span class="p"&gt;]&lt;/span&gt; &lt;span class="o"&gt;-&lt;/span&gt; &lt;span class="n"&gt;WorldPos&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
+&lt;span class="k"&gt;float&lt;/span&gt; &lt;span class="n"&gt;attenuation&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="mf"&gt;1.0&lt;/span&gt; &lt;span class="o"&gt;/&lt;/span&gt; &lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;distance&lt;/span&gt; &lt;span class="o"&gt;*&lt;/span&gt; &lt;span class="n"&gt;distance&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
+&lt;span class="k"&gt;vec3&lt;/span&gt; &lt;span class="n"&gt;radiance&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;pointLightColors&lt;/span&gt;&lt;span class="p"&gt;[&lt;/span&gt;&lt;span class="n"&gt;i&lt;/span&gt;&lt;span class="p"&gt;]&lt;/span&gt; &lt;span class="o"&gt;*&lt;/span&gt; &lt;span class="n"&gt;attenuation&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
+&lt;span class="c1"&gt;// Cook-Torrance BRDF&lt;/span&gt;
+&lt;span class="k"&gt;float&lt;/span&gt; &lt;span class="n"&gt;NDF&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;DistributionGGX&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;N&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;H&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;roughness&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
+&lt;span class="k"&gt;float&lt;/span&gt; &lt;span class="n"&gt;G&lt;/span&gt;   &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;GeometrySmith&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;N&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;V&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;L&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;roughness&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
+&lt;span class="k"&gt;vec3&lt;/span&gt; &lt;span class="n"&gt;F&lt;/span&gt;    &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;fresnelSchlick&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;clamp&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;dot&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;H&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;V&lt;/span&gt;&lt;span class="p"&gt;),&lt;/span&gt; &lt;span class="mf"&gt;0.0&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="mf"&gt;1.0&lt;/span&gt;&lt;span class="p"&gt;),&lt;/span&gt; &lt;span class="n"&gt;F0&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
+&lt;span class="k"&gt;vec3&lt;/span&gt; &lt;span class="n"&gt;nominator&lt;/span&gt;    &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;NDF&lt;/span&gt; &lt;span class="o"&gt;*&lt;/span&gt; &lt;span class="n"&gt;G&lt;/span&gt; &lt;span class="o"&gt;*&lt;/span&gt; &lt;span class="n"&gt;F&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
+&lt;span class="k"&gt;float&lt;/span&gt; &lt;span class="n"&gt;denominator&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="mf"&gt;4.0&lt;/span&gt; &lt;span class="o"&gt;*&lt;/span&gt; &lt;span class="n"&gt;max&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;dot&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;N&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;V&lt;/span&gt;&lt;span class="p"&gt;),&lt;/span&gt; &lt;span class="mf"&gt;0.0&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="o"&gt;*&lt;/span&gt; &lt;span class="n"&gt;max&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;dot&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;N&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;L&lt;/span&gt;&lt;span class="p"&gt;),&lt;/span&gt; &lt;span class="mf"&gt;0.0&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
+&lt;span class="k"&gt;vec3&lt;/span&gt; &lt;span class="n"&gt;specular&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;nominator&lt;/span&gt; &lt;span class="o"&gt;/&lt;/span&gt; &lt;span class="n"&gt;max&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;denominator&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="mf"&gt;0.001&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt; &lt;span class="c1"&gt;// prevent divide by zero for NdotV=0.0 or NdotL=0.0&lt;/span&gt;
+&lt;span class="c1"&gt;// kS is equal to Fresnel&lt;/span&gt;
+&lt;span class="k"&gt;vec3&lt;/span&gt; &lt;span class="n"&gt;kS&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;F&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
+&lt;span class="c1"&gt;// for energy conservation, the diffuse and specular light can&amp;#39;t&lt;/span&gt;
+&lt;span class="c1"&gt;// be above 1.0 (unless the surface emits light); to preserve this&lt;/span&gt;
+&lt;span class="c1"&gt;// relationship the diffuse component (kD) should equal 1.0 - kS.&lt;/span&gt;
+&lt;span class="k"&gt;vec3&lt;/span&gt; &lt;span class="n"&gt;kD&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="k"&gt;vec3&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="mf"&gt;1.0&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="o"&gt;-&lt;/span&gt; &lt;span class="n"&gt;kS&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
+&lt;span class="c1"&gt;// multiply kD by the inverse metalness such that only non-metals&lt;/span&gt;
+&lt;span class="c1"&gt;// have diffuse lighting, or a linear blend if partly metal (pure metals&lt;/span&gt;
+&lt;span class="c1"&gt;// have no diffuse light).&lt;/span&gt;
+&lt;span class="n"&gt;kD&lt;/span&gt; &lt;span class="o"&gt;*=&lt;/span&gt; &lt;span class="mf"&gt;1.0&lt;/span&gt; &lt;span class="o"&gt;-&lt;/span&gt; &lt;span class="n"&gt;metallic&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
+&lt;span class="c1"&gt;// scale light by NdotL&lt;/span&gt;
+&lt;span class="k"&gt;float&lt;/span&gt; &lt;span class="n"&gt;NdotL&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;max&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;dot&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;N&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;L&lt;/span&gt;&lt;span class="p"&gt;),&lt;/span&gt; &lt;span class="mf"&gt;0.0&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
+&lt;span class="c1"&gt;// add to outgoing radiance Lo&lt;/span&gt;
+&lt;span class="c1"&gt;// note that we already multiplied the BRDF by the Fresnel (kS so we won&amp;#39;t multiply by kS again&lt;/span&gt;
+&lt;span class="n"&gt;Lo&lt;/span&gt; &lt;span class="o"&gt;+=&lt;/span&gt; &lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;kD&lt;/span&gt; &lt;span class="o"&gt;*&lt;/span&gt; &lt;span class="n"&gt;albedo&lt;/span&gt; &lt;span class="o"&gt;/&lt;/span&gt; &lt;span class="n"&gt;PI&lt;/span&gt; &lt;span class="o"&gt;+&lt;/span&gt; &lt;span class="n"&gt;specular&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="o"&gt;*&lt;/span&gt; &lt;span class="n"&gt;radiance&lt;/span&gt; &lt;span class="o"&gt;*&lt;/span&gt; &lt;span class="n"&gt;NdotL&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;p&gt;可以看出来实现基本上就是直接对着公式翻译了一遍，注意在计算kD的时候，我们最后还乘以了（1.0-metallic），这说明在表面材质完全是金属的时候，将不会有漫反射&lt;/p&gt;
+&lt;p&gt;对于方向光源，我们也是类似这样子计算：&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="k"&gt;vec3&lt;/span&gt; &lt;span class="n"&gt;L&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;normalize&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="o"&gt;-&lt;/span&gt;&lt;span class="n"&gt;directionLightDir&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
+&lt;span class="k"&gt;vec3&lt;/span&gt; &lt;span class="n"&gt;H&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;normalize&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;V&lt;/span&gt; &lt;span class="o"&gt;+&lt;/span&gt; &lt;span class="n"&gt;L&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
+&lt;span class="k"&gt;vec3&lt;/span&gt; &lt;span class="n"&gt;radiance&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;directionLightColor&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
+&lt;span class="c1"&gt;// Cook-Torrance BRDF&lt;/span&gt;
+&lt;span class="k"&gt;float&lt;/span&gt; &lt;span class="n"&gt;NDF&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;DistributionGGX&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;N&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;H&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;roughness&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
+&lt;span class="k"&gt;float&lt;/span&gt; &lt;span class="n"&gt;G&lt;/span&gt;   &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;GeometrySmith&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;N&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;V&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;L&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;roughness&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
+&lt;span class="k"&gt;vec3&lt;/span&gt; &lt;span class="n"&gt;F&lt;/span&gt;    &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;fresnelSchlick&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;clamp&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;dot&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;H&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;V&lt;/span&gt;&lt;span class="p"&gt;),&lt;/span&gt; &lt;span class="mf"&gt;0.0&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="mf"&gt;1.0&lt;/span&gt;&lt;span class="p"&gt;),&lt;/span&gt; &lt;span class="n"&gt;F0&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
+&lt;span class="k"&gt;vec3&lt;/span&gt; &lt;span class="n"&gt;nominator&lt;/span&gt;    &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;NDF&lt;/span&gt; &lt;span class="o"&gt;*&lt;/span&gt; &lt;span class="n"&gt;G&lt;/span&gt; &lt;span class="o"&gt;*&lt;/span&gt; &lt;span class="n"&gt;F&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
+&lt;span class="k"&gt;float&lt;/span&gt; &lt;span class="n"&gt;denominator&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="mf"&gt;4.0&lt;/span&gt; &lt;span class="o"&gt;*&lt;/span&gt; &lt;span class="n"&gt;max&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;dot&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;N&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;V&lt;/span&gt;&lt;span class="p"&gt;),&lt;/span&gt; &lt;span class="mf"&gt;0.0&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="o"&gt;*&lt;/span&gt; &lt;span class="n"&gt;max&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;dot&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;N&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;L&lt;/span&gt;&lt;span class="p"&gt;),&lt;/span&gt; &lt;span class="mf"&gt;0.0&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
+&lt;span class="k"&gt;vec3&lt;/span&gt; &lt;span class="n"&gt;specular&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;nominator&lt;/span&gt; &lt;span class="o"&gt;/&lt;/span&gt; &lt;span class="n"&gt;max&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;denominator&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="mf"&gt;0.001&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt; &lt;span class="c1"&gt;// prevent divide by zero for NdotV=0.0 or NdotL=0.0&lt;/span&gt;
+&lt;span class="c1"&gt;// kS is equal to Fresnel&lt;/span&gt;
+&lt;span class="k"&gt;vec3&lt;/span&gt; &lt;span class="n"&gt;kS&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;F&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
+&lt;span class="c1"&gt;// for energy conservation, the diffuse and specular light can&amp;#39;t&lt;/span&gt;
+&lt;span class="c1"&gt;// be above 1.0 (unless the surface emits light); to preserve this&lt;/span&gt;
+&lt;span class="c1"&gt;// relationship the diffuse component (kD) should equal 1.0 - kS.&lt;/span&gt;
+&lt;span class="k"&gt;vec3&lt;/span&gt; &lt;span class="n"&gt;kD&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="k"&gt;vec3&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="mf"&gt;1.0&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="o"&gt;-&lt;/span&gt; &lt;span class="n"&gt;kS&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
+&lt;span class="c1"&gt;// multiply kD by the inverse metalness such that only non-metals&lt;/span&gt;
+&lt;span class="c1"&gt;// have diffuse lighting, or a linear blend if partly metal (pure metals&lt;/span&gt;
+&lt;span class="c1"&gt;// have no diffuse light).&lt;/span&gt;
+&lt;span class="n"&gt;kD&lt;/span&gt; &lt;span class="o"&gt;*=&lt;/span&gt; &lt;span class="mf"&gt;1.0&lt;/span&gt; &lt;span class="o"&gt;-&lt;/span&gt; &lt;span class="n"&gt;metallic&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
+&lt;span class="c1"&gt;// scale light by NdotL&lt;/span&gt;
+&lt;span class="k"&gt;float&lt;/span&gt; &lt;span class="n"&gt;NdotL&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;max&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;dot&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;N&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;L&lt;/span&gt;&lt;span class="p"&gt;),&lt;/span&gt; &lt;span class="mf"&gt;0.0&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
+&lt;span class="c1"&gt;// add to outgoing radiance Lo&lt;/span&gt;
+&lt;span class="c1"&gt;// note that we already multiplied the BRDF by the Fresnel (kS) so we won&amp;#39;t multiply by kS again&lt;/span&gt;
+&lt;span class="n"&gt;Lo&lt;/span&gt; &lt;span class="o"&gt;+=&lt;/span&gt; &lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;kD&lt;/span&gt; &lt;span class="o"&gt;*&lt;/span&gt; &lt;span class="n"&gt;albedo&lt;/span&gt; &lt;span class="o"&gt;+&lt;/span&gt; &lt;span class="n"&gt;specular&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="o"&gt;*&lt;/span&gt; &lt;span class="n"&gt;radiance&lt;/span&gt; &lt;span class="o"&gt;*&lt;/span&gt; &lt;span class="n"&gt;NdotL&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;p&gt;注意跟点光源计算不同，我们在计算的时候并没有根据距离来衰减光照能量&lt;/p&gt;
+&lt;p&gt;最后，在计算出光照颜色之后，由于我们整个计算过程都是在线性空间中计算，并且没有对输出颜色归一，所以最后我们还需要进行Gamma校正以及色调映射（Tone Mapping）:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="c1"&gt;// HDR tonemapping&lt;/span&gt;
+&lt;span class="n"&gt;color&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;color&lt;/span&gt; &lt;span class="o"&gt;/&lt;/span&gt; &lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;color&lt;/span&gt; &lt;span class="o"&gt;+&lt;/span&gt; &lt;span class="k"&gt;vec3&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="mf"&gt;1.0&lt;/span&gt;&lt;span class="p"&gt;));&lt;/span&gt;
+&lt;span class="c1"&gt;// gamma correct&lt;/span&gt;
+&lt;span class="n"&gt;color&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;pow&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;color&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="k"&gt;vec3&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="mf"&gt;1.0&lt;/span&gt;&lt;span class="o"&gt;/&lt;/span&gt;&lt;span class="mf"&gt;2.2&lt;/span&gt;&lt;span class="p"&gt;));&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;p&gt;下图便是在Android中，在不同的粗糙度下的渲染结果：&lt;/p&gt;
+&lt;p&gt;&lt;img alt="" src="static/images/android_pbr_direct_light_render_roughness.jpg"&gt;&lt;/p&gt;
+&lt;p&gt;本文章具体实现代码在：&lt;a href="https://github.com/ragnraok/AndroidPBR"&gt;AndroidPBR&lt;/a&gt;，渲染的界面提供了两个slidebar用于调整金属度以及粗糙度参数&lt;/p&gt;
+&lt;p&gt;PBR管线除了直接光照明部分以外，还有环境光照明部分，这部分是PBR对比与上一世代光照模型的一个很重要的区别，所谓全局光照的实体，我将会在下一篇文章尝试介绍这一部分的内容&lt;/p&gt;
+&lt;h2&gt;References&lt;/h2&gt;
+&lt;ul&gt;
+&lt;li&gt;PBR理论介绍: &lt;a href="https://learnopengl-cn.github.io/07%20PBR/01%20Theory/"&gt;https://learnopengl-cn.github.io/07%20PBR/01%20Theory/&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;PBR直接光照明实现: &lt;a href="https://learnopengl-cn.github.io/07%20PBR/02%20Lighting/"&gt;https://learnopengl-cn.github.io/07%20PBR/02%20Lighting/&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;PBR白皮书: &lt;a href="https://zhuanlan.zhihu.com/p/53086060"&gt;https://zhuanlan.zhihu.com/p/53086060&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;</content></entry><entry><title>浅谈Android中Surface显示延迟处理</title><link href="http://ragnraok.github.io/surface_display_lag.html" rel="alternate"></link><published>2018-06-20T00:00:00+08:00</published><updated>2018-06-20T00:00:00+08:00</updated><author><name>Ragnarok Zhou</name></author><id>tag:ragnraok.github.io,2018-06-20:/surface_display_lag.html</id><summary type="html">&lt;p&gt;最近在使用GLES在Surface上渲染结果的时候，遇到了一个显示延迟的问题，当渲染时间过长，同时帧率要求比较高的时候，如果不加控制，就会造成显示的延迟，如果界面没有交互，倒是不会看出什么问题，如果是强交互的场景，这种情况下就会造成可感知的用户使用延迟了。处理这种情况的其中一种方式是给渲染的一帧赋予一个时间戳，用于给SurfaceFlinger进行对应的丢帧控制，具体什么原理呢，让我们一步一步来说明一下&lt;/p&gt;
 &lt;h3&gt;Surface是什么？&lt;/h3&gt;
-&lt;hr /&gt;
+&lt;hr&gt;
+&lt;p&gt;从原来上讲，Android的 &lt;a href="https://developer.android.com/reference/android/view/Surface"&gt;Surface&lt;/a&gt; 可以认为是目前图形架构中，作为 &lt;a href="https://source.android.com/devices/graphics/arch-bq-gralloc"&gt;BufferQueue&lt;/a&gt; 的生产者端，Android会首先把内容渲染到Surface上，填充数据到GraphicBuffer上。而作为消费者端则为系统的&lt;a href="https://source.android.com/devices/graphics/arch-sf-hwc"&gt;SurfaceFlinger&lt;/a&gt; ，取出BufferQueue中的GraphicBuffer，并配合vysnc将数据送给HWC合成到屏幕上。&lt;/p&gt;
+&lt;p&gt;一般来说，Android会把所有可见的View渲染到一个由SurfaceFlinger创建的Surface上，但是这个Surface并不能由开发者直接操作，从App的开发角度来看，大部分情况下我们直接操作的Surface一般会从以下两个地方获取&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;a href="https://developer.android.com/reference/android/view/SurfaceView"&gt;SurfaceView&lt;/a&gt; / &lt;a href="https://kapeli.com/dash_share?docset_file=Android&amp;amp;docset_name=Android&amp;amp;path=developer.android.com/reference/android/opengl/GLSurfaceView.html&amp;amp;platform=android&amp;amp;repo=Main&amp;amp;source=https://developer.android.com/reference/android/opengl/GLSurfaceView.html&amp;amp;version=8.1.0"&gt;GLSurfaceView&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;这两个组件是结合了Surface跟View的实现，特别的是，这两个view系统为其单独提供一层了Surface，并直接由SurfaceFlinger进行管理合成，因此实际显示在屏幕上的时候，并没有完全从属在当前的View的布局层次上，在布局对应的位置上，只是一个透明的占位符。而GLSurfaceView，则在SurfaceView的基础上提供了EGL的上下文，以便可以直接使用GLES在Surface上绘制内容&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;a href="https://developer.android.com/reference/android/graphics/SurfaceTexture"&gt;SurfaceTexture&lt;/a&gt; / &lt;a href="https://developer.android.com/reference/android/view/TextureView"&gt;TextureView&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;SurfaceTexture是从Android 3 …&lt;/p&gt;&lt;/li&gt;&lt;/ul&gt;</summary><content type="html">&lt;p&gt;最近在使用GLES在Surface上渲染结果的时候，遇到了一个显示延迟的问题，当渲染时间过长，同时帧率要求比较高的时候，如果不加控制，就会造成显示的延迟，如果界面没有交互，倒是不会看出什么问题，如果是强交互的场景，这种情况下就会造成可感知的用户使用延迟了。处理这种情况的其中一种方式是给渲染的一帧赋予一个时间戳，用于给SurfaceFlinger进行对应的丢帧控制，具体什么原理呢，让我们一步一步来说明一下&lt;/p&gt;
+&lt;h3&gt;Surface是什么？&lt;/h3&gt;
+&lt;hr&gt;
 &lt;p&gt;从原来上讲，Android的 &lt;a href="https://developer.android.com/reference/android/view/Surface"&gt;Surface&lt;/a&gt; 可以认为是目前图形架构中，作为 &lt;a href="https://source.android.com/devices/graphics/arch-bq-gralloc"&gt;BufferQueue&lt;/a&gt; 的生产者端，Android会首先把内容渲染到Surface上，填充数据到GraphicBuffer上。而作为消费者端则为系统的&lt;a href="https://source.android.com/devices/graphics/arch-sf-hwc"&gt;SurfaceFlinger&lt;/a&gt; ，取出BufferQueue中的GraphicBuffer，并配合vysnc将数据送给HWC合成到屏幕上。&lt;/p&gt;
 &lt;p&gt;一般来说，Android会把所有可见的View渲染到一个由SurfaceFlinger创建的Surface上，但是这个Surface并不能由开发者直接操作，从App的开发角度来看，大部分情况下我们直接操作的Surface一般会从以下两个地方获取&lt;/p&gt;
 &lt;ul&gt;
@@ -15,7 +303,7 @@
 &lt;/li&gt;
 &lt;/ul&gt;
 &lt;h3&gt;使用GLES在Surface中显示内容&lt;/h3&gt;
-&lt;hr /&gt;
+&lt;hr&gt;
 &lt;p&gt;上面说到，Surface作为BufferQueue的生产方，开发者可以在上面绘制画面，而在SurfaceView/TextureView上，系统都提供了对应的&lt;code&gt;lockCanvas&lt;/code&gt;方法，返回一个&lt;code&gt;Canvas&lt;/code&gt;对象允许在对应的Surface上绘制内容。除了这个方法以外，我们也可以使用GLES在Surface上绘制内容。&lt;/p&gt;
 &lt;p&gt;无论是使用GLSurfaceView，还是TextureView，使用GLES在Surface上绘制内容，我们都必须在单独线程进行GLES的上下文初始化（因为GL Context是跟线程绑定的），创建对应的&lt;a href="https://source.android.com/devices/graphics/arch-egl-opengl"&gt;EGLSurface&lt;/a&gt; ，一般来说，实现的代码如下（如果用的是GLSurfaceView，下面的初始化逻辑内部已经给你做好了）：&lt;/p&gt;
 &lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="n"&gt;mEGLDisplay&lt;/span&gt; &lt;span class="p"&gt;=&lt;/span&gt; &lt;span class="n"&gt;EGL14&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;eglGetDisplay&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;EGL14&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;EGL_DEFAULT_DISPLAY&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
@@ -56,7 +344,7 @@
 
 
 &lt;p&gt;以上代码摘自&lt;a href="https://bigflake.com/mediacodec/CameraToMpegTest.java.txt"&gt;这里&lt;/a&gt;，并转换成了kotlin&lt;/p&gt;
-&lt;p&gt;大概流程就是先选择好需要的EGL配置，然后初始化EGLConfig跟EGLContext，最终，调用&lt;code&gt;eglCreatexxxSurface&lt;/code&gt;创建一个EGLSurface，这这个例子中调用的是&lt;code&gt;eglCreateWindowSurface&lt;/code&gt;，并在函数中传入了SurfaceView/TextureView中的Surface对象&lt;/p&gt;
+&lt;p&gt;大概流程就是先选择好需要的EGL配置，然后初始化EGLConfig跟EGLContext，最终，调用&lt;code&gt;eglCreatexxxSurface&lt;/code&gt;创建一个EGLSurface，这这个例子中调用的是&lt;code&gt;eglCreateWindowSurface&lt;/code&gt;，并在函数中传入了SurfaceView/TextureView中的Surface对象````&lt;/p&gt;
 &lt;p&gt;另外，在&lt;code&gt;eglCreateWindowSurface&lt;/code&gt;函数中传入的Surface对象，如果不是需要渲染到屏幕上的话，除了直接使用上面的两个Surface对象以外，在很多处理视频特效的应用中，另外一种方式是传入MediaCodec的Surface，也就是这个方法的返回结果&lt;/p&gt;
 &lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="n"&gt;MediaCodec&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="na"&gt;getInputSurface&lt;/span&gt;
 &lt;/pre&gt;&lt;/div&gt;
@@ -71,7 +359,7 @@
 &lt;p&gt;&lt;strong&gt;Surface -&amp;gt; EGL renderer -&amp;gt; swap buffer -&amp;gt; BufferQueue deque -&amp;gt; SurfaceFlinger -&amp;gt; HWC -&amp;gt; Display&lt;/strong&gt;&lt;/p&gt;
 &lt;p&gt;更具体的GraphicBuffer/BufferQueue同步机制，推荐看下&lt;a href="https://blog.csdn.net/jinzhuojun/article/details/39698317"&gt;这篇&lt;/a&gt;文章的分析&lt;/p&gt;
 &lt;h3&gt;Surface渲染上屏时间戳&lt;/h3&gt;
-&lt;hr /&gt;
+&lt;hr&gt;
 &lt;p&gt;上面大体分析了Surface原理，以及对应渲染上屏的步骤，但是，直到SurfaceFlinger，到Hareware Composer这一步，我们还有一个关键的问题没有解决：&lt;/p&gt;
 &lt;p&gt;&lt;strong&gt;我们在渲染好一帧之后，如何能够保证这一帧的内容能够及时显示到屏幕上呢？&lt;/strong&gt;&lt;/p&gt;
 &lt;p&gt;或者换一个问法：&lt;/p&gt;
@@ -102,7 +390,7 @@
 &lt;p&gt;总体来看，在通过帧时间戳控制之后，Android就可以解决Surface的渲染上屏延迟问题，但渲染过长的时候，就势必带来丢帧，因此根本的解决方案，还是得尽量在16ms内，渲染完一帧数据&lt;/p&gt;
 &lt;p&gt;文笔一般，水平有限，仅做抛砖引玉之用，欢迎更加仔细的讨论!&lt;/p&gt;
 &lt;h3&gt;References&lt;/h3&gt;
-&lt;hr /&gt;
+&lt;hr&gt;
 &lt;ul&gt;
 &lt;li&gt;
 &lt;p&gt;&lt;a href="https://stackoverflow.com/questions/26317132/minimize-android-glsurfaceview-lag/"&gt;StackOverFlow—Minimize Android GLSurfaceView Lag&lt;/a&gt;&lt;/p&gt;
@@ -117,13 +405,13 @@
 &lt;p&gt;&lt;a href="https://source.android.com/devices/graphics/"&gt;Android图形架构&lt;/a&gt;&lt;/p&gt;
 &lt;/li&gt;
 &lt;li&gt;
-&lt;p&gt;&lt;a href="https://bigflake.com/mediacodec/"&gt;Android MediaCodec Stuff&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href="https://bigflake.com/mediacodec/"&gt;Android MediaCodec Stuff&lt;/a&gt;````&lt;/p&gt;
 &lt;/li&gt;
-&lt;/ul&gt;</summary></entry><entry><title>谈谈关于Android视频编码的那些坑</title><link href="http://ragnraok.github.io/android_video_record.html" rel="alternate"></link><published>2017-08-27T00:00:00+08:00</published><author><name>Ragnarok Zhou</name></author><id>tag:ragnraok.github.io,2017-08-27:android_video_record.html</id><summary type="html">&lt;p&gt;Android的视频相关的开发，大概一直是整个Android生态，以及Android API中，最为分裂以及兼容性问题最为突出的一部分。摄像头，以及视频编码相关的API，Google一直对这方面的控制力非常差，导致不同厂商对这两个API的实现有不少差异，而且从API的设计来看，一直以来优化也相当有限，甚至有人认为这是“Android上最难用的API之一”&lt;/p&gt;
+&lt;/ul&gt;</content></entry><entry><title>谈谈关于Android视频编码的那些坑</title><link href="http://ragnraok.github.io/android_video_record.html" rel="alternate"></link><published>2017-08-27T00:00:00+08:00</published><updated>2017-08-27T00:00:00+08:00</updated><author><name>Ragnarok Zhou</name></author><id>tag:ragnraok.github.io,2017-08-27:/android_video_record.html</id><summary type="html">&lt;p&gt;Android的视频相关的开发，大概一直是整个Android生态，以及Android API中，最为分裂以及兼容性问题最为突出的一部分。摄像头，以及视频编码相关的API，Google一直对这方面的控制力非常差，导致不同厂商对这两个API的实现有不少差异，而且从API的设计来看，一直以来优化也相当有限，甚至有人认为这是“Android上最难用的API之一”&lt;/p&gt;
 &lt;p&gt;以微信为例，我们录制一个540p的mp4文件，对于Android来说，大体上是遵循这么一个流程：&lt;/p&gt;
-&lt;hr /&gt;
-&lt;p&gt;&lt;img alt="" src="static/images/encoderProcess.png" /&gt;&lt;/p&gt;
-&lt;hr /&gt;
+&lt;hr&gt;
+&lt;p&gt;&lt;img alt="" src="static/images/encoderProcess.png"&gt;&lt;/p&gt;
+&lt;hr&gt;
 &lt;p&gt;大体上就是从摄像头输出的YUV帧经过预处理之后，送入编码器，获得编码好的h264视频流。&lt;/p&gt;
 &lt;p&gt;上面只是针对视频流的编码，另外还需要对音频流单独录制，最后再将视频流和音频流进行合成出最终视频。&lt;/p&gt;
 &lt;p&gt;这篇文章主要将会对视频流的编码中两个常见问题进行分析：&lt;/p&gt;
@@ -131,7 +419,7 @@
 &lt;li&gt;视频编码器的选择（硬编 or 软编）？&lt;/li&gt;
 &lt;li&gt;如何对摄像头输出的YUV帧进行快速预处理（镜像，缩放，旋转）？&lt;/li&gt;
 &lt;/ol&gt;
-&lt;hr /&gt;
+&lt;hr&gt;
 &lt;h3&gt;视频编码器的选择&lt;/h3&gt;
 &lt;p&gt;对于录制视频的需求，不少app都需要对每一帧数据进行单独处理，因此很少会直接用到&lt;code&gt;MediaRecorder&lt;/code&gt;来直接录取视频，一般来说，会有这么两个选择&lt;/p&gt;
 &lt;ul&gt;
@@ -139,10 +427,32 @@
 &lt;li&gt;FFMpeg+x264/openh264&lt;/li&gt;
 &lt;/ul&gt;
 &lt;p&gt;我们来逐个解析一下&lt;/p&gt;
-&lt;hr /&gt;
+&lt;hr&gt;
+&lt;h4&gt;MediaCodec&lt;/h4&gt;
+&lt;p&gt;MediaCodec是API 16之后Google推出的用于音视频编解码的一套偏底层的API，可以直接利用硬件加速进行视频的编解码。调用的时候需要先初始化MediaCodec作为视频的编码器 …&lt;/p&gt;</summary><content type="html">&lt;p&gt;Android的视频相关的开发，大概一直是整个Android生态，以及Android API中，最为分裂以及兼容性问题最为突出的一部分。摄像头，以及视频编码相关的API，Google一直对这方面的控制力非常差，导致不同厂商对这两个API的实现有不少差异，而且从API的设计来看，一直以来优化也相当有限，甚至有人认为这是“Android上最难用的API之一”&lt;/p&gt;
+&lt;p&gt;以微信为例，我们录制一个540p的mp4文件，对于Android来说，大体上是遵循这么一个流程：&lt;/p&gt;
+&lt;hr&gt;
+&lt;p&gt;&lt;img alt="" src="static/images/encoderProcess.png"&gt;&lt;/p&gt;
+&lt;hr&gt;
+&lt;p&gt;大体上就是从摄像头输出的YUV帧经过预处理之后，送入编码器，获得编码好的h264视频流。&lt;/p&gt;
+&lt;p&gt;上面只是针对视频流的编码，另外还需要对音频流单独录制，最后再将视频流和音频流进行合成出最终视频。&lt;/p&gt;
+&lt;p&gt;这篇文章主要将会对视频流的编码中两个常见问题进行分析：&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;视频编码器的选择（硬编 or 软编）？&lt;/li&gt;
+&lt;li&gt;如何对摄像头输出的YUV帧进行快速预处理（镜像，缩放，旋转）？&lt;/li&gt;
+&lt;/ol&gt;
+&lt;hr&gt;
+&lt;h3&gt;视频编码器的选择&lt;/h3&gt;
+&lt;p&gt;对于录制视频的需求，不少app都需要对每一帧数据进行单独处理，因此很少会直接用到&lt;code&gt;MediaRecorder&lt;/code&gt;来直接录取视频，一般来说，会有这么两个选择&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;MediaCodec&lt;/li&gt;
+&lt;li&gt;FFMpeg+x264/openh264&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;我们来逐个解析一下&lt;/p&gt;
+&lt;hr&gt;
 &lt;h4&gt;MediaCodec&lt;/h4&gt;
 &lt;p&gt;MediaCodec是API 16之后Google推出的用于音视频编解码的一套偏底层的API，可以直接利用硬件加速进行视频的编解码。调用的时候需要先初始化MediaCodec作为视频的编码器，然后只需要不停传入原始的YUV数据进入编码器就可以直接输出编码好的h264流，整个API设计模型来看，就是同时包含了输入端和输出端的两条队列：&lt;/p&gt;
-&lt;p&gt;&lt;img alt="" src="static/images/mediacodec_buffers.png" /&gt;&lt;/p&gt;
+&lt;p&gt;&lt;img alt="" src="static/images/mediacodec_buffers.png"&gt;&lt;/p&gt;
 &lt;p&gt;因此，作为编码器，输入端队列存放的就是原始YUV数据，输出端队列输出的就是编码好的h264流，作为解码器则对应相反。在调用的时候，MediaCodec提供了同步和异步两种调用方式，但是异步使用Callback的方式是在API 21之后才加入的，以同步调用为例，一般来说调用方式大概是这样（摘自官方例子）：&lt;/p&gt;
 &lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt; &lt;span class="n"&gt;MediaCodec&lt;/span&gt; &lt;span class="n"&gt;codec&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;MediaCodec&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="na"&gt;createByCodecName&lt;/span&gt;&lt;span class="o"&gt;(&lt;/span&gt;&lt;span class="n"&gt;name&lt;/span&gt;&lt;span class="o"&gt;);&lt;/span&gt;
  &lt;span class="n"&gt;codec&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="na"&gt;configure&lt;/span&gt;&lt;span class="o"&gt;(&lt;/span&gt;&lt;span class="n"&gt;format&lt;/span&gt;&lt;span class="o"&gt;,&lt;/span&gt; &lt;span class="err"&gt;…&lt;/span&gt;&lt;span class="o"&gt;);&lt;/span&gt;
@@ -229,7 +539,7 @@ if (h264type.eProfile != OMX_VIDEO_AVCProfileBaseline) {
 &lt;p&gt;很明显这还是因为厂商在实现这个API的时候，对传入的数据缺少校验以及前置处理导致的，目前来看，华为，三星的Soc出现这个问题会比较频繁，其他厂商的一些早期Soc也有这种问题，一般来说解决方法还是在设置视频宽高的时候，统一设置成对齐16位之后的大小就好了。&lt;/p&gt;
 &lt;/li&gt;
 &lt;/ol&gt;
-&lt;hr /&gt;
+&lt;hr&gt;
 &lt;h4&gt;FFMpeg+x264/openh264&lt;/h4&gt;
 &lt;p&gt;除了使用MediaCodec进行编码之外，另外一种比较流行的方案就是使用ffmpeg+x264/openh264进行软编码，ffmpeg是用于一些视频帧的预处理。这里主要是使用x264/openh264作为视频的编码器。&lt;/p&gt;
 &lt;p&gt;x264基本上被认为是当今市面上最快的商用视频编码器，而且基本上所有h264的特性都支持，通过合理配置各种参数还是能够得到较好的压缩率和编码速度的，限于篇幅，这里不再阐述h264的参数配置，有兴趣可以看下&lt;a href="https://www.nmm-hd.org/d/index.php?title=X264%E4%BD%BF%E7%94%A8%E4%BB%8B%E7%BB%8D&amp;amp;variant=zh-cn"&gt;这里&lt;/a&gt;和&lt;a href="http://www.cnblogs.com/wainiwann/p/5647521.html"&gt;这里&lt;/a&gt;对x264编码参数的调优。&lt;/p&gt;
@@ -242,7 +552,7 @@ if (h264type.eProfile != OMX_VIDEO_AVCProfileBaseline) {
 &lt;p&gt;从编码效率上来看，openh264的速度也并不会比x264快，不过其最大的好处，还是能够直接免费使用吧。&lt;/p&gt;
 &lt;h4&gt;软硬编对比&lt;/h4&gt;
 &lt;p&gt;从上面的分析来看，硬编的好处主要在于速度快，而且系统自带不需要引入外部的库，但是特性支持有限，而且硬编的压缩率一般偏低，而对于软编码来说，虽然速度较慢，但是压缩率比较高，而且支持的H264特性也会比硬编码多很多，相对来说比较可控。就可用性而言，在4.4+的系统上，MediaCodec的可用性是能够基本保证的，但是不同等级的机器的编码器能力会有不少差别，建议可以根据机器的配置，选择不同的编码器配置。&lt;/p&gt;
-&lt;hr /&gt;
+&lt;hr&gt;
 &lt;h3&gt;YUV帧的预处理&lt;/h3&gt;
 &lt;p&gt;根据最开始给出的流程，在送入编码器之前，我们需要先对摄像头输出的YUV帧进行一些前置处理&lt;/p&gt;
 &lt;p&gt;1.缩放&lt;/p&gt;
@@ -266,7 +576,7 @@ if (h264type.eProfile != OMX_VIDEO_AVCProfileBaseline) {
 
 &lt;p&gt;在nexus 6p上，直接使用ffmpeg来进行缩放的时间基本上都需要&lt;strong&gt;40ms+&lt;/strong&gt;，对于我们需要录制30fps的来说，每帧处理时间最多就30ms左右，如果光是缩放就消耗了如此多的时间，基本上录制出来的视频只能在15fps上下了。&lt;/p&gt;
 &lt;p&gt;很明显，直接使用ffmpeg进行缩放是在是太慢了，不得不说swsscale简直就是ffmpeg里面的渣渣，在对比了几种业界常用的算之后，我们最后考虑实现使用这种快速缩放的算法：&lt;/p&gt;
-&lt;p&gt;&lt;img alt="" src="static/images/frame_compress.png" /&gt;&lt;/p&gt;
+&lt;p&gt;&lt;img alt="" src="static/images/frame_compress.png"&gt;&lt;/p&gt;
 &lt;p&gt;我们选择一种叫做的&lt;strong&gt;局部均值&lt;/strong&gt;算法，前后两行四个临近点算出最终图片的四个像素点，对于源图片的每行像素，我们可以使用Neon直接实现，以缩放Y分量为例：&lt;/p&gt;
 &lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;    &lt;span class="nf"&gt;const&lt;/span&gt; &lt;span class="no"&gt;uint8&lt;/span&gt;&lt;span class="p"&gt;*&lt;/span&gt; &lt;span class="no"&gt;src_next&lt;/span&gt; &lt;span class="err"&gt;=&lt;/span&gt; &lt;span class="no"&gt;src_ptr&lt;/span&gt; &lt;span class="err"&gt;+&lt;/span&gt; &lt;span class="no"&gt;src_stride&lt;/span&gt;&lt;span class="c"&gt;;&lt;/span&gt;
     &lt;span class="no"&gt;asm&lt;/span&gt; &lt;span class="no"&gt;volatile&lt;/span&gt; &lt;span class="p"&gt;(&lt;/span&gt;
@@ -334,23 +644,34 @@ if (h264type.eProfile != OMX_VIDEO_AVCProfileBaseline) {
 
 
 &lt;p&gt;同样，剩余的数据用纯C代码实现就好了， 在nexus6p上，这种镜像翻转一帧1080x1920 YUV数据大概只要不到&lt;strong&gt;5ms&lt;/strong&gt;&lt;/p&gt;
-&lt;hr /&gt;
+&lt;hr&gt;
 &lt;p&gt;在编码好h264视频流之后，最终处理就是把音频流跟视频流合流然后包装到mp4文件，这部分我们可以通过系统的&lt;a href="https://developer.android.com/reference/android/media/MediaMuxer.html"&gt;MediaMuxer&lt;/a&gt;，&lt;a href="https://code.google.com/archive/p/mp4v2/"&gt;mp4v2&lt;/a&gt;，或者ffmpeg来实现，这部分比较简单，在这里就不再阐述了&lt;/p&gt;
-&lt;hr /&gt;
+&lt;hr&gt;
 &lt;p&gt;注：本文亦被发表在《程序员》以及WeMobileDev公众号上&lt;/p&gt;
-&lt;hr /&gt;
+&lt;hr&gt;
 &lt;h3&gt;References&lt;/h3&gt;
 &lt;ol&gt;
 &lt;li&gt;&lt;a href="http://blog.csdn.net/leixiaohua1020"&gt;雷霄骅(leixiaohua1020)的专栏&lt;/a&gt; ，大名鼎鼎雷神的博客，里面有非常多关于音视频编码/ffmpeg相关的学习资料，入门必备。也祝愿他能够在天堂安息吧&lt;/li&gt;
 &lt;li&gt;&lt;a href="http://bigflake.com/mediacodec/"&gt;Android MediaCodec stuff&lt;/a&gt;，包含了一些MediaCodec使用的示例代码，初次使用可以参考下这里&lt;/li&gt;
 &lt;li&gt;&lt;a href="https://community.arm.com/processors/b/blog/posts/coding-for-neon---part-1-load-and-stores"&gt;Coding for NEON&lt;/a&gt;，一个系列教程，讲述了一些常用Neon指令使用方法。上面在介绍缩放的时候使用到了Neon，事实上大部分音视频处理过程都会使用到，以YUV帧处理为例，缩放，旋转，镜像翻转都可以使用neon来做优化&lt;/li&gt;
 &lt;li&gt;&lt;a href="https://chromium.googlesource.com/libyuv/libyuv/"&gt;libyuv&lt;/a&gt;，Google开源的一个YUV处理库，上面只针对1080p-&amp;gt;540p视频帧缩放的算法，而对于通用的压缩处理，可以直接使用这里的实现，对比起ffmpeg的速度快上不少&lt;/li&gt;
-&lt;/ol&gt;</summary></entry><entry><title>如何获取Android系统中申请对象的信息</title><link href="http://ragnraok.github.io/get_android_alloc_object_info.html" rel="alternate"></link><published>2016-05-30T00:00:00+08:00</published><author><name>Ragnarok Zhou</name></author><id>tag:ragnraok.github.io,2016-05-30:get_android_alloc_object_info.html</id><summary type="html">&lt;p&gt;最近一直在做有关内存方面的优化工作，在做优化的过程，除了关注内存的申请量以及GC的情况之外，我们经常需要想方法找出是那些对象占用了大量内存，以及他们是如何导致GC的，这意味着我们需要获取对象申请的信息（大小，类型，堆栈等），我们这篇文章来介绍下几种获取对象申请信息的方法&lt;/p&gt;
+&lt;/ol&gt;</content></entry><entry><title>如何获取Android系统中申请对象的信息</title><link href="http://ragnraok.github.io/get_android_alloc_object_info.html" rel="alternate"></link><published>2016-05-30T00:00:00+08:00</published><updated>2016-05-30T00:00:00+08:00</updated><author><name>Ragnarok Zhou</name></author><id>tag:ragnraok.github.io,2016-05-30:/get_android_alloc_object_info.html</id><summary type="html">&lt;p&gt;最近一直在做有关内存方面的优化工作，在做优化的过程，除了关注内存的申请量以及GC的情况之外，我们经常需要想方法找出是那些对象占用了大量内存，以及他们是如何导致GC的，这意味着我们需要获取对象申请的信息（大小，类型，堆栈等），我们这篇文章来介绍下几种获取对象申请信息的方法&lt;/p&gt;
 &lt;h3&gt;Allocation Tracker&lt;/h3&gt;
 &lt;p&gt;Allocation Tracker是android studio自带的一个功能，我们可以在MemoryMonitor中打开使用：&lt;/p&gt;
-&lt;p&gt;&lt;img alt="" src="static/images/memorymonitor_1.jpeg" /&gt;&lt;/p&gt;
+&lt;p&gt;&lt;img alt="" src="static/images/memorymonitor_1.jpeg"&gt;&lt;/p&gt;
 &lt;p&gt;如上图，点击红框按钮，然后操作app，开始allocation tracking，当认为需要结束的时候，再次点击按钮，稍等片刻，即可以在android studio中dump出在 &lt;strong&gt;这段时间&lt;/strong&gt; 内 &lt;strong&gt;新申请&lt;/strong&gt; 对象的信息：&lt;/p&gt;
-&lt;p&gt;&lt;img alt="" src="static/images/memorymonitor_2.png" /&gt;&lt;/p&gt;
+&lt;p&gt;&lt;img alt="" src="static/images/memorymonitor_2.png"&gt;&lt;/p&gt;
+&lt;p&gt;这种使用方式相当直观，可以看到申请对象大小，数量，还有堆栈等，通过这些信息，我们可以作为我们接下来进行内存优化的参考&lt;/p&gt;
+&lt;p&gt;但是，对于这种获取申请对象信息的方法，会存在几个问题：&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;获取的信息过于分散，中间夹杂着不少其他的信息，不完全是app申请的，可能需要进行不少查找才能定位到具体的问题&lt;/li&gt;
+&lt;li&gt;跟TraceView一样，无法做到自动化分析，每次都需要开发者手工开始/结束，对于某些问题的分析可能会造成不便，而且对于批量分析来说也比较困难&lt;/li&gt;
+&lt;li&gt;虽然在allocation …&lt;/li&gt;&lt;/ol&gt;</summary><content type="html">&lt;p&gt;最近一直在做有关内存方面的优化工作，在做优化的过程，除了关注内存的申请量以及GC的情况之外，我们经常需要想方法找出是那些对象占用了大量内存，以及他们是如何导致GC的，这意味着我们需要获取对象申请的信息（大小，类型，堆栈等），我们这篇文章来介绍下几种获取对象申请信息的方法&lt;/p&gt;
+&lt;h3&gt;Allocation Tracker&lt;/h3&gt;
+&lt;p&gt;Allocation Tracker是android studio自带的一个功能，我们可以在MemoryMonitor中打开使用：&lt;/p&gt;
+&lt;p&gt;&lt;img alt="" src="static/images/memorymonitor_1.jpeg"&gt;&lt;/p&gt;
+&lt;p&gt;如上图，点击红框按钮，然后操作app，开始allocation tracking，当认为需要结束的时候，再次点击按钮，稍等片刻，即可以在android studio中dump出在 &lt;strong&gt;这段时间&lt;/strong&gt; 内 &lt;strong&gt;新申请&lt;/strong&gt; 对象的信息：&lt;/p&gt;
+&lt;p&gt;&lt;img alt="" src="static/images/memorymonitor_2.png"&gt;&lt;/p&gt;
 &lt;p&gt;这种使用方式相当直观，可以看到申请对象大小，数量，还有堆栈等，通过这些信息，我们可以作为我们接下来进行内存优化的参考&lt;/p&gt;
 &lt;p&gt;但是，对于这种获取申请对象信息的方法，会存在几个问题：&lt;/p&gt;
 &lt;ol&gt;
@@ -730,14 +1051,21 @@ if (h264type.eProfile != OMX_VIDEO_AVCProfileBaseline) {
 
 
 &lt;p&gt;上面的&lt;code&gt;#include "Globals.h"&lt;/code&gt;是指Dalvik源码中的&lt;code&gt;Globals.h&lt;/code&gt;头文件， 另外这段Native的代码需要打包在某个app当中，然后在开启Allocation Tracker之后（之前介绍的随便一种方法都可以），运行这段代码，那么&lt;code&gt;t_gDvm-&amp;gt;allocRecords&lt;/code&gt;中就是申请对象的数据了，可以直接读取里面的字段，打印出来大概是这样的：&lt;/p&gt;
-&lt;p&gt;&lt;img alt="" src="static/images/allocrecordjni.png" /&gt;&lt;/p&gt;
+&lt;p&gt;&lt;img alt="" src="static/images/allocrecordjni.png"&gt;&lt;/p&gt;
 &lt;p&gt;由于是直接读取Dalvik本身记录对象信息的结构，没有了结束Allocation Tracker时候把数据dump出来的请求，这意味着完全不会影响手机本身的性能，而且对于对象信息的获取，也能够更加的及时，例如说每隔10s把数据拿出来分析。相对来说，对于之前使用ddmlib的方案，10s定时请求这么高的频率，很有可能跑一会直接就把手机卡死了。&lt;/p&gt;
 &lt;p&gt;但是对于这种方案，会存在兼容性问题，这里可以看到，我们获取&lt;code&gt;gDvm&lt;/code&gt;变量的方式是用&lt;code&gt;dlsym&lt;/code&gt;系统调用直接拿出来，然后强转成&lt;code&gt;DvmGlobals&lt;/code&gt;类型，然而由于不同版本的Dalvik虚拟机中的&lt;code&gt;DvmGlobals&lt;/code&gt;的定义不一样，可能会造成拿出&lt;code&gt;gDvm&lt;/code&gt;这个符号之后，对应的&lt;code&gt;allocRecords&lt;/code&gt;字段并不是真正的在这台机器上的&lt;code&gt;allocRecords&lt;/code&gt;字段，出现数据的错乱，或者&lt;code&gt;gDvm-&amp;gt;allocRecords&lt;/code&gt;压根为NULL 。就目前的简单测试来，暂时只有MX3 4.4.4系统的flyme os能够正常操作，估计这里要适配大部分机器的话，工作量应该不少。&lt;/p&gt;
 &lt;h3&gt;Notes:&lt;/h3&gt;
 &lt;ol&gt;
 &lt;li&gt;关于Allocation Tracker在JVM层的响应，目前暂时只有Dalvik的分析，而ART对Allocation Tracker的处理似乎更加复杂，尚在研究中&lt;/li&gt;
 &lt;li&gt;这篇文章中的示例代码，可以从&lt;a href="https://github.com/ragnraok/AllocRecordDemo"&gt;这里&lt;/a&gt;拿到&lt;/li&gt;
-&lt;/ol&gt;</summary></entry><entry><title>Tricking Android MemoryFile</title><link href="http://ragnraok.github.io/tricking-android-memoryfile.html" rel="alternate"></link><published>2016-01-10T00:00:00+08:00</published><author><name>Ragnarok Zhou</name></author><id>tag:ragnraok.github.io,2016-01-10:tricking-android-memoryfile.html</id><summary type="html">&lt;p&gt;之前在做一个内存优化的时候，使用到了MemoryFile，由此发现了MemoryFile的一些特性以及一个非常trickly的使用方法，因此在这里记录一下&lt;/p&gt;
+&lt;/ol&gt;</content></entry><entry><title>Tricking Android MemoryFile</title><link href="http://ragnraok.github.io/tricking-android-memoryfile.html" rel="alternate"></link><published>2016-01-10T00:00:00+08:00</published><updated>2016-01-10T00:00:00+08:00</updated><author><name>Ragnarok Zhou</name></author><id>tag:ragnraok.github.io,2016-01-10:/tricking-android-memoryfile.html</id><summary type="html">&lt;p&gt;之前在做一个内存优化的时候，使用到了MemoryFile，由此发现了MemoryFile的一些特性以及一个非常trickly的使用方法，因此在这里记录一下&lt;/p&gt;
+&lt;h3&gt;What is it&lt;/h3&gt;
+&lt;p&gt;MemoryFile是android在最开始就引入的一套框架，其内部实际上是封装了android特有的内存共享机制&lt;a href="http://elinux.org/Android_Kernel_Features#ashmem"&gt;Ashmem&lt;/a&gt;匿名共享内存，简单来说，Ashmem在Android内核中是被注册成一个特殊的字符设备，Ashmem驱动通过在内核的一个自定义&lt;a href="https://en.wikipedia.org/wiki/Slab_allocation"&gt;slab&lt;/a&gt;缓冲区中初始化一段内存区域，然后通过mmap把申请的内存映射到用户的进程空间中（通过&lt;a href="https://en.wikipedia.org/wiki/Tmpfs"&gt;tmpfs&lt;/a&gt;），这样子就可以在用户进程中使用这里申请的内存了，另外，Ashmem的一个特性就是可以在系统内存不足的时候，回收掉被标记为"unpin"的内存，这个后面会讲到，另外，MemoryFile也可以通过Binder跨进程调用来让两个进程共享一段内存区域。由于整个申请内存的过程并不再Java层上，可以很明显的看出使用MemoryFile申请的内存实际上是&lt;strong&gt;并不会&lt;/strong&gt;占用Java堆内存的。&lt;/p&gt;
+&lt;p&gt;MemoryFile暴露出来的用户接口可以说跟他的名字一样，基本上跟我们平时的文件的读写基本一致，也可以使用InputStream和OutputStream来对其进行读写等操作：&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="n"&gt;MemoryFile&lt;/span&gt; &lt;span class="n"&gt;memoryFile&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="k"&gt;new&lt;/span&gt; &lt;span class="n"&gt;MemoryFile&lt;/span&gt;&lt;span class="o"&gt;(&lt;/span&gt;&lt;span class="kc"&gt;null&lt;/span&gt;&lt;span class="o"&gt;,&lt;/span&gt; &lt;span class="n"&gt;inputStream&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="na"&gt;available&lt;/span&gt;&lt;span class="o"&gt;());&lt;/span&gt;
+&lt;span class="n"&gt;memoryFile&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="na"&gt;allowPurging&lt;/span&gt;&lt;span class="o"&gt;(&lt;/span&gt;&lt;span class="kc"&gt;false&lt;/span&gt;&lt;span class="o"&gt;);&lt;/span&gt;
+&lt;span class="n"&gt;OutputStream&lt;/span&gt; &lt;span class="n"&gt;outputStream&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;memoryFile&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="na"&gt;getOutputStream&lt;/span&gt;&lt;span class="o"&gt;();&lt;/span&gt;
+&lt;span class="n"&gt;outputStream …&lt;/span&gt;&lt;/pre&gt;&lt;/div&gt;</summary><content type="html">&lt;p&gt;之前在做一个内存优化的时候，使用到了MemoryFile，由此发现了MemoryFile的一些特性以及一个非常trickly的使用方法，因此在这里记录一下&lt;/p&gt;
 &lt;h3&gt;What is it&lt;/h3&gt;
 &lt;p&gt;MemoryFile是android在最开始就引入的一套框架，其内部实际上是封装了android特有的内存共享机制&lt;a href="http://elinux.org/Android_Kernel_Features#ashmem"&gt;Ashmem&lt;/a&gt;匿名共享内存，简单来说，Ashmem在Android内核中是被注册成一个特殊的字符设备，Ashmem驱动通过在内核的一个自定义&lt;a href="https://en.wikipedia.org/wiki/Slab_allocation"&gt;slab&lt;/a&gt;缓冲区中初始化一段内存区域，然后通过mmap把申请的内存映射到用户的进程空间中（通过&lt;a href="https://en.wikipedia.org/wiki/Tmpfs"&gt;tmpfs&lt;/a&gt;），这样子就可以在用户进程中使用这里申请的内存了，另外，Ashmem的一个特性就是可以在系统内存不足的时候，回收掉被标记为"unpin"的内存，这个后面会讲到，另外，MemoryFile也可以通过Binder跨进程调用来让两个进程共享一段内存区域。由于整个申请内存的过程并不再Java层上，可以很明显的看出使用MemoryFile申请的内存实际上是&lt;strong&gt;并不会&lt;/strong&gt;占用Java堆内存的。&lt;/p&gt;
 &lt;p&gt;MemoryFile暴露出来的用户接口可以说跟他的名字一样，基本上跟我们平时的文件的读写基本一致，也可以使用InputStream和OutputStream来对其进行读写等操作：&lt;/p&gt;
@@ -752,10 +1080,10 @@ if (h264type.eProfile != OMX_VIDEO_AVCProfileBaseline) {
 &lt;h3&gt;Tricks&lt;/h3&gt;
 &lt;p&gt;MemoryFile是一个非常trickly的东西，由于并不占用Java堆内存，我们可以将一些对象用MemoryFile来保存起来避免GC，另外，这里可能android上有个BUG：&lt;/p&gt;
 &lt;p&gt;在4.4及其以上的系统中，如果在应用中使用了MemoryFile，那么在dumpsys meminfo的时候，可以看到多了一项Ashmem的值：&lt;/p&gt;
-&lt;p&gt;&lt;img alt="" src="static/images/memoryfile_1.jpg" /&gt;&lt;/p&gt;
+&lt;p&gt;&lt;img alt="" src="static/images/memoryfile_1.jpg"&gt;&lt;/p&gt;
 &lt;p&gt;可以看出来虽然MemoryFile申请的内存不计入Java堆也不计入Native堆中，但是占用了Ashmem的内存，这个实际上是算入了app当前占用的内存当中&lt;/p&gt;
 &lt;p&gt;但是在4.4以下的机器中时，使用MemoryFile申请的内存居然是&lt;strong&gt;不算入&lt;/strong&gt;app的内存中的：&lt;/p&gt;
-&lt;p&gt;&lt;img alt="" src="static/images/memoryfile_2.jpg" /&gt;&lt;/p&gt;
+&lt;p&gt;&lt;img alt="" src="static/images/memoryfile_2.jpg"&gt;&lt;/p&gt;
 &lt;p&gt;而且这里我也算过，也是不算入Native Heap中的，另外，这个时候去系统设置里面看进程的内存占用，也可以看出来其实并没有计入Ashmem的内存的&lt;/p&gt;
 &lt;p&gt;这个应该是android的一个BUG，但是我搜了一下并没有搜到对应的issue，搞不好这里也可能是一个feature&lt;/p&gt;
 &lt;p&gt;而在大名鼎鼎的Fresco当中，他们也有用到这个bug来避免在decode bitmap的时候，将文件的字节读到Java堆中，使用了MemoryFile，并利用了这个BUG然这部分内存不算入app中，这里分别对应了Fresco中的&lt;a href="https://github.com/facebook/fresco/blob/master/imagepipeline/src/main/java/com/facebook/imagepipeline/platform/GingerbreadPurgeableDecoder.java"&gt;GingerbreadPurgeableDecoder&lt;/a&gt;和&lt;a href="https://github.com/facebook/fresco/blob/master/imagepipeline/src/main/java/com/facebook/imagepipeline/platform/KitKatPurgeableDecoder.java"&gt;KitKatPurgeableDecoder&lt;/a&gt;，Fresco在decode图片的时候会在4.4和4.4以下的系统中分别使用这两个不同的decoder&lt;/p&gt;
@@ -765,8 +1093,28 @@ if (h264type.eProfile != OMX_VIDEO_AVCProfileBaseline) {
 &lt;h3&gt;References&lt;/h3&gt;
 &lt;ol&gt;
 &lt;li&gt;&lt;a href="http://blog.csdn.net/luoshengyang/article/details/6664554"&gt;Android系统匿名共享内存Ashmem（Anonymous Shared Memory）驱动程序源代码分析&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;&lt;a href="http://elinux.org/Android_Kernel_Features#ashmem"&gt;Android Kernel Features(Ashmem)&lt;/a&gt;&lt;/li&gt;
-&lt;/ol&gt;</summary></entry><entry><title>RxCamera, 一个RxJava风格的android camera封装</title><link href="http://ragnraok.github.io/rxcamera-introduce.html" rel="alternate"></link><published>2015-12-20T00:00:00+08:00</published><author><name>Ragnarok Zhou</name></author><id>tag:ragnraok.github.io,2015-12-20:rxcamera-introduce.html</id><summary type="html">&lt;p&gt;事实上这个库写了已经有一段时间了，由于最近工作上比较忙，所以现在才写一篇文章来总结&lt;/p&gt;
+&lt;li&gt;&lt;a href="http://elinux.org/Android_Kernel_Features#ashmem"&gt;Android Kernel Features(Ashmem)&lt;/a&gt;``&lt;/li&gt;
+&lt;/ol&gt;</content></entry><entry><title>RxCamera, 一个RxJava风格的android camera封装</title><link href="http://ragnraok.github.io/rxcamera-introduce.html" rel="alternate"></link><published>2015-12-20T00:00:00+08:00</published><updated>2015-12-20T00:00:00+08:00</updated><author><name>Ragnarok Zhou</name></author><id>tag:ragnraok.github.io,2015-12-20:/rxcamera-introduce.html</id><summary type="html">&lt;p&gt;事实上这个库写了已经有一段时间了，由于最近工作上比较忙，所以现在才写一篇文章来总结&lt;/p&gt;
+&lt;h3&gt;What's this&lt;/h3&gt;
+&lt;p&gt;正如标题所说，&lt;a href="https://github.com/ragnraok/RxCamera"&gt;RxCamera&lt;/a&gt;是一个基于RxJava而构建的一套&lt;a href="http://developer.android.com/intl/es/reference/android/hardware/Camera.html"&gt;android.hardware.camera&lt;/a&gt;封装的库。最初写这个库的目的是为了熟悉RxJava，并且而且也看到虽然在android开发已经有不少基于RxJava的库，但是关于音视频相关却少之又少，于是就动手实现了一下。目前这个库还处于非常早期的状态，API比较简陋，并且关于camera的设置还有很多没有做&lt;/p&gt;
+&lt;h3&gt;How to use&lt;/h3&gt;
+&lt;p&gt;在&lt;a href="https://github.com/ragnraok/RxCamera"&gt;RxCamera&lt;/a&gt;的README中已经有关于这个库使用的比较详细介绍了，我在这里再说明一下：&lt;/p&gt;
+&lt;h4&gt;加入依赖&lt;/h4&gt;
+&lt;p&gt;首先你需要在项目中加入对RxCamera项目的依赖:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;repositories {
+        jcenter()
+}
+dependencies {
+    compile &amp;#39;com.ragnarok.rxcamera:lib:0.0.1&amp;#39;
+}
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;h4&gt;基本的使用&lt;/h4&gt;
+&lt;ul&gt;
+&lt;li&gt;配置camera的参数&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;android的原生camera api提供了不少的选项来配置打开摄像头时候的参数，例如预览的帧率，预览的分辨率，自动对焦等，在RxCamera中主要是通过一个&lt;code&gt;RxCameraConfig&lt;/code&gt;对象来管理这些对象，并通过 …&lt;/p&gt;</summary><content type="html">&lt;p&gt;事实上这个库写了已经有一段时间了，由于最近工作上比较忙，所以现在才写一篇文章来总结&lt;/p&gt;
 &lt;h3&gt;What's this&lt;/h3&gt;
 &lt;p&gt;正如标题所说，&lt;a href="https://github.com/ragnraok/RxCamera"&gt;RxCamera&lt;/a&gt;是一个基于RxJava而构建的一套&lt;a href="http://developer.android.com/intl/es/reference/android/hardware/Camera.html"&gt;android.hardware.camera&lt;/a&gt;封装的库。最初写这个库的目的是为了熟悉RxJava，并且而且也看到虽然在android开发已经有不少基于RxJava的库，但是关于音视频相关却少之又少，于是就动手实现了一下。目前这个库还处于非常早期的状态，API比较简陋，并且关于camera的设置还有很多没有做&lt;/p&gt;
 &lt;h3&gt;How to use&lt;/h3&gt;
@@ -840,9 +1188,14 @@ dependencies {
 &lt;h3&gt;目前的状态&lt;/h3&gt;
 &lt;p&gt;很明显这个库目前还处于非常早期的状态，API还比较简单，并且很多摄像头的参数也没有加入到进行设置，例如白平衡，闪光灯，测光等，后续这里将会逐渐完善丰富摄像头的各种设置。另外，由于是完全基于RxJava来构建的库，大部分接口都会直接返回Observable对象，这对于没有熟悉RxJava的人来说可能还是会有点距离，因此这里后续对接口的封装还是需要继续改进，对外可能不再暴露Observable对象&lt;/p&gt;
 &lt;h3&gt;About camera2&lt;/h3&gt;
-&lt;p&gt;熟悉android开发的人估计都已经知道在Lollipop，Google新增一套&lt;a href="http://developer.android.com/intl/es/reference/android/hardware/camera2/package-summary.html"&gt;camera2&lt;/a&gt;API用以取代之前的camera API，camera2提供了对摄像头更加精细化的控制，相对来说比起老的API，对摄像头的可控程度高了非常多。但我个人觉得新的API还不是特别好用，并且由于目前还是比较新，在使用新的camera2 API的时候，&lt;a href="http://source.android.com/devices/camera/versioning.html#camera_api2_capabilities_and_support_levels"&gt;还需要查询手机上有哪些特性是有实现的&lt;/a&gt;，目前使用起来相当麻烦。所以RxCamera暂时还不打算支持camera2&lt;/p&gt;</summary></entry><entry><title>Project Lacie Initiate</title><link href="http://ragnraok.github.io/project-lacie-initiate.html" rel="alternate"></link><published>2015-08-17T00:00:00+08:00</published><author><name>Ragnarok Zhou</name></author><id>tag:ragnraok.github.io,2015-08-17:project-lacie-initiate.html</id><summary type="html">&lt;h3&gt;Motivation&lt;/h3&gt;
+&lt;p&gt;熟悉android开发的人估计都已经知道在Lollipop，Google新增一套&lt;a href="http://developer.android.com/intl/es/reference/android/hardware/camera2/package-summary.html"&gt;camera2&lt;/a&gt;API用以取代之前的camera API，camera2提供了对摄像头更加精细化的控制，相对来说比起老的API，对摄像头的可控程度高了非常多。但我个人觉得新的API还不是特别好用，并且由于目前还是比较新，在使用新的camera2 API的时候，&lt;a href="http://source.android.com/devices/camera/versioning.html#camera_api2_capabilities_and_support_levels"&gt;还需要查询手机上有哪些特性是有实现的&lt;/a&gt;，目前使用起来相当麻烦。所以RxCamera暂时还不打算支持camera2&lt;/p&gt;</content></entry><entry><title>Project Lacie Initiate</title><link href="http://ragnraok.github.io/project-lacie-initiate.html" rel="alternate"></link><published>2015-08-17T00:00:00+08:00</published><updated>2015-08-17T00:00:00+08:00</updated><author><name>Ragnarok Zhou</name></author><id>tag:ragnraok.github.io,2015-08-17:/project-lacie-initiate.html</id><summary type="html">&lt;h3&gt;Motivation&lt;/h3&gt;
 &lt;p&gt;我记得去年在组内介绍Annotation和&lt;a href="http://docs.oracle.com/javase/7/docs/technotes/guides/apt/"&gt;Annotation Process Tool&lt;/a&gt;的时候，当时不少小伙伴都认为这个是一个非常棒的工具，用来做代码生成非常合适，但是也存在不少问题，主要的争论点在于，对于大型的项目，其代码量非常大，无论是在IDE内或者在命令行中进行编译，即使只是普通的增量编译，打包，也需要耗上非常长的时间。而普通的APT则需要每次都先拉起一次编译过程，因为实际上整个Annotation Processing是Java编译中的一个&lt;a href="http://openjdk.java.net/groups/compiler/doc/compilation-overview/index.html"&gt;步骤&lt;/a&gt;，另外如果在Annotation Processing的过程中另外产生了新的代码的话，还需要重新编译生成的代码，这会导致整个编译过程变得更加漫长，如下图，为Java源码编译的过程，摘自OpenJDK官网。&lt;/p&gt;
-&lt;p&gt;&lt;img alt="" src="static/images/javac-flow.png" /&gt;&lt;/p&gt;
+&lt;p&gt;&lt;img alt="" src="static/images/javac-flow.png"&gt;&lt;/p&gt;
+&lt;p&gt;于是，后续我就逐渐开始想方法实现有一个类似Annotation Processor的API的工具，但并不需要拉起Javac进行编译，只需要输入源码即可，然后由开发者自行定义生成代码的规则，即可完成APT的功能。&lt;/p&gt;
+&lt;h3&gt;Research&lt;/h3&gt;
+&lt;p&gt;要实现这样的一个工具，最先迫切的就是需要一个语法解析器，这样子才能从源码中提取出所需要的信息。当时候的想法是自己来实现Tokenizer和Parser（真庆幸大学的时候教编译原理的灭绝大法师的训练，我还记得怎么写哈哈哈哈），但很快我就找到了&lt;a href="https://javacc.java.net/"&gt;JavaCC&lt;/a&gt;这个工具，这玩意可以说是Java编译器的生成工具，实际上Javac的前端也是这个东西来生成的。但是JavaCC生成的代码非常乱并且其API并不是很好用。当时候我想当JDK中一定是有单独Javac前端独立出来的，于是我又找到了JDK中的&lt;code&gt;tools …&lt;/code&gt;&lt;/p&gt;</summary><content type="html">&lt;h3&gt;Motivation&lt;/h3&gt;
+&lt;p&gt;我记得去年在组内介绍Annotation和&lt;a href="http://docs.oracle.com/javase/7/docs/technotes/guides/apt/"&gt;Annotation Process Tool&lt;/a&gt;的时候，当时不少小伙伴都认为这个是一个非常棒的工具，用来做代码生成非常合适，但是也存在不少问题，主要的争论点在于，对于大型的项目，其代码量非常大，无论是在IDE内或者在命令行中进行编译，即使只是普通的增量编译，打包，也需要耗上非常长的时间。而普通的APT则需要每次都先拉起一次编译过程，因为实际上整个Annotation Processing是Java编译中的一个&lt;a href="http://openjdk.java.net/groups/compiler/doc/compilation-overview/index.html"&gt;步骤&lt;/a&gt;，另外如果在Annotation Processing的过程中另外产生了新的代码的话，还需要重新编译生成的代码，这会导致整个编译过程变得更加漫长，如下图，为Java源码编译的过程，摘自OpenJDK官网。&lt;/p&gt;
+&lt;p&gt;&lt;img alt="" src="static/images/javac-flow.png"&gt;&lt;/p&gt;
 &lt;p&gt;于是，后续我就逐渐开始想方法实现有一个类似Annotation Processor的API的工具，但并不需要拉起Javac进行编译，只需要输入源码即可，然后由开发者自行定义生成代码的规则，即可完成APT的功能。&lt;/p&gt;
 &lt;h3&gt;Research&lt;/h3&gt;
 &lt;p&gt;要实现这样的一个工具，最先迫切的就是需要一个语法解析器，这样子才能从源码中提取出所需要的信息。当时候的想法是自己来实现Tokenizer和Parser（真庆幸大学的时候教编译原理的灭绝大法师的训练，我还记得怎么写哈哈哈哈），但很快我就找到了&lt;a href="https://javacc.java.net/"&gt;JavaCC&lt;/a&gt;这个工具，这玩意可以说是Java编译器的生成工具，实际上Javac的前端也是这个东西来生成的。但是JavaCC生成的代码非常乱并且其API并不是很好用。当时候我想当JDK中一定是有单独Javac前端独立出来的，于是我又找到了JDK中的&lt;code&gt;tools.jar&lt;/code&gt;（OSX下这文件在&lt;code&gt;/Library/Java/JavaVirtualMachines/jdk_version/Contents/Home/lib&lt;/code&gt;可以找到），这玩意就是JDK的编译器前端，实现了Tokenizer和Parser，另外还实现了一套visitor模式的API，让使用者可以很方便的遍历整棵抽象语法树。这个库实在是太棒了，当时候就写了一篇&lt;a href="http://ragnraok.github.io/using-jdk-parser.html"&gt;文章&lt;/a&gt;来介绍这个库的使用。&lt;/p&gt;
@@ -858,7 +1211,7 @@ dependencies {
 &lt;p&gt;更具体的支持以及对应的TODO，可以看下这里的&lt;a href="https://github.com/ragnraok/JParserUtil"&gt;README&lt;/a&gt;&lt;/p&gt;
 &lt;h3&gt;Another Beginning&lt;/h3&gt;
 &lt;p&gt;目前&lt;a href="https://github.com/ragnraok/JParserUtil"&gt;JParserUtil&lt;/a&gt;项目已经大致完成，因此这个不用拉起编译期的Annotation Processor Tool项目也正式开始的，我将其命名为&lt;a href="https://github.com/ragnraok/Lacie"&gt;Projecct Lacie&lt;/a&gt;：&lt;/p&gt;
-&lt;p&gt;&lt;img alt="" src="static/images/lacie.jpg" /&gt;&lt;/p&gt;
+&lt;p&gt;&lt;img alt="" src="static/images/lacie.jpg"&gt;&lt;/p&gt;
 &lt;p&gt;至于Lacie是谁，可以参考下&lt;a href="http://baike.baidu.com/view/9817779.htm?fromtitle=%E8%95%BE%E8%A5%BF&amp;amp;fromid=13003855&amp;amp;type=syn"&gt;蕾西·巴斯卡比鲁&lt;/a&gt;&lt;/p&gt;
 &lt;p&gt;项目已经正式开始，正在处于快速的开发中，目前的road map大致如下：&lt;/p&gt;
 &lt;ol&gt;
@@ -867,13 +1220,30 @@ dependencies {
 &lt;li&gt;为了证明其可行性，打算另外实现一些使用APT编写的库，例如在android开发领域中大名鼎鼎的&lt;a href="https://github.com/excilys/androidannotations"&gt;AndroidAnnotations&lt;/a&gt;，&lt;a href="https://github.com/square/dagger"&gt;dagger&lt;/a&gt;&lt;/li&gt;
 &lt;/ol&gt;
 &lt;p&gt;希望这个项目最后能被使用起来吧~，El Psy Congroo&lt;/p&gt;
-&lt;hr /&gt;
+&lt;hr&gt;
 &lt;h3&gt;References&lt;/h3&gt;
 &lt;ol&gt;
 &lt;li&gt;OpenJDK主页关于Java源码编译过程的介绍：&lt;a href="http://openjdk.java.net/groups/compiler/doc/compilation-overview/index.html"&gt;http://openjdk.java.net/groups/compiler/doc/compilation-overview/index.html&lt;/a&gt;&lt;/li&gt;
 &lt;li&gt;JavaCC主页：&lt;a href="https://javacc.java.net/"&gt;https://javacc.java.net/&lt;/a&gt;&lt;/li&gt;
 &lt;li&gt;之前写关于&lt;code&gt;tools.jar&lt;/code&gt;的介绍：&lt;a href="http://ragnraok.github.io/using-jdk-parser.html"&gt;http://ragnraok.github.io/using-jdk-parser.html&lt;/a&gt;&lt;/li&gt;
-&lt;/ol&gt;</summary></entry><entry><title>TextView预渲染研究</title><link href="http://ragnraok.github.io/textview-pre-render-research.html" rel="alternate"></link><published>2015-07-26T00:00:00+08:00</published><author><name>Ragnarok Zhou</name></author><id>tag:ragnraok.github.io,2015-07-26:textview-pre-render-research.html</id><summary type="html">&lt;p&gt;Android中的TextView是整个framework中最复杂的控件之一，负责Android中显示文本的大部分工作，framwork中的许多控件也直接或者间接的继承于TextView，例如Button，EditText等。其内部实现也相当复杂，单论代码行数来说，android-22中TextView有足足9509行，另外，TextView中许多操作都非常繁重，例如&lt;code&gt;setText&lt;/code&gt;操作，需要设置SpanWatcher，或者需要重现创建一个SpannableString，还需要根据情况重新创建Text Layout，这些操作加起来之后令一次setText操作非常耗时。为了提升TextView的渲染效率，最近研究了一下预渲染的方法，接下来给大家讲解一下原理。&lt;/p&gt;
+&lt;/ol&gt;</content></entry><entry><title>TextView预渲染研究</title><link href="http://ragnraok.github.io/textview-pre-render-research.html" rel="alternate"></link><published>2015-07-26T00:00:00+08:00</published><updated>2015-07-26T00:00:00+08:00</updated><author><name>Ragnarok Zhou</name></author><id>tag:ragnraok.github.io,2015-07-26:/textview-pre-render-research.html</id><summary type="html">&lt;p&gt;Android中的TextView是整个framework中最复杂的控件之一，负责Android中显示文本的大部分工作，framwork中的许多控件也直接或者间接的继承于TextView，例如Button，EditText等。其内部实现也相当复杂，单论代码行数来说，android-22中TextView有足足9509行，另外，TextView中许多操作都非常繁重，例如&lt;code&gt;setText&lt;/code&gt;操作，需要设置SpanWatcher，或者需要重现创建一个SpannableString，还需要根据情况重新创建Text Layout，这些操作加起来之后令一次setText操作非常耗时。为了提升TextView的渲染效率，最近研究了一下预渲染的方法，接下来给大家讲解一下原理。&lt;/p&gt;
+&lt;h3&gt;TextView渲染基本原理&lt;/h3&gt;
+&lt;p&gt;首先来介绍下TextView的基本渲染原理，总的来说，TextView中负责渲染文字的主要是这三个类：&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;a href="http://developer.android.com/intl/zh-cn/reference/android/text/BoringLayout.html"&gt;BoringLayout&lt;/a&gt; &lt;br /&gt;
+    主要负责显示单行文本，并提供了isBoring方法来判断是否满足单行文本的条件。&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;a href="http://developer.android.com/intl/zh-cn/reference/android/text/DynamicLayout.html"&gt;DynamicLayout&lt;/a&gt; &lt;br /&gt;
+    当文本为Spannable的时候，TextView就会使用它来负责文本的显示，在内部设置了SpanWatcher，当检测到span改变的时候，会进行reflow，重新计算布局。&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;a href="http://developer.android.com/intl/zh-cn/reference/android/text/StaticLayout.html"&gt;StaticLayout&lt;/a&gt; &lt;br /&gt;
+    当文本为非单行文本，且非Spannable的时候，就会使用StaticLayout，内部并不会监听span的变化，因此效率上会比DynamicLayout高，只需一次布局的创建即可，但其实内部也能显示SpannableString，只是不能在span变化之后重新进行布局而已。&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;另外，以上三个类都继承于&lt;a href="http://developer.android.com/intl/zh-cn/reference/android/text/Layout.html"&gt;Layout&lt;/a&gt;类，在此类中统一负责文本的具体绘制，在Layout …&lt;/p&gt;</summary><content type="html">&lt;p&gt;Android中的TextView是整个framework中最复杂的控件之一，负责Android中显示文本的大部分工作，framwork中的许多控件也直接或者间接的继承于TextView，例如Button，EditText等。其内部实现也相当复杂，单论代码行数来说，android-22中TextView有足足9509行，另外，TextView中许多操作都非常繁重，例如&lt;code&gt;setText&lt;/code&gt;操作，需要设置SpanWatcher，或者需要重现创建一个SpannableString，还需要根据情况重新创建Text Layout，这些操作加起来之后令一次setText操作非常耗时。为了提升TextView的渲染效率，最近研究了一下预渲染的方法，接下来给大家讲解一下原理。&lt;/p&gt;
 &lt;h3&gt;TextView渲染基本原理&lt;/h3&gt;
 &lt;p&gt;首先来介绍下TextView的基本渲染原理，总的来说，TextView中负责渲染文字的主要是这三个类：&lt;/p&gt;
 &lt;ol&gt;
@@ -948,13 +1318,32 @@ dependencies {
 &lt;p&gt;testcase的内容为，在一个ListView中，显示300个Item，每个item都是一段纯文本，里面全都是包含有大量ImageSpan的SpannableString，进行两边的对比，一边是直接使用StaticLayout，一边是使用普通的TextView，并且这300段文本不全相同，长度不同，随机生成，在StaticLayout的testcase中，StaticLayout都是预先在另外一个线程创建好之后才设置进去的，另外SpannableString也是预先生成好的。&lt;/p&gt;
 &lt;p&gt;另外，在这里为了模拟真实app繁重的后台工作，另外创建了3个线程，不停在做浮点预算以尝试抢占CPU资源。&lt;/p&gt;
 &lt;p&gt;测量性能的指标为，ListView连续向下滚动，测量其平均帧率为多少，分别测量五次，计算其平均值，最终性能测试结果如下：&lt;/p&gt;
-&lt;p&gt;&lt;img alt="" src="static/images/staticLayoutPerformance.png" /&gt;&lt;/p&gt;
+&lt;p&gt;&lt;img alt="" src="static/images/staticLayoutPerformance.png"&gt;&lt;/p&gt;
 &lt;p&gt;这里测试的机器是MX3，左侧是直接使用StaticLayout的方案，右侧是系统的默认方案，Y轴是FPS，可以看出来，使用优化之后的方案，帧率提升了许多。&lt;/p&gt;
 &lt;h3&gt;References&lt;/h3&gt;
 &lt;p&gt;&lt;a href="http://instagram-engineering.tumblr.com/post/114508858967/improving-comment-rendering-on-android"&gt;Improving Comment Rendering on Android&lt;/a&gt;   &lt;br /&gt;
-这篇文章介绍了Instagram如何优化他们的TextView渲染的效率，这也是这里优化方法的来源，Instagram也是直接使用StaticLayout并通过预先创建Layout的方法来减少了ListView滚动过程中的掉帧率，并且效果非常显著。这篇文章算是给出了这里的原理解析以及一个简单的实现&lt;/p&gt;</summary></entry><entry><title>使用Kotlin进行Android开发</title><link href="http://ragnraok.github.io/using-kotlin-to-write-android-app.html" rel="alternate"></link><published>2015-06-24T00:00:00+08:00</published><author><name>Ragnarok Zhou</name></author><id>tag:ragnraok.github.io,2015-06-24:using-kotlin-to-write-android-app.html</id><summary type="html">&lt;h3&gt;What is Kotlin&lt;/h3&gt;
+这篇文章介绍了Instagram如何优化他们的TextView渲染的效率，这也是这里优化方法的来源，Instagram也是直接使用StaticLayout并通过预先创建Layout的方法来减少了ListView滚动过程中的掉帧率，并且效果非常显著。这篇文章算是给出了这里的原理解析以及一个简单的实现&lt;/p&gt;</content></entry><entry><title>使用Kotlin进行Android开发</title><link href="http://ragnraok.github.io/using-kotlin-to-write-android-app.html" rel="alternate"></link><published>2015-06-24T00:00:00+08:00</published><updated>2015-06-24T00:00:00+08:00</updated><author><name>Ragnarok Zhou</name></author><id>tag:ragnraok.github.io,2015-06-24:/using-kotlin-to-write-android-app.html</id><summary type="html">&lt;h3&gt;What is Kotlin&lt;/h3&gt;
 &lt;p&gt;Kotlin，原意是在俄罗斯的一个&lt;a href="https://zh.wikipedia.org/wiki/%E7%A7%91%E7%89%B9%E6%9E%97%E5%B3%B6"&gt;小岛&lt;/a&gt;，JetBrain在2011年推出了以这个来命名的一个运行在JVM上的语言， 看上去有点类似C#和Scala的结合，并且同为静态类型，作为一门JVM上的语言，可以轻松兼容Java，并且整个语言设计的非常轻量。目前的版本为&lt;code&gt;0.12.200&lt;/code&gt;，尚未发布正式版。&lt;/p&gt;
-&lt;hr /&gt;
+&lt;hr&gt;
+&lt;p&gt;Kotlin的下载和配置在其&lt;a href="http://kotlinlang.org/docs/tutorials/getting-started.html"&gt;官网&lt;/a&gt;上有，在这里就不再赘述了，值得一提的是，作为JetBrains家出品的语言，自家的IDEA当然全力支持！&lt;/p&gt;
+&lt;h3&gt;基本语法介绍&lt;/h3&gt;
+&lt;p&gt;Kotlin的语法非常简洁，熟悉Java或者Scala的人都可以快速上手：&lt;/p&gt;
+&lt;h4&gt;函数声明：&lt;/h4&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;fun foo(va: Int): Int {
+    return 1
+}
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;p&gt;也可以单行声明：&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;fun foo(va: Int): Int = 1
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;p&gt;lambda当然也是支持的：&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;var c = {foo: Int -&amp;gt; println(foo …&lt;/pre&gt;&lt;/div&gt;</summary><content type="html">&lt;h3&gt;What is Kotlin&lt;/h3&gt;
+&lt;p&gt;Kotlin，原意是在俄罗斯的一个&lt;a href="https://zh.wikipedia.org/wiki/%E7%A7%91%E7%89%B9%E6%9E%97%E5%B3%B6"&gt;小岛&lt;/a&gt;，JetBrain在2011年推出了以这个来命名的一个运行在JVM上的语言， 看上去有点类似C#和Scala的结合，并且同为静态类型，作为一门JVM上的语言，可以轻松兼容Java，并且整个语言设计的非常轻量。目前的版本为&lt;code&gt;0.12.200&lt;/code&gt;，尚未发布正式版。&lt;/p&gt;
+&lt;hr&gt;
 &lt;p&gt;Kotlin的下载和配置在其&lt;a href="http://kotlinlang.org/docs/tutorials/getting-started.html"&gt;官网&lt;/a&gt;上有，在这里就不再赘述了，值得一提的是，作为JetBrains家出品的语言，自家的IDEA当然全力支持！&lt;/p&gt;
 &lt;h3&gt;基本语法介绍&lt;/h3&gt;
 &lt;p&gt;Kotlin的语法非常简洁，熟悉Java或者Scala的人都可以快速上手：&lt;/p&gt;
@@ -1102,7 +1491,7 @@ when (x) {
 
 
 &lt;p&gt;这大大的减少了我们写xxxUtils类的必要性&lt;/p&gt;
-&lt;hr /&gt;
+&lt;hr&gt;
 &lt;h3&gt;配置使用Kotlin进行Android开发&lt;/h3&gt;
 &lt;p&gt;使用Kotlin开发Android app的配置非常简单，按照&lt;a href="http://kotlinlang.org/docs/tutorials/kotlin-android.html"&gt;官方给出的配置即可&lt;/a&gt;，直接在Gradle的配置文件build.gradle中添加一个依赖：&lt;/p&gt;
 &lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;compile &amp;quot;org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version&amp;quot;
@@ -1117,7 +1506,7 @@ when (x) {
 &lt;p&gt;进行一次Gradle Sync之后，就可以直接在项目使用Kotlin编写代码了，另外，如果安装了Intellij的Kotlin插件，可以选择
 &lt;code&gt;Tools-&amp;gt;Kotlin-&amp;gt;Configure Kotlin in Project&lt;/code&gt;，就可以自动进行上述的配置，一步到位&lt;/p&gt;
 &lt;p&gt;我写了一个简单的Demo app放到了Github上，有兴趣可以看下使用Kotlin开发android app具体是怎样的：&lt;a href="https://github.com/ragnraok/MovieCamera"&gt;Demo地址&lt;/a&gt;&lt;/p&gt;
-&lt;hr /&gt;
+&lt;hr&gt;
 &lt;h3&gt;对于dex方法数目的影响&lt;/h3&gt;
 &lt;p&gt;dex有个65535方法数的限制，这对Android开发造成了很大的影响，在使用Kotlin进行android app开发的时候，需要将Kotlin的标准库打包进入apk中，这意味着如果标准库过大，对分包会造成很大的限制（因为这必须得打包在主dex中），所幸的是，Kotlin的哲学是“Java中有的，就尽量复用，不再自行创造一套”，使得整个Kotlin的标准库非常小，我们可以简单将Kotlin的标准库和其他比较常用库进行一下对比：&lt;/p&gt;
 &lt;table border="1" cellpadding="5"&gt;
@@ -1143,7 +1532,7 @@ when (x) {
 
 &lt;p&gt;&lt;br /&gt;
 可以看出来Kotlin的标准库相当小，只有7000多个方法，比support-v13和support-v4还小，这体现了Kotlin的设计哲学之一："100% interoperable with Java"，基本上Java已经有的，Kotlin会尽量复用。而对比来看，同样是JVM上的语言，我们也可以选择使用Scala来进行Android开发，但Scala标准库有5万多个方法，全部打包进主dex中，很容易就导致app爆主dex了。所以综合来看，轻量形的Kotlin还是相当适合进行Android开发的。&lt;/p&gt;
-&lt;hr /&gt;
+&lt;hr&gt;
 &lt;h3&gt;Project Anko&lt;/h3&gt;
 &lt;p&gt;&lt;a href="https://github.com/JetBrains/anko"&gt;Anko&lt;/a&gt; 是JetBrains推出的一个简化Android开发的库，同样由Kotlin来编写，主要的革命在于，声明UI的方式，完全抛弃了xml的使用，使用Anko，声明UI是这样做的：&lt;/p&gt;
 &lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;override fun onCreate(savedInstanceState: Bundle?) {
@@ -1192,13 +1581,23 @@ when (x) {
 &lt;li&gt;由于实际上全是由代码来布局，省去了解析xml的时间&lt;/li&gt;
 &lt;li&gt;xml本身有许多缺点，例如不可重用，非类型安全等，使用代码布局的话，我们可以很容易的就解决这个问题了&lt;/li&gt;
 &lt;/ul&gt;
-&lt;hr /&gt;
+&lt;hr&gt;
 &lt;h3&gt;Other References:&lt;/h3&gt;
 &lt;p&gt;这里列出一些国外的关于Kotlin的介绍文章：&lt;/p&gt;
 &lt;ul&gt;
 &lt;li&gt;&lt;a href="https://docs.google.com/document/d/1ReS3ep-hjxWA8kZi0YqDbEhCqTt29hG8P44aA9W0DM8/edit?hl=zh-CN&amp;amp;forcehl=1"&gt;Using Project Kotlin for Android&lt;/a&gt; Square的JakeWharton曾经考察过几种不同的语言来进行Android开发，最后还是认为Kotlin比较优秀&lt;/li&gt;
 &lt;li&gt;&lt;a href="http://blog.gouline.net/2014/08/31/kotlin-the-swift-of-android/"&gt;Kotlin, the Swift of Android&lt;/a&gt; 这篇文章把Kotlin比喻为Android上的swift，虽然比较老，但是也可以看做Kotlin的介绍性文章&lt;/li&gt;
-&lt;/ul&gt;</summary></entry><entry><title>使用JDK的Parser来解析Java源代码</title><link href="http://ragnraok.github.io/using-jdk-parser.html" rel="alternate"></link><published>2015-04-12T00:00:00+08:00</published><author><name>Ragnarok Zhou</name></author><id>tag:ragnraok.github.io,2015-04-12:using-jdk-parser.html</id><summary type="html">&lt;p&gt;在JDK中，自带了一套相关的编译API，可以在Java中发起编译流程，解析Java源文件然后获取其语法树，在JDK的&lt;code&gt;tools.jar&lt;/code&gt;（OSX下可以在/Library/Java/JavaVirtualMachines/jdk_version/Contents/Home/lib中找到）中包含着这整套API，但是这却不是Oracle和OpenJDK发布中的公开API，因此对于这套API，并没有官方的正式文档来进行说明。但是，也有不少项目利用了这套API来做了不少事情，例如大名鼎鼎的&lt;a href="https://github.com/rzwitserloot/lombok.git"&gt;lombok&lt;/a&gt;使用了这套API在Annotation Processing阶段修改了源代码中的语法树，最终结果相当于直接在源文件中插入了新的代码！&lt;/p&gt;
+&lt;/ul&gt;</content></entry><entry><title>使用JDK的Parser来解析Java源代码</title><link href="http://ragnraok.github.io/using-jdk-parser.html" rel="alternate"></link><published>2015-04-12T00:00:00+08:00</published><updated>2015-04-12T00:00:00+08:00</updated><author><name>Ragnarok Zhou</name></author><id>tag:ragnraok.github.io,2015-04-12:/using-jdk-parser.html</id><summary type="html">&lt;p&gt;在JDK中，自带了一套相关的编译API，可以在Java中发起编译流程，解析Java源文件然后获取其语法树，在JDK的&lt;code&gt;tools.jar&lt;/code&gt;（OSX下可以在/Library/Java/JavaVirtualMachines/jdk_version/Contents/Home/lib中找到）中包含着这整套API，但是这却不是Oracle和OpenJDK发布中的公开API，因此对于这套API，并没有官方的正式文档来进行说明。但是，也有不少项目利用了这套API来做了不少事情，例如大名鼎鼎的&lt;a href="https://github.com/rzwitserloot/lombok.git"&gt;lombok&lt;/a&gt;使用了这套API在Annotation Processing阶段修改了源代码中的语法树，最终结果相当于直接在源文件中插入了新的代码！&lt;/p&gt;
+&lt;p&gt;由于这套API目前缺少相关文档，使用起来比较困难，例如，解析源代码中的所有变量，并打印出来：&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="kr"&gt;public&lt;/span&gt; &lt;span class="kr"&gt;class&lt;/span&gt; &lt;span class="nx"&gt;JavaParser&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
+
+    &lt;span class="kr"&gt;private&lt;/span&gt; &lt;span class="kr"&gt;static&lt;/span&gt; &lt;span class="kr"&gt;final&lt;/span&gt; &lt;span class="nb"&gt;String&lt;/span&gt; &lt;span class="nx"&gt;path&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="s2"&gt;&amp;quot;User.java&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
+
+    &lt;span class="kr"&gt;private&lt;/span&gt; &lt;span class="nx"&gt;JavacFileManager&lt;/span&gt; &lt;span class="nx"&gt;fileManager&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
+    &lt;span class="kr"&gt;private&lt;/span&gt; &lt;span class="nx"&gt;JavacTool&lt;/span&gt; &lt;span class="nx"&gt;javacTool&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
+
+    &lt;span class="kr"&gt;public&lt;/span&gt; &lt;span class="nx"&gt;JavaParser&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
+        &lt;span class="nx"&gt;Context …&lt;/span&gt;&lt;/pre&gt;&lt;/div&gt;</summary><content type="html">&lt;p&gt;在JDK中，自带了一套相关的编译API，可以在Java中发起编译流程，解析Java源文件然后获取其语法树，在JDK的&lt;code&gt;tools.jar&lt;/code&gt;（OSX下可以在/Library/Java/JavaVirtualMachines/jdk_version/Contents/Home/lib中找到）中包含着这整套API，但是这却不是Oracle和OpenJDK发布中的公开API，因此对于这套API，并没有官方的正式文档来进行说明。但是，也有不少项目利用了这套API来做了不少事情，例如大名鼎鼎的&lt;a href="https://github.com/rzwitserloot/lombok.git"&gt;lombok&lt;/a&gt;使用了这套API在Annotation Processing阶段修改了源代码中的语法树，最终结果相当于直接在源文件中插入了新的代码！&lt;/p&gt;
 &lt;p&gt;由于这套API目前缺少相关文档，使用起来比较困难，例如，解析源代码中的所有变量，并打印出来：&lt;/p&gt;
 &lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="kr"&gt;public&lt;/span&gt; &lt;span class="kr"&gt;class&lt;/span&gt; &lt;span class="nx"&gt;JavaParser&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
 
@@ -1319,8 +1718,11 @@ when (x) {
 
 
 &lt;p&gt;可以看出我们把类名以及类中的变量都打印了出来。而在&lt;code&gt;visitClass&lt;/code&gt;方法中，我们可以通过&lt;code&gt;getMembers&lt;/code&gt;方法拿到类中所有的成员，包括变量，方法，annotation等，分别对应着不同的类型，例如变量就对应着&lt;code&gt;VariableTree&lt;/code&gt;类型，方法就对应的&lt;code&gt;MethodTree&lt;/code&gt;类型。&lt;/p&gt;
-&lt;hr /&gt;
-&lt;p&gt;总得来说，虽然实际上使用并不算特别复杂，但是由于缺少文档，对使用造成了很大的障碍，而且目前所介绍的只是这套API的一少部分，后续我将会继续研究这套API的相关函数。&lt;/p&gt;</summary></entry><entry><title>探索在Android中使用Emoji Font的方法</title><link href="http://ragnraok.github.io/android-emoji-font-method.html" rel="alternate"></link><published>2015-01-14T00:00:00+08:00</published><author><name>Ragnarok Zhou</name></author><id>tag:ragnraok.github.io,2015-01-14:android-emoji-font-method.html</id><summary type="html">&lt;p&gt;先说结论，在android4.4以前，无法使用像苹果那样的emoji字体样式，最简单的解决方案是使用ImageSpan配合SpannableString，而在4.4及之后的版本，则可以直接采用类似iOS/OSX的方案进行快速渲染。&lt;/p&gt;
+&lt;hr&gt;
+&lt;p&gt;总得来说，虽然实际上使用并不算特别复杂，但是由于缺少文档，对使用造成了很大的障碍，而且目前所介绍的只是这套API的一少部分，后续我将会继续研究这套API的相关函数。&lt;/p&gt;</content></entry><entry><title>探索在Android中使用Emoji Font的方法</title><link href="http://ragnraok.github.io/android-emoji-font-method.html" rel="alternate"></link><published>2015-01-14T00:00:00+08:00</published><updated>2015-01-14T00:00:00+08:00</updated><author><name>Ragnarok Zhou</name></author><id>tag:ragnraok.github.io,2015-01-14:/android-emoji-font-method.html</id><summary type="html">&lt;p&gt;先说结论，在android4.4以前，无法使用像苹果那样的emoji字体样式，最简单的解决方案是使用ImageSpan配合SpannableString，而在4.4及之后的版本，则可以直接采用类似iOS/OSX的方案进行快速渲染。&lt;/p&gt;
+&lt;h3&gt;Apple Color Emoji&lt;/h3&gt;
+&lt;p&gt;&lt;a href="http://zh.wikipedia.org/wiki/%E7%B9%AA%E6%96%87%E5%AD%97"&gt;Emoji&lt;/a&gt;表情，最初是从日本的“绘文字”演化过来，在没有正式定下规范之前，日本的三大电信运营商，NTT DoCoMo，au/KDDI，Softbank都各自有一套关于Emoji的编码规范，而且在这个时候，每个Emoji表情对应的表情图片也是没有统一规范的。这时候，应用最广泛的是应该的属于日本软银（Softbank）的Softbank编码了，在iOS系统的早期的版本上，采用的也是这个编码规范。&lt;/p&gt;
+&lt;p&gt;后来，在2010年10月，随着Unicode6.0的发布，Emoji的编码以及对应的表情图片正式被规范化，核心Emoji表情包含722个Emoji编码。而到了Unicode 7.0（2014年6月发行）之后，更多的Emoji表情被加入了进来，包括一些其他比较偏门的Emoji表情组，例如&lt;a href="http://en.wikipedia.org/wiki/Webdings"&gt;Webdings&lt;/a&gt;，&lt;a href="http://en.wikipedia.org/wiki/Wingdings"&gt;Wingdings&lt;/a&gt;，也被编入了Unicode 7 …&lt;/p&gt;</summary><content type="html">&lt;p&gt;先说结论，在android4.4以前，无法使用像苹果那样的emoji字体样式，最简单的解决方案是使用ImageSpan配合SpannableString，而在4.4及之后的版本，则可以直接采用类似iOS/OSX的方案进行快速渲染。&lt;/p&gt;
 &lt;h3&gt;Apple Color Emoji&lt;/h3&gt;
 &lt;p&gt;&lt;a href="http://zh.wikipedia.org/wiki/%E7%B9%AA%E6%96%87%E5%AD%97"&gt;Emoji&lt;/a&gt;表情，最初是从日本的“绘文字”演化过来，在没有正式定下规范之前，日本的三大电信运营商，NTT DoCoMo，au/KDDI，Softbank都各自有一套关于Emoji的编码规范，而且在这个时候，每个Emoji表情对应的表情图片也是没有统一规范的。这时候，应用最广泛的是应该的属于日本软银（Softbank）的Softbank编码了，在iOS系统的早期的版本上，采用的也是这个编码规范。&lt;/p&gt;
 &lt;p&gt;后来，在2010年10月，随着Unicode6.0的发布，Emoji的编码以及对应的表情图片正式被规范化，核心Emoji表情包含722个Emoji编码。而到了Unicode 7.0（2014年6月发行）之后，更多的Emoji表情被加入了进来，包括一些其他比较偏门的Emoji表情组，例如&lt;a href="http://en.wikipedia.org/wiki/Webdings"&gt;Webdings&lt;/a&gt;，&lt;a href="http://en.wikipedia.org/wiki/Wingdings"&gt;Wingdings&lt;/a&gt;，也被编入了Unicode 7.0规范，此时，整个Emoji编码集合已经有大概1000个左右，而在表情图片的规范上，除了我们常见的ios style之外，还有Android Style，Twitter Style等，在&lt;a href="http://apps.timwhitlock.info/emoji/tables/unicode"&gt;这里&lt;/a&gt;，有一份比较详细的Emoji表情列表，包含了不同的表情样式以及对应的编码。&lt;/p&gt;
@@ -1366,7 +1768,7 @@ when (x) {
 &lt;p&gt;其中&lt;code&gt;"Apple Color Emoji.ttf"&lt;/code&gt;请改成Apple Color Emoji.ttf这个文件对应的目录&lt;/p&gt;
 &lt;ul&gt;
 &lt;li&gt;执行脚本，然后我们看到在同目录下多了一个叫做&lt;code&gt;extracted&lt;/code&gt;文件夹，里面分别存放着不同分辨率的Emoji表情图片：&lt;br /&gt;
-&lt;img alt="" src="static/images/emojiFontList.png" /&gt; &lt;/li&gt;
+&lt;img alt="" src="static/images/emojiFontList.png"&gt; &lt;/li&gt;
 &lt;/ul&gt;
 &lt;p&gt;&lt;code&gt;set_**&lt;/code&gt;目录分辨对应不同的分辨率，可以看出，&lt;code&gt;Apple Color Emoji.ttf&lt;/code&gt;这个字体内嵌了多达8中不同分辨率的Emoji图片，难怪这个字体文件的大小达到了34M。&lt;/p&gt;
 &lt;p&gt;非常感谢这位程序员的工作，使得我们能够一窥这个字体的大致实现，但是很可惜，这个实现是苹果自己的私有标准，没有合入到OpenType的正式标准中，而苹果官方对这里的实现也没有更多的资料，所以具体的技术标准，目前暂时找不到更加详细的资料。&lt;/p&gt;
@@ -1387,9 +1789,9 @@ when (x) {
 &lt;p&gt;其中，这个项目的freetype以及skia的实现被带入了Android 4.4中，也就是说，在Android 4.4之后的版本，我们终于可以像iOS一样使用Color Emoji Font了！！&lt;/p&gt;
 &lt;h3&gt;Using in Android&lt;/h3&gt;
 &lt;p&gt;上文提到，在Android 4.4之后，Google终于支持了Color Emoji Font，实际上，如果你用的是Google输入法，则可以发现在这个面板上输入到所有Google Style的Emoji表情：&lt;/p&gt;
-&lt;p&gt;&lt;img alt="" src="static/images/googleIME.png" /&gt; &lt;/p&gt;
+&lt;p&gt;&lt;img alt="" src="static/images/googleIME.png"&gt; &lt;/p&gt;
 &lt;p&gt;但是，很明显，Google提供的Emoji字体的样式实在是太丑了，很多人还是喜欢原来苹果的Emoji样式：&lt;/p&gt;
-&lt;p&gt;&lt;img alt="" src="static/images/iosEmoji.jpg" /&gt; &lt;/p&gt;
+&lt;p&gt;&lt;img alt="" src="static/images/iosEmoji.jpg"&gt; &lt;/p&gt;
 &lt;p&gt;既然Android 4.4之后新增了Color Emoji Font的支持，根据上面的叙述，我们是否可以自己制作一个iOS Style Emoji字体给我们使用呢，答案当然是可以了，在xda论坛上，已经有人进行了这种&lt;a href="http://forum.xda-developers.com/showthread.php?t=2563757"&gt;尝试&lt;/a&gt;，原理是利用OSX中的&lt;code&gt;Apple Color Emoji.ttf&lt;/code&gt;提取出来的图片，然后使用FontTools以及&lt;a href="https://code.google.com/p/color-emoji/"&gt;color-emoji&lt;/a&gt;项目中的相关脚本即可生成对应的ttf文件。&lt;/p&gt;
 &lt;p&gt;由于整个生成过程比较复杂，涉及比较多的依赖，有兴趣的可以看下color-emoji项目中的example的Makefile文件的内容，可以看到每一步是怎么生成的，在这里由于篇幅有限就不再赘述了。根据此方法生成的ttf文件，大家可以在这里&lt;a href="http://pan.baidu.com/s/1kTLyqSB"&gt;下载&lt;/a&gt;&lt;/p&gt;
 &lt;p&gt;在生成了这个emoji字体文件之后，我们就可以直接在android中使用了，有以下两种方式：&lt;/p&gt;
@@ -1400,7 +1802,7 @@ when (x) {
 &lt;h4&gt;性能对比&lt;/h4&gt;
 &lt;p&gt;对比起使用SpannableString那一套，直接通过setTypeface来显示emoji文字的性能差距究竟有多少呢？接下来我们来简单的测试一下。&lt;/p&gt;
 &lt;p&gt;在测试用例的选择方面，我们选择一条3000多行的emoji表情字符串，算是一个非常极端例子（每个表情后面跟上一个换行符）：&lt;/p&gt;
-&lt;p&gt;&lt;img alt="" src="static/images/emojiFontTestCase.png" /&gt;&lt;/p&gt;
+&lt;p&gt;&lt;img alt="" src="static/images/emojiFontTestCase.png"&gt;&lt;/p&gt;
 &lt;p&gt;测试基准为，从&lt;code&gt;startActivity&lt;/code&gt;开始，到包含表情的Activity的中展示emoji的TextView第一次调用&lt;code&gt;dispatchDraw&lt;/code&gt;方法为止所消耗的时间，测试的环境为Nexus 5，Android 5.0，测试10次，计算平均时间：&lt;/p&gt;
 &lt;ul&gt;
 &lt;li&gt;使用Emoji Font，平均时间为&lt;strong&gt;433ms&lt;/strong&gt;&lt;/li&gt;
@@ -1415,11 +1817,11 @@ when (x) {
 &lt;li&gt;重造TextView，自行解析emoji符号，不使用SpannableString，而是直接画出来。使用这个方案之后，Emoji Font就不是必须的了，但重造TextView的成本也是太高了。&lt;/li&gt;
 &lt;/ul&gt;
 &lt;p&gt;因此，最终的结论仍然是开头中所说的，在android4.4以前，无法使用像iOS/OSX那样的Emoji Font，最简单的解决方案是使用ImageSpan配合SpannableString，而在4.4及之后的版本，则可以直接采用类似iOS/OSX的方案进行快速渲染。&lt;/p&gt;
-&lt;hr /&gt;
-&lt;p&gt;最后，祝愿Lollipop的光芒能够早日照亮天朝。&lt;/p&gt;</summary></entry><entry><title>Re:Blog</title><link href="http://ragnraok.github.io/re-blog.html" rel="alternate"></link><published>2015-01-02T00:00:00+08:00</published><author><name>Ragnarok Zhou</name></author><id>tag:ragnraok.github.io,2015-01-02:re-blog.html</id><summary type="html">&lt;p&gt;大二的时候，曾经写过一段时间的博客。当时还记得刚学python不久，兴高采烈的使用Django写了一个非常简单的博客引擎，在42qu买了个服务器，然后在Godaddy那里买了个域名，于是就火速在上面搭建了人生的第一个博客。&lt;/p&gt;
+&lt;hr&gt;
+&lt;p&gt;最后，祝愿Lollipop的光芒能够早日照亮天朝。&lt;/p&gt;</content></entry><entry><title>Re:Blog</title><link href="http://ragnraok.github.io/re-blog.html" rel="alternate"></link><published>2015-01-02T00:00:00+08:00</published><updated>2015-01-02T00:00:00+08:00</updated><author><name>Ragnarok Zhou</name></author><id>tag:ragnraok.github.io,2015-01-02:/re-blog.html</id><content type="html">&lt;p&gt;大二的时候，曾经写过一段时间的博客。当时还记得刚学python不久，兴高采烈的使用Django写了一个非常简单的博客引擎，在42qu买了个服务器，然后在Godaddy那里买了个域名，于是就火速在上面搭建了人生的第一个博客。&lt;/p&gt;
 &lt;p&gt;一晃过去，已经是两年的时间了，原来的博客早已废弃，已经很久没有在博客上写过文字了。&lt;/p&gt;
 &lt;p&gt;工作半年，这半年工作真的非常忙。越来越觉得缺少积累，而且慢慢地，也失去了当初在学校那种涉猎各种技术的激情，反而，作为Android开发者，在Android开发这里，进行了更加深入的研究。这让我想起了以前在学校有位老师跟我说过，在学校需要的时候更广的知识面，而到了工作，就需要更为深入的专研某个技术的实现，而对于Android以外的技术，已经没有那么多时间再去涉猎了，这或许是从BFS到DFS的转变吧。&lt;/p&gt;
 &lt;p&gt;在以前的博客，即使我成功地实现了某个函数也会记录下来，在这里，除了技术，或许我会在这里记录一些生活的细节吧。&lt;/p&gt;
 &lt;p&gt;思绪混乱，文笔一般，看客请注意。&lt;/p&gt;
 &lt;p&gt;已经是2015年了，新的一年，希望通过这个博客，能够有个新的开始吧。&lt;/p&gt;
-&lt;p&gt;&lt;em&gt;注：此博客由&lt;a href="https://github.com/getpelican/pelican"&gt;pelican&lt;/a&gt;搭建&lt;/em&gt;&lt;/p&gt;</summary></entry></feed>
+&lt;p&gt;&lt;em&gt;注：此博客由&lt;a href="https://github.com/getpelican/pelican"&gt;pelican&lt;/a&gt;搭建&lt;/em&gt;&lt;/p&gt;</content></entry></feed>

@@ -31,7 +31,7 @@
   <div class="entry-content">
     <h3>What is Kotlin</h3>
 <p>Kotlin，原意是在俄罗斯的一个<a href="https://zh.wikipedia.org/wiki/%E7%A7%91%E7%89%B9%E6%9E%97%E5%B3%B6">小岛</a>，JetBrain在2011年推出了以这个来命名的一个运行在JVM上的语言， 看上去有点类似C#和Scala的结合，并且同为静态类型，作为一门JVM上的语言，可以轻松兼容Java，并且整个语言设计的非常轻量。目前的版本为<code>0.12.200</code>，尚未发布正式版。</p>
-<hr />
+<hr>
 <p>Kotlin的下载和配置在其<a href="http://kotlinlang.org/docs/tutorials/getting-started.html">官网</a>上有，在这里就不再赘述了，值得一提的是，作为JetBrains家出品的语言，自家的IDEA当然全力支持！</p>
 <h3>基本语法介绍</h3>
 <p>Kotlin的语法非常简洁，熟悉Java或者Scala的人都可以快速上手：</p>
@@ -179,7 +179,7 @@ when (x) {
 
 
 <p>这大大的减少了我们写xxxUtils类的必要性</p>
-<hr />
+<hr>
 <h3>配置使用Kotlin进行Android开发</h3>
 <p>使用Kotlin开发Android app的配置非常简单，按照<a href="http://kotlinlang.org/docs/tutorials/kotlin-android.html">官方给出的配置即可</a>，直接在Gradle的配置文件build.gradle中添加一个依赖：</p>
 <div class="highlight"><pre><span></span>compile &quot;org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version&quot;
@@ -194,7 +194,7 @@ when (x) {
 <p>进行一次Gradle Sync之后，就可以直接在项目使用Kotlin编写代码了，另外，如果安装了Intellij的Kotlin插件，可以选择
 <code>Tools-&gt;Kotlin-&gt;Configure Kotlin in Project</code>，就可以自动进行上述的配置，一步到位</p>
 <p>我写了一个简单的Demo app放到了Github上，有兴趣可以看下使用Kotlin开发android app具体是怎样的：<a href="https://github.com/ragnraok/MovieCamera">Demo地址</a></p>
-<hr />
+<hr>
 <h3>对于dex方法数目的影响</h3>
 <p>dex有个65535方法数的限制，这对Android开发造成了很大的影响，在使用Kotlin进行android app开发的时候，需要将Kotlin的标准库打包进入apk中，这意味着如果标准库过大，对分包会造成很大的限制（因为这必须得打包在主dex中），所幸的是，Kotlin的哲学是“Java中有的，就尽量复用，不再自行创造一套”，使得整个Kotlin的标准库非常小，我们可以简单将Kotlin的标准库和其他比较常用库进行一下对比：</p>
 <table border="1" cellpadding="5">
@@ -220,7 +220,7 @@ when (x) {
 
 <p><br />
 可以看出来Kotlin的标准库相当小，只有7000多个方法，比support-v13和support-v4还小，这体现了Kotlin的设计哲学之一："100% interoperable with Java"，基本上Java已经有的，Kotlin会尽量复用。而对比来看，同样是JVM上的语言，我们也可以选择使用Scala来进行Android开发，但Scala标准库有5万多个方法，全部打包进主dex中，很容易就导致app爆主dex了。所以综合来看，轻量形的Kotlin还是相当适合进行Android开发的。</p>
-<hr />
+<hr>
 <h3>Project Anko</h3>
 <p><a href="https://github.com/JetBrains/anko">Anko</a> 是JetBrains推出的一个简化Android开发的库，同样由Kotlin来编写，主要的革命在于，声明UI的方式，完全抛弃了xml的使用，使用Anko，声明UI是这样做的：</p>
 <div class="highlight"><pre><span></span>override fun onCreate(savedInstanceState: Bundle?) {
@@ -269,7 +269,7 @@ when (x) {
 <li>由于实际上全是由代码来布局，省去了解析xml的时间</li>
 <li>xml本身有许多缺点，例如不可重用，非类型安全等，使用代码布局的话，我们可以很容易的就解决这个问题了</li>
 </ul>
-<hr />
+<hr>
 <h3>Other References:</h3>
 <p>这里列出一些国外的关于Kotlin的介绍文章：</p>
 <ul>
