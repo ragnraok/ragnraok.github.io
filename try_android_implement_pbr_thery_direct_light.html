@@ -182,6 +182,15 @@
 
 <p>有了F0之后，我们使用Fresnel-Schlick近似来计算菲涅尔方程的近似：</p>
 <p><img alt="" src="static/images/brdf_f_eq.png"></p>
+<p>在glsl中的实现则为：</p>
+<div class="highlight"><pre><span></span><span class="k">vec3</span> <span class="n">fresnelSchlick</span><span class="p">(</span><span class="k">float</span> <span class="n">cosTheta</span><span class="p">,</span> <span class="k">vec3</span> <span class="n">F0</span><span class="p">)</span>
+<span class="p">{</span>
+  <span class="k">return</span> <span class="n">F0</span> <span class="o">+</span> <span class="p">(</span><span class="mf">1.0</span> <span class="o">-</span> <span class="n">F0</span><span class="p">)</span> <span class="o">*</span> <span class="n">pow</span><span class="p">(</span><span class="mf">1.0</span> <span class="o">-</span> <span class="n">cosTheta</span><span class="p">,</span> <span class="mf">5.0</span><span class="p">);</span>
+<span class="p">}</span>
+</pre></div>
+
+
+<p>其中cosTheta则为HdotV</p>
 <p>终于，我们计算出了BRDF公式中的所有近似项，并且，我们有了两项粗糙度（Roughness）以及金属度（Metallic）两项额外的参数可以用于调整渲染效果，这两个参数的取值范围均为[0, 1]</p>
 <hr>
 <h2>直接光照明</h2>
