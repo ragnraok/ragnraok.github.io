@@ -4,58 +4,47 @@
         <title> Articles by Ragnarok Zhou - Ragnarok Note</title>
         <meta charset="utf-8" />
         <link href="//netdna.bootstrapcdn.com/bootstrap/3.0.0/css/bootstrap.min.css" rel="stylesheet" />
-        <link href="http://ragnraok.github.io/theme/static/css/style.css" rel="stylesheet" />
+        <link href="/theme/static/css/style.css" rel="stylesheet" />
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-        <link href="http://ragnraok.github.io/feeds/atom.xml" type="application/atom+xml" rel="alternate" title="Ragnarok Note Full Atom Feed" />
+        <link href="/feeds/atom.xml" type="application/atom+xml" rel="alternate" title="Ragnarok Note Full Atom Feed" />
     </head>
 
     <body id="index" class="archive">
         <div class="container">
             <div class="header">
                 <ul class="nav nav-pills pull-right">
-                    <li class=""><a href="http://ragnraok.github.io">Home</a></li>
-                    <li class="active"><a href="http://ragnraok.github.io/archives.html">Archives</a></li>
+                    <li class=""><a href="">Home</a></li>
+                    <li class="active"><a href="/archives.html">Archives</a></li>
                 </ul>
-                <h3 class="text-muted"><a href="http://ragnraok.github.io">Ragnarok Note</a></h3>
+                <h3 class="text-muted"><a href="">Ragnarok Note</a></h3>
 				<h2 class="text-muted"></h2>
              </div>
 <section id="content" class="content">
 <h2>Articles by Ragnarok Zhou</h2>
 
         <article class="hentry">
-                <header> <h2 class="entry-title"><a href="http://ragnraok.github.io/try_android_implement_pbr_thery_direct_light.html" rel="bookmark" title="Permalink to 尝试在Android中实现PBR管线——基本原理以及直接光照明">尝试在Android中实现PBR管线——基本原理以及直接光照明</a></h2> </header>
+                <header> <h2 class="entry-title"><a href="/try_android_implement_pbr_thery_direct_light.html" rel="bookmark" title="Permalink to 尝试在Android中实现PBR管线——基本原理以及直接光照明">尝试在Android中实现PBR管线——基本原理以及直接光照明</a></h2> </header>
                 <div class="entry-content"> <p>从本个世代起，基于物理的渲染（Physically Based Rendering，简称PBR）基本上就成为了事实上当下3A大作的渲染标准，自从迪士尼在在SIGGRAPH 2012上提出的著名的“迪士尼原则的BRDF”以及基于金属工作流来实现的方案，由于高度的易用性，美术设计师可以根据现实物理的参数来构建表面材质，可以实现惊人的显示效果，目前已经被广泛的在业界中使用</p>
 <p>这篇文章将会尝试在Android中基于Kotlin来实现PBR管线，在正式开始代码实现之前，我们先来讨论下PBR管线的基础理论。</p>
 <hr>
 <h2>Before PBR</h2>
 <p>首先我们来看看，在PBR出现之前，传统的Blinn-Phong光照是怎么做的，我们先来看看渲染方程：</p>
-<p><img alt="" src="static/images/Blinn_Phong.png"></p>
+<!-- ![](static/images/Blinn_Phong.png) -->
+
+<div class="math">$$L=Diffuse\ast N\cdot L+Specular+(N\cdot L)^{shiness}$$</div>
 <p>我们可以看到，光照颜色的输出，主要有两部分构成，<strong>漫反射</strong>项以及<strong>高光项</strong>，在渲染方程中：</p>
 <ul>
 <li>
-<p>Diffuse是漫反射颜色</p>
+<p><span class="math">\(Diffuse\)</span>是漫反射颜色</p>
 </li>
 <li>
-<p>Specular是高光颜色，或者叫做镜面反射的颜色</p>
+<p><span class="math">\(Specular\)</span>是高光颜色，或者叫做镜面反射的颜色</p>
 </li>
 <li>
-<p><img alt="" src="static/images/NdotL.png"> 是表面法向量跟光线方向向量的点乘</p>
-</li>
-<li>
-<p><img alt="" src="static/images/NdotH.png"> 是表面法向量跟半程向量（光线方向向量跟视角向量的中间向量）的点乘</p>
-</li>
-<li>
-<p>shiness是高光度的反光度参数，值越大，高光点越集中</p>
-</li>
-</ul>
-<p>这个是经典的Blinn-Phong光照模型的，除了这个基本公式以外，后续也有针对这个模型一些改进项，使其更加符合物理上的直觉效果</p>
-<p>这个光照模型并不复杂，但终究并非基于真实的物理参数进行材质的构建，实际渲染的时候往往得不到令人信服的效果。</p>
-<hr>
-<h2>PBR基础理论</h2>
-<p>接下来 …</p> </div><!-- entry-content -->
+<p><span class="math">\(N\cdot L …</span></p></li></ul> </div><!-- entry-content -->
         </article>
         <article class="hentry">
-                <header> <h2 class="entry-title"><a href="http://ragnraok.github.io/surface_display_lag.html" rel="bookmark" title="Permalink to 浅谈Android中Surface显示延迟处理">浅谈Android中Surface显示延迟处理</a></h2> </header>
+                <header> <h2 class="entry-title"><a href="/surface_display_lag.html" rel="bookmark" title="Permalink to 浅谈Android中Surface显示延迟处理">浅谈Android中Surface显示延迟处理</a></h2> </header>
                 <div class="entry-content"> <p>最近在使用GLES在Surface上渲染结果的时候，遇到了一个显示延迟的问题，当渲染时间过长，同时帧率要求比较高的时候，如果不加控制，就会造成显示的延迟，如果界面没有交互，倒是不会看出什么问题，如果是强交互的场景，这种情况下就会造成可感知的用户使用延迟了。处理这种情况的其中一种方式是给渲染的一帧赋予一个时间戳，用于给SurfaceFlinger进行对应的丢帧控制，具体什么原理呢，让我们一步一步来说明一下</p>
 <h3>Surface是什么？</h3>
 <hr>
@@ -71,7 +60,7 @@
 <p>SurfaceTexture是从Android 3 …</p></li></ul> </div><!-- entry-content -->
         </article>
         <article class="hentry">
-                <header> <h2 class="entry-title"><a href="http://ragnraok.github.io/android_video_record.html" rel="bookmark" title="Permalink to 谈谈关于Android视频编码的那些坑">谈谈关于Android视频编码的那些坑</a></h2> </header>
+                <header> <h2 class="entry-title"><a href="/android_video_record.html" rel="bookmark" title="Permalink to 谈谈关于Android视频编码的那些坑">谈谈关于Android视频编码的那些坑</a></h2> </header>
                 <div class="entry-content"> <p>Android的视频相关的开发，大概一直是整个Android生态，以及Android API中，最为分裂以及兼容性问题最为突出的一部分。摄像头，以及视频编码相关的API，Google一直对这方面的控制力非常差，导致不同厂商对这两个API的实现有不少差异，而且从API的设计来看，一直以来优化也相当有限，甚至有人认为这是“Android上最难用的API之一”</p>
 <p>以微信为例，我们录制一个540p的mp4文件，对于Android来说，大体上是遵循这么一个流程：</p>
 <hr>
@@ -97,7 +86,7 @@
 <p>MediaCodec是API 16之后Google推出的用于音视频编解码的一套偏底层的API，可以直接利用硬件加速进行视频的编解码。调用的时候需要先初始化MediaCodec作为视频的编码器 …</p> </div><!-- entry-content -->
         </article>
         <article class="hentry">
-                <header> <h2 class="entry-title"><a href="http://ragnraok.github.io/get_android_alloc_object_info.html" rel="bookmark" title="Permalink to 如何获取Android系统中申请对象的信息">如何获取Android系统中申请对象的信息</a></h2> </header>
+                <header> <h2 class="entry-title"><a href="/get_android_alloc_object_info.html" rel="bookmark" title="Permalink to 如何获取Android系统中申请对象的信息">如何获取Android系统中申请对象的信息</a></h2> </header>
                 <div class="entry-content"> <p>最近一直在做有关内存方面的优化工作，在做优化的过程，除了关注内存的申请量以及GC的情况之外，我们经常需要想方法找出是那些对象占用了大量内存，以及他们是如何导致GC的，这意味着我们需要获取对象申请的信息（大小，类型，堆栈等），我们这篇文章来介绍下几种获取对象申请信息的方法</p>
 <h3>Allocation Tracker</h3>
 <p>Allocation Tracker是android studio自带的一个功能，我们可以在MemoryMonitor中打开使用：</p>
@@ -112,7 +101,7 @@
 <li>虽然在allocation …</li></ol> </div><!-- entry-content -->
         </article>
         <article class="hentry">
-                <header> <h2 class="entry-title"><a href="http://ragnraok.github.io/tricking-android-memoryfile.html" rel="bookmark" title="Permalink to Tricking Android MemoryFile">Tricking Android MemoryFile</a></h2> </header>
+                <header> <h2 class="entry-title"><a href="/tricking-android-memoryfile.html" rel="bookmark" title="Permalink to Tricking Android MemoryFile">Tricking Android MemoryFile</a></h2> </header>
                 <div class="entry-content"> <p>之前在做一个内存优化的时候，使用到了MemoryFile，由此发现了MemoryFile的一些特性以及一个非常trickly的使用方法，因此在这里记录一下</p>
 <h3>What is it</h3>
 <p>MemoryFile是android在最开始就引入的一套框架，其内部实际上是封装了android特有的内存共享机制<a href="http://elinux.org/Android_Kernel_Features#ashmem">Ashmem</a>匿名共享内存，简单来说，Ashmem在Android内核中是被注册成一个特殊的字符设备，Ashmem驱动通过在内核的一个自定义<a href="https://en.wikipedia.org/wiki/Slab_allocation">slab</a>缓冲区中初始化一段内存区域，然后通过mmap把申请的内存映射到用户的进程空间中（通过<a href="https://en.wikipedia.org/wiki/Tmpfs">tmpfs</a>），这样子就可以在用户进程中使用这里申请的内存了，另外，Ashmem的一个特性就是可以在系统内存不足的时候，回收掉被标记为"unpin"的内存，这个后面会讲到，另外，MemoryFile也可以通过Binder跨进程调用来让两个进程共享一段内存区域。由于整个申请内存的过程并不再Java层上，可以很明显的看出使用MemoryFile申请的内存实际上是<strong>并不会</strong>占用Java堆内存的。</p>
@@ -125,16 +114,16 @@
 <div class="pager">
       <ul>
                         <li class="previous disabled"><a>← Previous</a></li>
-						<li class="next"><a href="http://ragnraok.github.io/author/ragnarok-zhou2.html">Next →</a></li>
+						<li class="next"><a href="/author/ragnarok-zhou2.html">Next →</a></li>
       </ul>
     </div>
 </section><!-- content -->
             <footer id="contentinfo" class="footer">
                     <nav class="pull-right bottom-nav">
-                        <a href="http://ragnraok.github.io/feeds/atom.xml">RSS</a>
+                        <a href="/feeds/atom.xml">RSS</a>
                     </nav>
                     <address id="about" class="vcard body">
-                    &copy; <a href="http://ragnraok.github.io">Ragnarok Note</a> Proudly powered by <a href="http://getpelican.com/">Pelican</a>
+                    &copy; <a href="">Ragnarok Note</a> Proudly powered by <a href="http://getpelican.com/">Pelican</a>
                     </address><!-- /#about -->
             </footer><!-- /#contentinfo -->
         </div><!-- container -->

@@ -59,6 +59,10 @@ body {
   margin-top: 28px;
 }
 
+.MathJax {
+  font-size: 1.5em;
+}
+
 /* Responsive: Portrait tablets and up */
 @media screen and (min-width: 768px) {
   /* Remove the padding we set earlier */
