@@ -1,5 +1,417 @@
 <?xml version="1.0" encoding="utf-8"?>
-<feed xmlns="http://www.w3.org/2005/Atom"><title>Ragnarok Note</title><link href="http://ragnraok.github.io/" rel="alternate"></link><link href="http://ragnraok.github.io/feeds/atom.xml" rel="self"></link><id>http://ragnraok.github.io/</id><updated>2019-08-18T00:00:00+08:00</updated><entry><title>尝试在Android中实现PBR管线——基本原理以及直接光照明</title><link href="http://ragnraok.github.io/try_android_implement_pbr_thery_direct_light.html" rel="alternate"></link><published>2019-08-18T00:00:00+08:00</published><updated>2019-08-18T00:00:00+08:00</updated><author><name>Ragnarok Zhou</name></author><id>tag:ragnraok.github.io,2019-08-18:/try_android_implement_pbr_thery_direct_light.html</id><summary type="html">&lt;p&gt;从本个世代起，基于物理的渲染（Physically Based Rendering，简称PBR）基本上就成为了事实上当下3A大作的渲染标准，自从迪士尼在在SIGGRAPH 2012上提出的著名的“迪士尼原则的BRDF”以及基于金属工作流来实现的方案，由于高度的易用性，美术设计师可以根据现实物理的参数来构建表面材质，可以实现惊人的显示效果，目前已经被广泛的在业界中使用&lt;/p&gt;
+<feed xmlns="http://www.w3.org/2005/Atom"><title>Ragnarok Note</title><link href="http://ragnraok.github.io/" rel="alternate"></link><link href="http://ragnraok.github.io/feeds/atom.xml" rel="self"></link><id>http://ragnraok.github.io/</id><updated>2019-08-28T00:00:00+08:00</updated><entry><title>尝试在Android中实现PBR管线——环境光照明</title><link href="http://ragnraok.github.io/try_android_implement_pbr_ambient_lighting.html" rel="alternate"></link><published>2019-08-28T00:00:00+08:00</published><updated>2019-08-28T00:00:00+08:00</updated><author><name>Ragnarok Zhou</name></author><id>tag:ragnraok.github.io,2019-08-28:/try_android_implement_pbr_ambient_lighting.html</id><summary type="html">&lt;p&gt;在上一篇文章中，我们讨论了PBR管线的基础理论，以及实现了场景中直接光（点光源/方向光源）照明的计算，对比与Blinn-Phong模型，PBR使用了微平面理论来对现实世界建模，而在BRDF项计算中，使用了法线分布函数/几何函数/菲涅尔方程构成的BRDF方程来计算光线对某种材质最终输出光照的影响。&lt;/p&gt;
+&lt;p&gt;但单纯看直接光照明，PBR管线似乎跟上一个世代的效果差不多，真正让PBR得到超越上一个世代效果的，是其环境光照明部分，所谓的&lt;strong&gt;动态全局光照&lt;/strong&gt;的实体&lt;/p&gt;
+&lt;p&gt;首先我们来重新看下，在直接光照明下，我们的渲染方程：&lt;/p&gt;
+&lt;div class="math"&gt;$$L=(K_{d}f_{lambert} + K_{s}f_{cook-torrance})L_{i}(w_{i}\cdot n)$$&lt;/div&gt;
+&lt;div class="math"&gt;$$L=(K_{d}\frac{diffuse}{\pi} +K_{s}\frac{DFG}{4(W_{o …&lt;/div&gt;</summary><content type="html">&lt;p&gt;在上一篇文章中，我们讨论了PBR管线的基础理论，以及实现了场景中直接光（点光源/方向光源）照明的计算，对比与Blinn-Phong模型，PBR使用了微平面理论来对现实世界建模，而在BRDF项计算中，使用了法线分布函数/几何函数/菲涅尔方程构成的BRDF方程来计算光线对某种材质最终输出光照的影响。&lt;/p&gt;
+&lt;p&gt;但单纯看直接光照明，PBR管线似乎跟上一个世代的效果差不多，真正让PBR得到超越上一个世代效果的，是其环境光照明部分，所谓的&lt;strong&gt;动态全局光照&lt;/strong&gt;的实体&lt;/p&gt;
+&lt;p&gt;首先我们来重新看下，在直接光照明下，我们的渲染方程：&lt;/p&gt;
+&lt;div class="math"&gt;$$L=(K_{d}f_{lambert} + K_{s}f_{cook-torrance})L_{i}(w_{i}\cdot n)$$&lt;/div&gt;
+&lt;div class="math"&gt;$$L=(K_{d}\frac{diffuse}{\pi} +K_{s}\frac{DFG}{4(W_{o}\cdot n)(W_{i}\cdot n)})L_{i}(w_{i}\cdot n)$$&lt;/div&gt;
+&lt;p&gt;这里我们只考虑了场景中的直接光源，但除了直接光源，场景中还会有来自环境本身的光源，如下图所示&lt;/p&gt;
+&lt;p&gt;&lt;img alt="" src="static/images/pbr_indirect_light.png"&gt;&lt;/p&gt;
+&lt;p&gt;场景中的环境光照是指，来自环境中各个方向的光源，照射到物体，然后反射到观察者方向的照相机中，在实际中，要计算总的反射光，我们会对于场景中的每个片断点，计算以片断点中法向量n为轴的半球体中所有入射光的总和：&lt;/p&gt;
+&lt;p&gt;&lt;img alt="" src="static/images/pbr_indirect_lignht_semisphere.jpg"&gt;&lt;/p&gt;
+&lt;p&gt;而在数学上，我们会使用半球积分来计算场景中所有环境光的总和：&lt;/p&gt;
+&lt;div class="math"&gt;$$L=\int_{\Omega }(K_{d}f_{lambert} + K_{s}f_{cook-torrance})L_{i}(w_{i}\cdot n)dw_{i}$$&lt;/div&gt;
+&lt;p&gt;可以看到因为是对所有方向入射光做计算，因此我们的被积变量是&lt;span class="math"&gt;\(w_{i}\)&lt;/span&gt;，另外，如果我们将公式整理简化一下表达：&lt;/p&gt;
+&lt;div class="math"&gt;$$L(p, w_{o})=\int_{\Omega }f_{r}(p, w_{i}, w_{o})L_{i}(w_{i}\cdot n)dw_{i}$$&lt;/div&gt;
+&lt;p&gt;（这里&lt;span class="math"&gt;\(p\)&lt;/span&gt;是要计算的片段点，&lt;span class="math"&gt;\(w_{o}\)&lt;/span&gt;是出射光的方向，&lt;span class="math"&gt;\(w_{i}\)&lt;/span&gt;是入射光的方向，&lt;span class="math"&gt;\(n\)&lt;/span&gt;则是法线，&lt;span class="math"&gt;\(f_{r}\)&lt;/span&gt;则是BRDF）&lt;/p&gt;
+&lt;p&gt;可以看出来，这个方程可以看做是标准&lt;a href="https://zh.wikipedia.org/wiki/%E6%B8%B2%E6%9F%93%E6%96%B9%E7%A8%8B"&gt;渲染方程&lt;/a&gt;的一个近似解&lt;/p&gt;
+&lt;h3&gt;完整的PBR渲染方程&lt;/h3&gt;
+&lt;p&gt;在加上了环境光之后，对于场景中某一点&lt;span class="math"&gt;\(p\)&lt;/span&gt;，想要得到最终的光照输出&lt;span class="math"&gt;\(L\)&lt;/span&gt;，完整的PBR渲染方程就变成了这样：&lt;/p&gt;
+&lt;div class="math"&gt;$$L(p, w_{o})=\int_{\Omega }f_{r}(p, w_{i}, w_{o})L_{i}(w_{i}\cdot n)dw_{i}$$&lt;/div&gt;
+&lt;p&gt;可以看到要真正计算完整的光照，外面是一个半球积分，然而，这个半球积分并没有解析解，而计算机是离散的，所以我们通常会采用某种&lt;strong&gt;采样&lt;/strong&gt;的方法，来近似计算积分的值：&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="k"&gt;int&lt;/span&gt; &lt;span class="n"&gt;steps&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="mi"&gt;100&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
+&lt;span class="k"&gt;float&lt;/span&gt; &lt;span class="n"&gt;sum&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="mf"&gt;0.0&lt;/span&gt;&lt;span class="n"&gt;f&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
+&lt;span class="k"&gt;vec3&lt;/span&gt; &lt;span class="n"&gt;P&lt;/span&gt;    &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="p"&gt;...;&lt;/span&gt;
+&lt;span class="k"&gt;vec3&lt;/span&gt; &lt;span class="n"&gt;Wo&lt;/span&gt;   &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="p"&gt;...;&lt;/span&gt;
+&lt;span class="k"&gt;vec3&lt;/span&gt; &lt;span class="n"&gt;N&lt;/span&gt;    &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="p"&gt;...;&lt;/span&gt;
+&lt;span class="k"&gt;float&lt;/span&gt; &lt;span class="n"&gt;dW&lt;/span&gt;  &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="mf"&gt;1.0&lt;/span&gt;&lt;span class="n"&gt;f&lt;/span&gt; &lt;span class="o"&gt;/&lt;/span&gt; &lt;span class="n"&gt;steps&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
+&lt;span class="k"&gt;for&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="k"&gt;int&lt;/span&gt; &lt;span class="n"&gt;i&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="mo"&gt;0&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt; &lt;span class="n"&gt;i&lt;/span&gt; &lt;span class="o"&gt;&amp;lt;&lt;/span&gt; &lt;span class="n"&gt;steps&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt; &lt;span class="o"&gt;++&lt;/span&gt;&lt;span class="n"&gt;i&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;span class="p"&gt;{&lt;/span&gt;
+    &lt;span class="k"&gt;vec3&lt;/span&gt; &lt;span class="n"&gt;Wi&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;getNextIncomingLightDir&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;i&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
+    &lt;span class="n"&gt;sum&lt;/span&gt; &lt;span class="o"&gt;+=&lt;/span&gt; &lt;span class="n"&gt;Fr&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;p&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;Wi&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;Wo&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="o"&gt;*&lt;/span&gt; &lt;span class="n"&gt;L&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;p&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;Wi&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="o"&gt;*&lt;/span&gt; &lt;span class="n"&gt;dot&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;N&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;Wi&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="o"&gt;*&lt;/span&gt; &lt;span class="n"&gt;dW&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
+&lt;span class="p"&gt;}&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;p&gt;为了计算这个积分的近似值，我们再将积分函数展开：&lt;/p&gt;
+&lt;div class="math"&gt;$$L(p, w_{o})=\int_{\Omega }(K_{d}f_{lambert} + K_{s}f_{cook-torrance})L_{i}(w_{i}\cdot n)dw_{i}$$&lt;/div&gt;
+&lt;p&gt;因为积分中漫反射跟高光部分是加法，我们可以对积分进行拆解：&lt;/p&gt;
+&lt;div class="math"&gt;$$L(p, w_{o})=\int_{\Omega }(K_{d}f_{lambert})L_{i}(w_{i}\cdot n)dw_{i} + \int_{\Omega }(K_{s}f_{cook-torrance})L_{i}(w_{i}\cdot n)dw_{i}$$&lt;/div&gt;
+&lt;p&gt;于是我们将积分拆解成了漫反射部分跟高光部分，我们拆开来，再将公式展开：&lt;/p&gt;
+&lt;p&gt;则漫反射部分为：
+&lt;/p&gt;
+&lt;div class="math"&gt;$$L(p, w_{o})=\int_{\Omega }(K_{d}\frac{diffuse}{\pi})L_{i}(w_{i}\cdot n)dw_{i}$$&lt;/div&gt;
+&lt;p&gt;高光部分为：&lt;/p&gt;
+&lt;div class="math"&gt;$$L(p, w_{o})=\int_{\Omega }(K_{s}\frac{DFG}{4(W_{o}\cdot n)(W_{i}\cdot n)})L_{i}(w_{i}\cdot n)dw_{i}$$&lt;/div&gt;
+&lt;p&gt;以上是渲染的方程，而在具体的工程实现上，我们对场景中环境光源的模拟，则使用所谓的&lt;strong&gt;Imaged Based Lighting(IBL)&lt;/strong&gt;，即为基于图片的光照，通过在场景中添加环境贴图，也就是cubemap，作为环境中的光源的采样来源，然后再来照明物体&lt;/p&gt;
+&lt;p&gt;接下来我们再分别对漫反射和高光部分的光照分别求解&lt;/p&gt;
+&lt;h3&gt;漫反射环境光照&lt;/h3&gt;
+&lt;p&gt;首先，对于场景中的某一点，漫反射部分光照的积分公式为：&lt;/p&gt;
+&lt;div class="math"&gt;$$L(p, w_{o})=\int_{\Omega }(K_{d}\frac{diffuse}{\pi})L_{i}(w_{i}\cdot n)dw_{i}$$&lt;/div&gt;
+&lt;p&gt;我们先把常量部分拆出来：&lt;/p&gt;
+&lt;div class="math"&gt;$$L(p, w_{o})=K_{d}\frac{diffuse}{\pi}\int_{\Omega }L_{i}(w_{i}\cdot n)dw_{i}$$&lt;/div&gt;
+&lt;p&gt;因为计算机是离散的，要直接计算这个积分是不可能的，因此，我们通过连续采样，然后计算平均值的方法，来近似的计算这个积分的值，我们参考&lt;a href="http://www.codinglabs.net/article_physically_based_rendering.aspx"&gt;这里&lt;/a&gt;的推导：&lt;/p&gt;
+&lt;p&gt;首先，我们将半球积分，转换成为普通的半球二重积分：&lt;/p&gt;
+&lt;div class="math"&gt;$$L(p, w_{o})=K_{d}\frac{diffuse}{\pi}\int_{-\pi}^{\pi}\int_{0}^{\frac{\pi}{2}}L_{i}cos(\theta _{i})sin(\theta _{i})d\phi _{i}$$&lt;/div&gt;
+&lt;p&gt;其中&lt;span class="math"&gt;\(\theta _{i}\)&lt;/span&gt;则为光线方向跟半球法线方向的夹角&lt;/p&gt;
+&lt;p&gt;然后，对于积分，计算机中常见的计算方式是，使用&lt;a href="https://en.wikipedia.org/wiki/Monte_Carlo_method"&gt;蒙特卡洛方法&lt;/a&gt;来近似计算，令我们在球坐标系下的两个方向上采样数为&lt;span class="math"&gt;\(N_{1}\)&lt;/span&gt;和&lt;span class="math"&gt;\(N_{2}\)&lt;/span&gt;，代入如下：&lt;/p&gt;
+&lt;div class="math"&gt;$$L(p, w_{o})=K_{d}\frac{diffuse}{\pi}\frac{2\pi}{N_{1}}\frac{\pi}{2N_{2}} L_{i}cos(\theta _{i})sin(\theta _{i})$$&lt;/div&gt;
+&lt;p&gt;
+消去多余项之后则如下
+&lt;/p&gt;
+&lt;div class="math"&gt;$$L(p, w_{o})=K_{d}\frac{\pi diffuse}{N_{1}N_{2}} L_{i}cos(\theta _{i})sin(\theta _{i})$$&lt;/div&gt;
+&lt;p&gt;
+我们稍微简化一下表达，令&lt;span class="math"&gt;\(c=diffuse\)&lt;/span&gt;：
+&lt;/p&gt;
+&lt;div class="math"&gt;$$L(p, w_{o})=K_{d}\frac{\pi c}{N_{1}N_{2}} L_{i}cos(\theta _{i})sin(\theta _{i})$$&lt;/div&gt;
+&lt;p&gt;得到了这个公式之后，我们实现就很明确了，因为想要计算的是环境的漫反射光照，因此：&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;&lt;span class="math"&gt;\(L_{i}\)&lt;/span&gt; 可以采样为环境中天空盒纹理中的颜色作为光照来源，这就是字面意义的&lt;strong&gt;基于图片的光照&lt;/strong&gt;，对于场景中的一点我们都通过积分计算得到了来自半球上各个方向的光照，对于PBR管线来说，需要在线性空间计算光照，因此天空盒的纹理必须是HDR图片，对于GLES来说，就是GL_RGB16F的颜色格式，否则最终渲染的结果，对比度会明显不够&lt;/li&gt;
+&lt;li&gt;对于这个公式，我们可以在当前片断方向周围进行连续采样来计算积分，采样次数越多，积分结果越准确&lt;/li&gt;
+&lt;li&gt;最终，我们可以通过对天空盒纹理上的每个片断进行各个方向上的连续采样，将得到的结果存储在另外一张cubemap纹理中，最终直接采样这张纹理即可作为环境中的漫反射光照了&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;上面计算的代码如下&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="k"&gt;vec3&lt;/span&gt; &lt;span class="n"&gt;N&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;normalize&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;WorldPos&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
+
+&lt;span class="k"&gt;vec3&lt;/span&gt; &lt;span class="n"&gt;irradiance&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="k"&gt;vec3&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="mf"&gt;0.0&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
+
+&lt;span class="c1"&gt;// tangent space calculation from origin point&lt;/span&gt;
+&lt;span class="k"&gt;vec3&lt;/span&gt; &lt;span class="n"&gt;up&lt;/span&gt;    &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="k"&gt;vec3&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="mf"&gt;0.0&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="mf"&gt;1.0&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="mf"&gt;0.0&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
+&lt;span class="k"&gt;vec3&lt;/span&gt; &lt;span class="n"&gt;right&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;cross&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;up&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;N&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
+&lt;span class="n"&gt;up&lt;/span&gt;            &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;cross&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;N&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;right&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
+
+&lt;span class="k"&gt;float&lt;/span&gt; &lt;span class="n"&gt;sampleDelta&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="mf"&gt;0.025&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
+&lt;span class="k"&gt;float&lt;/span&gt; &lt;span class="n"&gt;nrSamples&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="mf"&gt;0.0&lt;/span&gt;&lt;span class="n"&gt;f&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
+&lt;span class="k"&gt;for&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="k"&gt;float&lt;/span&gt; &lt;span class="n"&gt;phi&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="mf"&gt;0.0&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt; &lt;span class="n"&gt;phi&lt;/span&gt; &lt;span class="o"&gt;&amp;lt;&lt;/span&gt; &lt;span class="mf"&gt;2.0&lt;/span&gt; &lt;span class="o"&gt;*&lt;/span&gt; &lt;span class="n"&gt;PI&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt; &lt;span class="n"&gt;phi&lt;/span&gt; &lt;span class="o"&gt;+=&lt;/span&gt; &lt;span class="n"&gt;sampleDelta&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;span class="p"&gt;{&lt;/span&gt;
+    &lt;span class="k"&gt;for&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="k"&gt;float&lt;/span&gt; &lt;span class="n"&gt;theta&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="mf"&gt;0.0&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt; &lt;span class="n"&gt;theta&lt;/span&gt; &lt;span class="o"&gt;&amp;lt;&lt;/span&gt; &lt;span class="mf"&gt;0.5&lt;/span&gt; &lt;span class="o"&gt;*&lt;/span&gt; &lt;span class="n"&gt;PI&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt; &lt;span class="n"&gt;theta&lt;/span&gt; &lt;span class="o"&gt;+=&lt;/span&gt; &lt;span class="n"&gt;sampleDelta&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+    &lt;span class="p"&gt;{&lt;/span&gt;
+        &lt;span class="c1"&gt;// spherical to cartesian (in tangent space)&lt;/span&gt;
+        &lt;span class="k"&gt;vec3&lt;/span&gt; &lt;span class="n"&gt;tangentSample&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="k"&gt;vec3&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;sin&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;theta&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="o"&gt;*&lt;/span&gt; &lt;span class="n"&gt;cos&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;phi&lt;/span&gt;&lt;span class="p"&gt;),&lt;/span&gt;  &lt;span class="n"&gt;sin&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;theta&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="o"&gt;*&lt;/span&gt; &lt;span class="n"&gt;sin&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;phi&lt;/span&gt;&lt;span class="p"&gt;),&lt;/span&gt; &lt;span class="n"&gt;cos&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;theta&lt;/span&gt;&lt;span class="p"&gt;));&lt;/span&gt;
+        &lt;span class="c1"&gt;// tangent space to world&lt;/span&gt;
+        &lt;span class="k"&gt;vec3&lt;/span&gt; &lt;span class="n"&gt;sampleVec&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;tangentSample&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;x&lt;/span&gt; &lt;span class="o"&gt;*&lt;/span&gt; &lt;span class="n"&gt;right&lt;/span&gt; &lt;span class="o"&gt;+&lt;/span&gt; &lt;span class="n"&gt;tangentSample&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;y&lt;/span&gt; &lt;span class="o"&gt;*&lt;/span&gt; &lt;span class="n"&gt;up&lt;/span&gt; &lt;span class="o"&gt;+&lt;/span&gt; &lt;span class="n"&gt;tangentSample&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;z&lt;/span&gt; &lt;span class="o"&gt;*&lt;/span&gt; &lt;span class="n"&gt;N&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
+
+        &lt;span class="n"&gt;irradiance&lt;/span&gt; &lt;span class="o"&gt;+=&lt;/span&gt; &lt;span class="n"&gt;texture&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;environmentMap&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;sampleVec&lt;/span&gt;&lt;span class="p"&gt;).&lt;/span&gt;&lt;span class="n"&gt;rgb&lt;/span&gt; &lt;span class="o"&gt;*&lt;/span&gt; &lt;span class="n"&gt;cos&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;theta&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="o"&gt;*&lt;/span&gt; &lt;span class="n"&gt;sin&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;theta&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
+        &lt;span class="n"&gt;nrSamples&lt;/span&gt;&lt;span class="o"&gt;++&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
+    &lt;span class="p"&gt;}&lt;/span&gt;
+&lt;span class="p"&gt;}&lt;/span&gt;
+&lt;span class="n"&gt;irradiance&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;PI&lt;/span&gt; &lt;span class="o"&gt;*&lt;/span&gt; &lt;span class="n"&gt;irradiance&lt;/span&gt; &lt;span class="o"&gt;*&lt;/span&gt; &lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="mf"&gt;1.0&lt;/span&gt; &lt;span class="o"&gt;/&lt;/span&gt; &lt;span class="k"&gt;float&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;nrSamples&lt;/span&gt;&lt;span class="p"&gt;));&lt;/span&gt;
+
+&lt;span class="n"&gt;FragColor&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="k"&gt;vec4&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;irradiance&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="mf"&gt;1.0&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;p&gt;将上面预采样的结果存储在另外一张cubemap纹理中，而在主shader中，我们对场景漫反射的采样只需要这样子计算就可以了：&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="k"&gt;vec3&lt;/span&gt; &lt;span class="n"&gt;irradiance&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;texture&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;irradianceMap&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;N&lt;/span&gt;&lt;span class="p"&gt;).&lt;/span&gt;&lt;span class="n"&gt;rgb&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
+&lt;span class="k"&gt;vec3&lt;/span&gt; &lt;span class="n"&gt;diffuse&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;irradiance&lt;/span&gt; &lt;span class="o"&gt;*&lt;/span&gt; &lt;span class="n"&gt;albedo&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;p&gt;预计算之后，我们得到了的纹理大概是这个样子的：&lt;/p&gt;
+&lt;p&gt;&lt;img alt="" src="static/images/ibl_irradiance.png"&gt;&lt;/p&gt;
+&lt;p&gt;做了积分之后，看出来图片跟类似做了卷积之后的结果有点类似，直接对右边图片采样，我们就可以得到对于场景中一点得到各个方向上漫反射的光照结果了，下图就是加了漫反射之后，在金属度为1.0，不同粗糙度下的渲染结果：&lt;/p&gt;
+&lt;p&gt;&lt;img alt="" src="static/images/irradiance_ibl_render_result.png"&gt;&lt;/p&gt;
+&lt;p&gt;可以看到，因为有了漫反射光照，我们渲染的结果比原来稍微亮了一些&lt;/p&gt;
+&lt;p&gt;另外，除了直接计算，我们也可以利用&lt;a href="https://github.com/dariomanesku/cmft"&gt;cmft&lt;/a&gt;来生成这张预计算贴图：&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;cmft --input &lt;span class="s2"&gt;&amp;quot;xx.hdr&amp;quot;&lt;/span&gt;           &lt;span class="se"&gt;\&lt;/span&gt;
+            --filter irradiance               &lt;span class="se"&gt;\&lt;/span&gt;
+            --srcFaceSize &lt;span class="m"&gt;0&lt;/span&gt;                   &lt;span class="se"&gt;\&lt;/span&gt;
+            --dstFaceSize &lt;span class="m"&gt;256&lt;/span&gt;                   &lt;span class="se"&gt;\&lt;/span&gt;
+            --outputNum &lt;span class="m"&gt;1&lt;/span&gt;                     &lt;span class="se"&gt;\&lt;/span&gt;
+            --output0 &lt;span class="s2"&gt;&amp;quot;xx_irradiance&amp;quot;&lt;/span&gt;         &lt;span class="se"&gt;\&lt;/span&gt;
+            --output0params dds,bgra8,cubemap
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;p&gt;这里最终会生成一张DDS格式的纹理，不过，在Android直接使用会有问题，这里会在文章后面说下这里的坑&lt;/p&gt;
+&lt;h3&gt;高光环境光照&lt;/h3&gt;
+&lt;p&gt;接下来我们再来继续实现高光部分，首先，我们再来看下高光部分的渲染方程为：&lt;/p&gt;
+&lt;div class="math"&gt;$$L(p, w_{o})=\int_{\Omega }(K_{s}\frac{DFG}{4(W_{o}\cdot n)(W_{i}\cdot n)})L_{i}(w_{i}\cdot n)dw_{i}$$&lt;/div&gt;
+&lt;p&gt;我们稍微简化下表达，把BRDF部分收回去：&lt;/p&gt;
+&lt;div class="math"&gt;$$L(p, w_{o})=\int_{\Omega }f_{r}(p, w_{i}, w_{o})L_{i}(w_{i}\cdot n)dw_{i}$$&lt;/div&gt;
+&lt;p&gt;可以看出来高光部分的积分要比漫反射部分复杂得多，无论是直接求解或者是直接应用蒙特卡洛积分计算都会变得相当复杂，而在很多游戏引擎中，为了求解，都会对这个积分进行拆解，变成两个积分的乘积来近似，这种方法叫做&lt;strong&gt;Split Sum Approximation&lt;/strong&gt;，拆解之后，我们的积分变成了这样子：&lt;/p&gt;
+&lt;div class="math"&gt;$$L(p, w_{o})=\int_{\Omega }L_{i}(w_{i}\cdot n)dw_{i} * \int_{\Omega }f_{r}(p, w_{i}, w_{o})(w_{i}\cdot n)dw_{i}$$&lt;/div&gt;
+&lt;p&gt;因此，我们的高光部分积分，就分成了两个部分&lt;/p&gt;
+&lt;h4&gt;预过滤环境贴图（Pre-filtered environment map）&lt;/h4&gt;
+&lt;div class="math"&gt;$$L(p, w_{o})=\int_{\Omega }L_{i}(w_{i}\cdot n)dw_{i}$$&lt;/div&gt;
+&lt;p&gt;类似针对漫反射光照的处理一样，对这个积分的计算，我们也采用蒙特卡洛积分来近似计算，但对于高光反射，我们会针对不同的粗糙度，生成不同大小的预计算纹理贴图，用来作为不同粗糙度下高光的环境光反射，这同样符合物理结果，粗糙度越高，对于高光反射越弱。而对于GLES来说，最合理的做法就是把不同粗糙度下的预计算结果存储在不同级别的mipMap level中，在使用的时候，再根据材质粗糙度插值来选取对应mipmap level的纹理：&lt;/p&gt;
+&lt;p&gt;&lt;img alt="" src="static/images/ibl_prefilter_map.png"&gt;&lt;/p&gt;
+&lt;p&gt;而在计算处理上，虽然我们也可以直接类似漫反射光照那样子，直接在半球空间内均匀采样然后再求值平均，但对于高光反射来说，由于表面粗糙度的影响，不同粗糙度的表面对光线的反射输出也不同&lt;/p&gt;
+&lt;p&gt;&lt;img alt="" src="static/images/ibl_specular_lobe.png"&gt;&lt;/p&gt;
+&lt;p&gt;可以看出来粗糙度越高的表面，反射的光线越分散，结合PBR的微表面模型，可以看出来对于某个片断点，高光反射的光线分布在半程向量的周围，因此我们可以结合粗糙度，以及法线分布函数，让计算时候的采样向量收敛在一个区间内，这就是&lt;strong&gt;重要性采样&lt;/strong&gt;，结合蒙特卡洛方法的公式如下:&lt;/p&gt;
+&lt;div class="math"&gt;$$\int_{a}^{b}f(x)dx=\frac{1}{N}\sum_{i=0}^{N-1}\frac{f(x)}{pdf(x)}$$&lt;/div&gt;
+&lt;p&gt;其中&lt;span class="math"&gt;\(pdf(x)\)&lt;/span&gt;为概率密度函数&lt;/p&gt;
+&lt;p&gt;因此，在得到采样点之后，我们的进行重要性采样计算代码为：&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="k"&gt;vec3&lt;/span&gt; &lt;span class="n"&gt;ImportanceSampleGGX&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="k"&gt;vec2&lt;/span&gt; &lt;span class="n"&gt;Xi&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="k"&gt;vec3&lt;/span&gt; &lt;span class="n"&gt;N&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="k"&gt;float&lt;/span&gt; &lt;span class="n"&gt;roughness&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;span class="p"&gt;{&lt;/span&gt;
+    &lt;span class="k"&gt;float&lt;/span&gt; &lt;span class="n"&gt;a&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;roughness&lt;/span&gt;&lt;span class="o"&gt;*&lt;/span&gt;&lt;span class="n"&gt;roughness&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
+
+    &lt;span class="k"&gt;float&lt;/span&gt; &lt;span class="n"&gt;phi&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="mf"&gt;2.0&lt;/span&gt; &lt;span class="o"&gt;*&lt;/span&gt; &lt;span class="n"&gt;PI&lt;/span&gt; &lt;span class="o"&gt;*&lt;/span&gt; &lt;span class="n"&gt;Xi&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;x&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
+    &lt;span class="k"&gt;float&lt;/span&gt; &lt;span class="n"&gt;cosTheta&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;sqrt&lt;/span&gt;&lt;span class="p"&gt;((&lt;/span&gt;&lt;span class="mf"&gt;1.0&lt;/span&gt; &lt;span class="o"&gt;-&lt;/span&gt; &lt;span class="n"&gt;Xi&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;y&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="o"&gt;/&lt;/span&gt; &lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="mf"&gt;1.0&lt;/span&gt; &lt;span class="o"&gt;+&lt;/span&gt; &lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;a&lt;/span&gt;&lt;span class="o"&gt;*&lt;/span&gt;&lt;span class="n"&gt;a&lt;/span&gt; &lt;span class="o"&gt;-&lt;/span&gt; &lt;span class="mf"&gt;1.0&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="o"&gt;*&lt;/span&gt; &lt;span class="n"&gt;Xi&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;y&lt;/span&gt;&lt;span class="p"&gt;));&lt;/span&gt;
+    &lt;span class="k"&gt;float&lt;/span&gt; &lt;span class="n"&gt;sinTheta&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;sqrt&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="mf"&gt;1.0&lt;/span&gt; &lt;span class="o"&gt;-&lt;/span&gt; &lt;span class="n"&gt;cosTheta&lt;/span&gt;&lt;span class="o"&gt;*&lt;/span&gt;&lt;span class="n"&gt;cosTheta&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
+
+    &lt;span class="c1"&gt;// from spherical coordinates to cartesian coordinates - halfway vector&lt;/span&gt;
+    &lt;span class="k"&gt;vec3&lt;/span&gt; &lt;span class="n"&gt;H&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
+    &lt;span class="n"&gt;H&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;x&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;cos&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;phi&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="o"&gt;*&lt;/span&gt; &lt;span class="n"&gt;sinTheta&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
+    &lt;span class="n"&gt;H&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;y&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;sin&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;phi&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="o"&gt;*&lt;/span&gt; &lt;span class="n"&gt;sinTheta&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
+    &lt;span class="n"&gt;H&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;z&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;cosTheta&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
+
+    &lt;span class="c1"&gt;// from tangent-space H vector to world-space sample vector&lt;/span&gt;
+    &lt;span class="k"&gt;vec3&lt;/span&gt; &lt;span class="n"&gt;up&lt;/span&gt;          &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;abs&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;N&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;z&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="o"&gt;&amp;lt;&lt;/span&gt; &lt;span class="mf"&gt;0.999&lt;/span&gt; &lt;span class="o"&gt;?&lt;/span&gt; &lt;span class="k"&gt;vec3&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="mf"&gt;0.0&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="mf"&gt;0.0&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="mf"&gt;1.0&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="o"&gt;:&lt;/span&gt; &lt;span class="k"&gt;vec3&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="mf"&gt;1.0&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="mf"&gt;0.0&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="mf"&gt;0.0&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
+    &lt;span class="k"&gt;vec3&lt;/span&gt; &lt;span class="n"&gt;tangent&lt;/span&gt;   &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;normalize&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;cross&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;up&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;N&lt;/span&gt;&lt;span class="p"&gt;));&lt;/span&gt;
+    &lt;span class="k"&gt;vec3&lt;/span&gt; &lt;span class="n"&gt;bitangent&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;cross&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;N&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;tangent&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
+
+    &lt;span class="k"&gt;vec3&lt;/span&gt; &lt;span class="n"&gt;sampleVec&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;tangent&lt;/span&gt; &lt;span class="o"&gt;*&lt;/span&gt; &lt;span class="n"&gt;H&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;x&lt;/span&gt; &lt;span class="o"&gt;+&lt;/span&gt; &lt;span class="n"&gt;bitangent&lt;/span&gt; &lt;span class="o"&gt;*&lt;/span&gt; &lt;span class="n"&gt;H&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;y&lt;/span&gt; &lt;span class="o"&gt;+&lt;/span&gt; &lt;span class="n"&gt;N&lt;/span&gt; &lt;span class="o"&gt;*&lt;/span&gt; &lt;span class="n"&gt;H&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;z&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
+    &lt;span class="k"&gt;return&lt;/span&gt; &lt;span class="n"&gt;normalize&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;sampleVec&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
+&lt;span class="p"&gt;}&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;p&gt;这里我们先得到的采样向量，然后计算出对应世界坐标系下的向量作为半程向量返回&lt;/p&gt;
+&lt;p&gt;这里我们还需要生成一个随机向量Xi，而对于蒙特卡洛积分来说，我们需要一种叫做&lt;strong&gt;低差异序列&lt;/strong&gt;的特殊随机数：&lt;/p&gt;
+&lt;p&gt;&lt;img alt="" src="static/images/ibl_low_discrepancy_sequence.png"&gt;&lt;/p&gt;
+&lt;p&gt;而在这里我们则使用所谓的Hammersley序列来生成，代码如下&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="c1"&gt;// ----------------------------------------------------------------------------&lt;/span&gt;
+&lt;span class="c1"&gt;// http://holger.dammertz.org/stuff/notes_HammersleyOnHemisphere.html&lt;/span&gt;
+&lt;span class="c1"&gt;// efficient VanDerCorpus calculation.&lt;/span&gt;
+&lt;span class="k"&gt;float&lt;/span&gt; &lt;span class="n"&gt;RadicalInverse_VdC&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;uint&lt;/span&gt; &lt;span class="n"&gt;bits&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;span class="p"&gt;{&lt;/span&gt;
+     &lt;span class="n"&gt;bits&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;bits&lt;/span&gt; &lt;span class="o"&gt;&amp;lt;&amp;lt;&lt;/span&gt; &lt;span class="mi"&gt;16&lt;/span&gt;&lt;span class="n"&gt;u&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="o"&gt;|&lt;/span&gt; &lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;bits&lt;/span&gt; &lt;span class="o"&gt;&amp;gt;&amp;gt;&lt;/span&gt; &lt;span class="mi"&gt;16&lt;/span&gt;&lt;span class="n"&gt;u&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
+     &lt;span class="n"&gt;bits&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="p"&gt;((&lt;/span&gt;&lt;span class="n"&gt;bits&lt;/span&gt; &lt;span class="o"&gt;&amp;amp;&lt;/span&gt; &lt;span class="mh"&gt;0x55555555&lt;/span&gt;&lt;span class="n"&gt;u&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="o"&gt;&amp;lt;&amp;lt;&lt;/span&gt; &lt;span class="mi"&gt;1&lt;/span&gt;&lt;span class="n"&gt;u&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="o"&gt;|&lt;/span&gt; &lt;span class="p"&gt;((&lt;/span&gt;&lt;span class="n"&gt;bits&lt;/span&gt; &lt;span class="o"&gt;&amp;amp;&lt;/span&gt; &lt;span class="mh"&gt;0xAAAAAAAA&lt;/span&gt;&lt;span class="n"&gt;u&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="o"&gt;&amp;gt;&amp;gt;&lt;/span&gt; &lt;span class="mi"&gt;1&lt;/span&gt;&lt;span class="n"&gt;u&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
+     &lt;span class="n"&gt;bits&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="p"&gt;((&lt;/span&gt;&lt;span class="n"&gt;bits&lt;/span&gt; &lt;span class="o"&gt;&amp;amp;&lt;/span&gt; &lt;span class="mh"&gt;0x33333333&lt;/span&gt;&lt;span class="n"&gt;u&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="o"&gt;&amp;lt;&amp;lt;&lt;/span&gt; &lt;span class="mi"&gt;2&lt;/span&gt;&lt;span class="n"&gt;u&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="o"&gt;|&lt;/span&gt; &lt;span class="p"&gt;((&lt;/span&gt;&lt;span class="n"&gt;bits&lt;/span&gt; &lt;span class="o"&gt;&amp;amp;&lt;/span&gt; &lt;span class="mh"&gt;0xCCCCCCCC&lt;/span&gt;&lt;span class="n"&gt;u&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="o"&gt;&amp;gt;&amp;gt;&lt;/span&gt; &lt;span class="mi"&gt;2&lt;/span&gt;&lt;span class="n"&gt;u&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
+     &lt;span class="n"&gt;bits&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="p"&gt;((&lt;/span&gt;&lt;span class="n"&gt;bits&lt;/span&gt; &lt;span class="o"&gt;&amp;amp;&lt;/span&gt; &lt;span class="mh"&gt;0x0F0F0F0F&lt;/span&gt;&lt;span class="n"&gt;u&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="o"&gt;&amp;lt;&amp;lt;&lt;/span&gt; &lt;span class="mi"&gt;4&lt;/span&gt;&lt;span class="n"&gt;u&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="o"&gt;|&lt;/span&gt; &lt;span class="p"&gt;((&lt;/span&gt;&lt;span class="n"&gt;bits&lt;/span&gt; &lt;span class="o"&gt;&amp;amp;&lt;/span&gt; &lt;span class="mh"&gt;0xF0F0F0F0&lt;/span&gt;&lt;span class="n"&gt;u&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="o"&gt;&amp;gt;&amp;gt;&lt;/span&gt; &lt;span class="mi"&gt;4&lt;/span&gt;&lt;span class="n"&gt;u&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
+     &lt;span class="n"&gt;bits&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="p"&gt;((&lt;/span&gt;&lt;span class="n"&gt;bits&lt;/span&gt; &lt;span class="o"&gt;&amp;amp;&lt;/span&gt; &lt;span class="mh"&gt;0x00FF00FF&lt;/span&gt;&lt;span class="n"&gt;u&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="o"&gt;&amp;lt;&amp;lt;&lt;/span&gt; &lt;span class="mi"&gt;8&lt;/span&gt;&lt;span class="n"&gt;u&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="o"&gt;|&lt;/span&gt; &lt;span class="p"&gt;((&lt;/span&gt;&lt;span class="n"&gt;bits&lt;/span&gt; &lt;span class="o"&gt;&amp;amp;&lt;/span&gt; &lt;span class="mh"&gt;0xFF00FF00&lt;/span&gt;&lt;span class="n"&gt;u&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="o"&gt;&amp;gt;&amp;gt;&lt;/span&gt; &lt;span class="mi"&gt;8&lt;/span&gt;&lt;span class="n"&gt;u&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
+     &lt;span class="k"&gt;return&lt;/span&gt; &lt;span class="k"&gt;float&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;bits&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="o"&gt;*&lt;/span&gt; &lt;span class="mf"&gt;2.3283064365386963e-10&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt; &lt;span class="c1"&gt;// / 0x100000000&lt;/span&gt;
+&lt;span class="p"&gt;}&lt;/span&gt;
+&lt;span class="c1"&gt;// ----------------------------------------------------------------------------&lt;/span&gt;
+&lt;span class="k"&gt;vec2&lt;/span&gt; &lt;span class="n"&gt;Hammersley&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;uint&lt;/span&gt; &lt;span class="n"&gt;i&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;uint&lt;/span&gt; &lt;span class="n"&gt;N&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;span class="p"&gt;{&lt;/span&gt;
+    &lt;span class="k"&gt;return&lt;/span&gt; &lt;span class="k"&gt;vec2&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="k"&gt;float&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;i&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;&lt;span class="o"&gt;/&lt;/span&gt;&lt;span class="k"&gt;float&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;N&lt;/span&gt;&lt;span class="p"&gt;),&lt;/span&gt; &lt;span class="n"&gt;RadicalInverse_VdC&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;i&lt;/span&gt;&lt;span class="p"&gt;));&lt;/span&gt;
+&lt;span class="p"&gt;}&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;p&gt;在得到了采样向量之后，我们就可以最终计算出预计算的结果了：&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="k"&gt;vec3&lt;/span&gt; &lt;span class="n"&gt;N&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;normalize&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;WorldPos&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
+
+&lt;span class="c1"&gt;// make the simplyfying assumption that V equals R equals the normal&lt;/span&gt;
+&lt;span class="k"&gt;vec3&lt;/span&gt; &lt;span class="n"&gt;R&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;N&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
+&lt;span class="k"&gt;vec3&lt;/span&gt; &lt;span class="n"&gt;V&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;R&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
+
+&lt;span class="k"&gt;const&lt;/span&gt; &lt;span class="n"&gt;uint&lt;/span&gt; &lt;span class="n"&gt;SAMPLE_COUNT&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="mi"&gt;1024&lt;/span&gt;&lt;span class="n"&gt;u&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
+&lt;span class="k"&gt;vec3&lt;/span&gt; &lt;span class="n"&gt;prefilteredColor&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="k"&gt;vec3&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="mf"&gt;0.0&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
+&lt;span class="k"&gt;float&lt;/span&gt; &lt;span class="n"&gt;totalWeight&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="mf"&gt;0.0&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
+
+&lt;span class="k"&gt;for&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;uint&lt;/span&gt; &lt;span class="n"&gt;i&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="mo"&gt;0&lt;/span&gt;&lt;span class="n"&gt;u&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt; &lt;span class="n"&gt;i&lt;/span&gt; &lt;span class="o"&gt;&amp;lt;&lt;/span&gt; &lt;span class="n"&gt;SAMPLE_COUNT&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt; &lt;span class="o"&gt;++&lt;/span&gt;&lt;span class="n"&gt;i&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;span class="p"&gt;{&lt;/span&gt;
+    &lt;span class="c1"&gt;// generates a sample vector that&amp;#39;s biased towards the preferred alignment direction (importance sampling).&lt;/span&gt;
+    &lt;span class="k"&gt;vec2&lt;/span&gt; &lt;span class="n"&gt;Xi&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;Hammersley&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;i&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;SAMPLE_COUNT&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
+    &lt;span class="k"&gt;vec3&lt;/span&gt; &lt;span class="n"&gt;H&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;ImportanceSampleGGX&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;Xi&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;N&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;roughness&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
+    &lt;span class="k"&gt;vec3&lt;/span&gt; &lt;span class="n"&gt;L&lt;/span&gt;  &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;normalize&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="mf"&gt;2.0&lt;/span&gt; &lt;span class="o"&gt;*&lt;/span&gt; &lt;span class="n"&gt;dot&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;V&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;H&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="o"&gt;*&lt;/span&gt; &lt;span class="n"&gt;H&lt;/span&gt; &lt;span class="o"&gt;-&lt;/span&gt; &lt;span class="n"&gt;V&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
+
+    &lt;span class="k"&gt;float&lt;/span&gt; &lt;span class="n"&gt;NdotL&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;max&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;dot&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;N&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;L&lt;/span&gt;&lt;span class="p"&gt;),&lt;/span&gt; &lt;span class="mf"&gt;0.0&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
+    &lt;span class="k"&gt;if&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;NdotL&lt;/span&gt; &lt;span class="o"&gt;&amp;gt;&lt;/span&gt; &lt;span class="mf"&gt;0.0&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+    &lt;span class="p"&gt;{&lt;/span&gt;
+        &lt;span class="c1"&gt;// sample from the environment&amp;#39;s mip level based on roughness/pdf&lt;/span&gt;
+        &lt;span class="k"&gt;float&lt;/span&gt; &lt;span class="n"&gt;D&lt;/span&gt;   &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;DistributionGGX&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;N&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;H&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;roughness&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
+        &lt;span class="k"&gt;float&lt;/span&gt; &lt;span class="n"&gt;NdotH&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;max&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;dot&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;N&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;H&lt;/span&gt;&lt;span class="p"&gt;),&lt;/span&gt; &lt;span class="mf"&gt;0.0&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
+        &lt;span class="k"&gt;float&lt;/span&gt; &lt;span class="n"&gt;HdotV&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;max&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;dot&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;H&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;V&lt;/span&gt;&lt;span class="p"&gt;),&lt;/span&gt; &lt;span class="mf"&gt;0.0&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
+        &lt;span class="k"&gt;float&lt;/span&gt; &lt;span class="n"&gt;pdf&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;D&lt;/span&gt; &lt;span class="o"&gt;*&lt;/span&gt; &lt;span class="n"&gt;NdotH&lt;/span&gt; &lt;span class="o"&gt;/&lt;/span&gt; &lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="mf"&gt;4.0&lt;/span&gt; &lt;span class="o"&gt;*&lt;/span&gt; &lt;span class="n"&gt;HdotV&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="o"&gt;+&lt;/span&gt; &lt;span class="mf"&gt;0.0001&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
+
+        &lt;span class="k"&gt;float&lt;/span&gt; &lt;span class="n"&gt;resolution&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="mf"&gt;512.0&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt; &lt;span class="c1"&gt;// resolution of source cubemap (per face)&lt;/span&gt;
+        &lt;span class="k"&gt;float&lt;/span&gt; &lt;span class="n"&gt;saTexel&lt;/span&gt;  &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="mf"&gt;4.0&lt;/span&gt; &lt;span class="o"&gt;*&lt;/span&gt; &lt;span class="n"&gt;PI&lt;/span&gt; &lt;span class="o"&gt;/&lt;/span&gt; &lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="err"&gt;$&lt;/span&gt;&lt;span class="p"&gt;{&lt;/span&gt;&lt;span class="n"&gt;RadianceMipmapLevel&lt;/span&gt; &lt;span class="o"&gt;-&lt;/span&gt; &lt;span class="mi"&gt;1&lt;/span&gt;&lt;span class="p"&gt;}&lt;/span&gt;&lt;span class="mf"&gt;.0&lt;/span&gt; &lt;span class="o"&gt;*&lt;/span&gt; &lt;span class="n"&gt;resolution&lt;/span&gt; &lt;span class="o"&gt;*&lt;/span&gt; &lt;span class="n"&gt;resolution&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
+        &lt;span class="k"&gt;float&lt;/span&gt; &lt;span class="n"&gt;saSample&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="mf"&gt;1.0&lt;/span&gt; &lt;span class="o"&gt;/&lt;/span&gt; &lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="k"&gt;float&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;SAMPLE_COUNT&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="o"&gt;*&lt;/span&gt; &lt;span class="n"&gt;pdf&lt;/span&gt; &lt;span class="o"&gt;+&lt;/span&gt; &lt;span class="mf"&gt;0.0001&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
+
+        &lt;span class="k"&gt;float&lt;/span&gt; &lt;span class="n"&gt;mipLevel&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;roughness&lt;/span&gt; &lt;span class="o"&gt;==&lt;/span&gt; &lt;span class="mf"&gt;0.0&lt;/span&gt; &lt;span class="o"&gt;?&lt;/span&gt; &lt;span class="mf"&gt;0.0&lt;/span&gt; &lt;span class="o"&gt;:&lt;/span&gt; &lt;span class="mf"&gt;0.5&lt;/span&gt; &lt;span class="o"&gt;*&lt;/span&gt; &lt;span class="n"&gt;log2&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;saSample&lt;/span&gt; &lt;span class="o"&gt;/&lt;/span&gt; &lt;span class="n"&gt;saTexel&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
+
+        &lt;span class="n"&gt;prefilteredColor&lt;/span&gt; &lt;span class="o"&gt;+=&lt;/span&gt; &lt;span class="n"&gt;texture&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;environmentMap&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;L&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;mipLevel&lt;/span&gt;&lt;span class="p"&gt;).&lt;/span&gt;&lt;span class="n"&gt;rgb&lt;/span&gt; &lt;span class="o"&gt;*&lt;/span&gt; &lt;span class="n"&gt;NdotL&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
+        &lt;span class="n"&gt;totalWeight&lt;/span&gt;      &lt;span class="o"&gt;+=&lt;/span&gt; &lt;span class="n"&gt;NdotL&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
+    &lt;span class="p"&gt;}&lt;/span&gt;
+&lt;span class="p"&gt;}&lt;/span&gt;
+
+&lt;span class="n"&gt;prefilteredColor&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;prefilteredColor&lt;/span&gt; &lt;span class="o"&gt;/&lt;/span&gt; &lt;span class="n"&gt;totalWeight&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
+
+&lt;span class="n"&gt;FragColor&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="k"&gt;vec4&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;prefilteredColor&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="mf"&gt;1.0&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;p&gt;可以看到，在计算的时候，我们针对采样的半程向量，对其反射光线一起视角方向进行了N=V=R的假设，这个是因为在预计算的场景下，我们没有办法计算出真实的视角方向以及法线向量，只能进行一定的假设了，然后，按照反射模型倒推出了采样的光线方向，然后再对天空盒纹理采样。&lt;/p&gt;
+&lt;p&gt;另外，注意到对于每次采样，我们都乘以了NdotL作为权重，因为在NdotL&amp;lt;0的情况下，这个时候这个光线是对高光没有贡献的&lt;/p&gt;
+&lt;p&gt;（这里数学推导过于复杂，我这里也没完全搞懂，有兴趣也可以继续看看这篇&lt;a href="https://zhuanlan.zhihu.com/p/34741174"&gt;文章&lt;/a&gt;了解下）&lt;/p&gt;
+&lt;p&gt;而在采样的时候，对天空盒纹理的不同miplevel进行了采样，由于这段代码来自&lt;a href="https://learnopengl.com/PBR/IBL/Specular-IBL"&gt;这里&lt;/a&gt;，不过在Android上，我发现有没有按照粗糙度对天空盒mipmap level采样似乎没有太大差别，这里原因还没有深究&lt;/p&gt;
+&lt;p&gt;另外，跟漫反射部分一样，这里的贴图，我们同样可以利用cmft来生成：&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;cmft --input &lt;span class="s2"&gt;&amp;quot;xxx.hdr&amp;quot;&lt;/span&gt;           &lt;span class="se"&gt;\&lt;/span&gt;
+              ::Filter options                  &lt;span class="se"&gt;\&lt;/span&gt;
+              --filter radiance                 &lt;span class="se"&gt;\&lt;/span&gt;
+              --srcFaceSize &lt;span class="m"&gt;256&lt;/span&gt;                 &lt;span class="se"&gt;\&lt;/span&gt;
+              --excludeBase &lt;span class="nb"&gt;false&lt;/span&gt;               &lt;span class="se"&gt;\&lt;/span&gt;
+              --mipCount &lt;span class="m"&gt;7&lt;/span&gt;                      &lt;span class="se"&gt;\&lt;/span&gt;
+              --glossScale &lt;span class="m"&gt;10&lt;/span&gt;                   &lt;span class="se"&gt;\&lt;/span&gt;
+              --glossBias &lt;span class="m"&gt;3&lt;/span&gt;                     &lt;span class="se"&gt;\&lt;/span&gt;
+              --lightingModel blinnbrdf         &lt;span class="se"&gt;\&lt;/span&gt;
+              --edgeFixup none                  &lt;span class="se"&gt;\&lt;/span&gt;
+              --dstFaceSize &lt;span class="m"&gt;256&lt;/span&gt;                 &lt;span class="se"&gt;\&lt;/span&gt;
+              ::Processing devices              &lt;span class="se"&gt;\&lt;/span&gt;
+              --numCpuProcessingThreads &lt;span class="m"&gt;4&lt;/span&gt;       &lt;span class="se"&gt;\&lt;/span&gt;
+              --useOpenCL &lt;span class="nb"&gt;true&lt;/span&gt;                  &lt;span class="se"&gt;\&lt;/span&gt;
+              --clVendor anyGpuVendor           &lt;span class="se"&gt;\&lt;/span&gt;
+              --deviceType gpu                  &lt;span class="se"&gt;\&lt;/span&gt;
+              --deviceIndex &lt;span class="m"&gt;0&lt;/span&gt;                   &lt;span class="se"&gt;\&lt;/span&gt;
+              ::Aditional operations            &lt;span class="se"&gt;\&lt;/span&gt;
+              --inputGammaNumerator &lt;span class="m"&gt;2&lt;/span&gt;.2         &lt;span class="se"&gt;\&lt;/span&gt;
+              --inputGammaDenominator &lt;span class="m"&gt;1&lt;/span&gt;.0       &lt;span class="se"&gt;\&lt;/span&gt;
+              --outputGammaNumerator &lt;span class="m"&gt;1&lt;/span&gt;.0        &lt;span class="se"&gt;\&lt;/span&gt;
+              --outputGammaDenominator &lt;span class="m"&gt;2&lt;/span&gt;.2      &lt;span class="se"&gt;\&lt;/span&gt;
+              --generateMipChain &lt;span class="nb"&gt;false&lt;/span&gt;          &lt;span class="se"&gt;\&lt;/span&gt;
+              ::Output                          &lt;span class="se"&gt;\&lt;/span&gt;
+              --outputNum &lt;span class="m"&gt;1&lt;/span&gt;                     &lt;span class="se"&gt;\&lt;/span&gt;
+              --output0 &lt;span class="s2"&gt;&amp;quot;xxx&amp;quot;&lt;/span&gt;       &lt;span class="se"&gt;\&lt;/span&gt;
+              --output0params dds,bgra8,cubemap &lt;span class="se"&gt;\&lt;/span&gt;
+              --output1 &lt;span class="s2"&gt;&amp;quot;xxx_preview&amp;quot;&lt;/span&gt;       &lt;span class="se"&gt;\&lt;/span&gt;
+              --output1params tga,rgba8,cubemap
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;h4&gt;环境光BRDF（Environment BRDF）&lt;/h4&gt;
+&lt;p&gt;而对于积分的另外一部分，则为包含了BRDF部分的高光环境计算，这里我们同样可以类似上面那样，进行重要性采样，然后计算出一个预先采样的纹理，这这篇&lt;a href="https://learnopengl.com/PBR/IBL/Specular-IBL"&gt;文章&lt;/a&gt;中有比较详细的描述，经过对积分的公式变换之后，我们将第二部分的积分公式变换成这个形式：&lt;/p&gt;
+&lt;div class="math"&gt;$$F_{0}\int_{\Omega}f_{r}(p, w_{i}, w_{o})(1-(1-w_{o}\cdot h)^{5})w_{i}\cdot n dw_{i} + \int_{\Omega}f_{r}(p, w_{i}, w_{o})(1-w_{o} \cdot h)^{5}w_{i} \cdot n dw_{i}$$&lt;/div&gt;
+&lt;p&gt;这个公式可以表达成这个形式：&lt;/p&gt;
+&lt;div class="math"&gt;$$F_{0} * Scale + Bias$$&lt;/div&gt;
+&lt;p&gt;于是我们可以预计算出&lt;span class="math"&gt;\(Scale\)&lt;/span&gt;跟&lt;span class="math"&gt;\(Bias\)&lt;/span&gt;的值，把结果存储在一张纹理上，计算出来的结果大概是这样子的：&lt;/p&gt;
+&lt;p&gt;&lt;img alt="" src="static/images/ibl_brdf_lut.png"&gt;&lt;/p&gt;
+&lt;p&gt;这是一张LUT纹理，使用NdotV以及roughness作为纹理坐标，采样就可以得到上面的计算结果，然后配合上面生成高光反射贴图，就可以得到高光部分的反射：&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="k"&gt;vec3&lt;/span&gt; &lt;span class="n"&gt;radiance&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;textureLod&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;radianceMap&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;R&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;roughness&lt;/span&gt; &lt;span class="o"&gt;*&lt;/span&gt; &lt;span class="n"&gt;MAX_RADIANCE_LOD&lt;/span&gt;&lt;span class="p"&gt;).&lt;/span&gt;&lt;span class="n"&gt;rgb&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
+&lt;span class="k"&gt;vec2&lt;/span&gt; &lt;span class="n"&gt;brdf&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;texture&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;envBrdfMap&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="k"&gt;vec2&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;max&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;dot&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;N&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;V&lt;/span&gt;&lt;span class="p"&gt;),&lt;/span&gt; &lt;span class="mf"&gt;0.0&lt;/span&gt;&lt;span class="p"&gt;),&lt;/span&gt; &lt;span class="n"&gt;roughness&lt;/span&gt;&lt;span class="p"&gt;)).&lt;/span&gt;&lt;span class="n"&gt;rg&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
+&lt;span class="k"&gt;vec3&lt;/span&gt; &lt;span class="n"&gt;specular&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;radiance&lt;/span&gt; &lt;span class="o"&gt;*&lt;/span&gt; &lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;F&lt;/span&gt; &lt;span class="o"&gt;*&lt;/span&gt; &lt;span class="n"&gt;brdf&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;x&lt;/span&gt; &lt;span class="o"&gt;+&lt;/span&gt; &lt;span class="n"&gt;brdf&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;y&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;p&gt;但在移动平台上，更为经济的做法是，对这个积分本身做数值拟合，在&lt;a href="https://zhuanlan.zhihu.com/p/53086060"&gt;PBR白皮书&lt;/a&gt;，有看到介绍在使命召唤——黑色行动2中便使用了这个做法：&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="k"&gt;vec3&lt;/span&gt; &lt;span class="n"&gt;EnvDFGLazarov&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt; &lt;span class="k"&gt;vec3&lt;/span&gt; &lt;span class="n"&gt;specularColor&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="k"&gt;float&lt;/span&gt; &lt;span class="n"&gt;gloss&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="k"&gt;float&lt;/span&gt; &lt;span class="n"&gt;ndotv&lt;/span&gt; &lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
+    &lt;span class="c1"&gt;//# [ Lazarov 2013, &amp;quot;Getting More Physical in Call of Duty: Black Ops II&amp;quot; ]&lt;/span&gt;
+    &lt;span class="c1"&gt;//# Adaptation to fit our G term.&lt;/span&gt;
+    &lt;span class="k"&gt;vec4&lt;/span&gt; &lt;span class="n"&gt;p0&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="k"&gt;vec4&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt; &lt;span class="mf"&gt;0.5745&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="mf"&gt;1.548&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="o"&gt;-&lt;/span&gt;&lt;span class="mf"&gt;0.02397&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="mf"&gt;1.301&lt;/span&gt; &lt;span class="p"&gt;);&lt;/span&gt;
+    &lt;span class="k"&gt;vec4&lt;/span&gt; &lt;span class="n"&gt;p1&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="k"&gt;vec4&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt; &lt;span class="mf"&gt;0.5753&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="o"&gt;-&lt;/span&gt;&lt;span class="mf"&gt;0.2511&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="o"&gt;-&lt;/span&gt;&lt;span class="mf"&gt;0.02066&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="mf"&gt;0.4755&lt;/span&gt; &lt;span class="p"&gt;);&lt;/span&gt;
+    &lt;span class="k"&gt;vec4&lt;/span&gt; &lt;span class="n"&gt;t&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;gloss&lt;/span&gt; &lt;span class="o"&gt;*&lt;/span&gt; &lt;span class="n"&gt;p0&lt;/span&gt; &lt;span class="o"&gt;+&lt;/span&gt; &lt;span class="n"&gt;p1&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
+    &lt;span class="k"&gt;float&lt;/span&gt; &lt;span class="n"&gt;bias&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;clamp&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt; &lt;span class="n"&gt;t&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;x&lt;/span&gt; &lt;span class="o"&gt;*&lt;/span&gt; &lt;span class="n"&gt;min&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt; &lt;span class="n"&gt;t&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;y&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;exp2&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt; &lt;span class="o"&gt;-&lt;/span&gt;&lt;span class="mf"&gt;7.672&lt;/span&gt; &lt;span class="o"&gt;*&lt;/span&gt; &lt;span class="n"&gt;ndotv&lt;/span&gt; &lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="o"&gt;+&lt;/span&gt; &lt;span class="n"&gt;t&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;z&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="mf"&gt;0.0&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="mf"&gt;1.0&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
+    &lt;span class="k"&gt;float&lt;/span&gt; &lt;span class="n"&gt;delta&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;clamp&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt; &lt;span class="n"&gt;t&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;w&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="mf"&gt;0.0&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="mf"&gt;1.0&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
+    &lt;span class="k"&gt;float&lt;/span&gt; &lt;span class="n"&gt;scale&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;delta&lt;/span&gt; &lt;span class="o"&gt;-&lt;/span&gt; &lt;span class="n"&gt;bias&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
+    &lt;span class="n"&gt;bias&lt;/span&gt; &lt;span class="o"&gt;*=&lt;/span&gt; &lt;span class="n"&gt;clamp&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt; &lt;span class="mf"&gt;50.0&lt;/span&gt; &lt;span class="o"&gt;*&lt;/span&gt; &lt;span class="n"&gt;specularColor&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;y&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="mf"&gt;0.0&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="mf"&gt;1.0&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
+    &lt;span class="k"&gt;return&lt;/span&gt; &lt;span class="n"&gt;specularColor&lt;/span&gt; &lt;span class="o"&gt;*&lt;/span&gt; &lt;span class="n"&gt;scale&lt;/span&gt; &lt;span class="o"&gt;+&lt;/span&gt; &lt;span class="n"&gt;bias&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
+&lt;span class="p"&gt;}&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;p&gt;其中specularColor则为F0，而具体的推导可以在这篇&lt;a href="https://zhuanlan.zhihu.com/p/41150563"&gt;文章&lt;/a&gt;中得到答案，其实就是在Mathematica中进行不停的拟合得到的结果，但对于手机来说，省去了一张纹理的消耗，是一个不错的优化&lt;/p&gt;
+&lt;p&gt;使用了这个方法来计算解析值之后，高光部分的反射结果就改成这样子计算出来：&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="k"&gt;vec3&lt;/span&gt; &lt;span class="n"&gt;radiance&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;textureLod&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;radianceMap&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;R&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;roughness&lt;/span&gt; &lt;span class="o"&gt;*&lt;/span&gt; &lt;span class="n"&gt;MAX_RADIANCE_LOD&lt;/span&gt;&lt;span class="p"&gt;).&lt;/span&gt;&lt;span class="n"&gt;rgb&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
+&lt;span class="k"&gt;vec3&lt;/span&gt; &lt;span class="n"&gt;envBrdf&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;EnvDFGLazarov&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;F0&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;metallic&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;max&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;dot&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;N&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;V&lt;/span&gt;&lt;span class="p"&gt;),&lt;/span&gt; &lt;span class="mf"&gt;0.0&lt;/span&gt;&lt;span class="p"&gt;));&lt;/span&gt;
+&lt;span class="k"&gt;vec3&lt;/span&gt; &lt;span class="n"&gt;specular&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;radiance&lt;/span&gt; &lt;span class="o"&gt;*&lt;/span&gt; &lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;F&lt;/span&gt; &lt;span class="o"&gt;*&lt;/span&gt; &lt;span class="n"&gt;envBrdf&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;h3&gt;组合渲染输出&lt;/h3&gt;
+&lt;p&gt;在得到高光以及漫反射部分的渲染结果之后，组合最终输出就很简单了：&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="k"&gt;vec3&lt;/span&gt; &lt;span class="n"&gt;ambient&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;kD&lt;/span&gt; &lt;span class="o"&gt;*&lt;/span&gt; &lt;span class="n"&gt;diffuse&lt;/span&gt; &lt;span class="o"&gt;+&lt;/span&gt; &lt;span class="n"&gt;specular&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="o"&gt;*&lt;/span&gt; &lt;span class="n"&gt;ao&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
+&lt;span class="k"&gt;vec3&lt;/span&gt; &lt;span class="n"&gt;color&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;ambient&lt;/span&gt; &lt;span class="o"&gt;+&lt;/span&gt; &lt;span class="n"&gt;Lo&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;p&gt;同样，因为显示到普通屏幕上，我们需要对输出进行色调映射跟Gamma校正：&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="c1"&gt;// HDR tonemapping&lt;/span&gt;
+&lt;span class="n"&gt;color&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;color&lt;/span&gt; &lt;span class="o"&gt;/&lt;/span&gt; &lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;color&lt;/span&gt; &lt;span class="o"&gt;+&lt;/span&gt; &lt;span class="k"&gt;vec3&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="mf"&gt;1.0&lt;/span&gt;&lt;span class="p"&gt;));&lt;/span&gt;
+&lt;span class="c1"&gt;// gamma correct&lt;/span&gt;
+&lt;span class="n"&gt;color&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;pow&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;color&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="k"&gt;vec3&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="mf"&gt;1.0&lt;/span&gt;&lt;span class="o"&gt;/&lt;/span&gt;&lt;span class="mf"&gt;2.2&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;p&gt;下面便是在加了高光跟漫反射环境光之后，在金属度为1，不同粗糙度下的渲染结果：&lt;/p&gt;
+&lt;p&gt;&lt;img alt="" src="static/images/radiance_ibl_render_result.jpg"&gt;&lt;/p&gt;
+&lt;p&gt;可以看出来，在加了高光反射之后，我们的渲染结果质量有了很明显的提升&lt;/p&gt;
+&lt;h3&gt;带上纹理贴图的输出&lt;/h3&gt;
+&lt;p&gt;在PBR的管线下，设计师可以针对&lt;strong&gt;金属度&lt;/strong&gt;以及&lt;strong&gt;粗糙度&lt;/strong&gt;分别建模贴图，从而给模型提供像素级别精度的参数调整，结合漫反射贴图以及法线贴图，我们就可以得出非常漂亮的渲染结果了：&lt;/p&gt;
+&lt;p&gt;&lt;img alt="" src="static/images/ibl_model_render_result.png"&gt;&lt;/p&gt;
+&lt;h3&gt;Notes&lt;/h3&gt;
+&lt;p&gt;最后，我们来聊聊实际实现的时候，遇到一些问题：&lt;/p&gt;
+&lt;h4&gt;DDS格式的问题&lt;/h4&gt;
+&lt;p&gt;cmft工具导出来的预计算贴图格式，一般是DDS，而在Android上，是没有办法直接通过原生接口解码DDS格式的，另外，cmft中导出的DDS格式也没办法指定支持rgba16这种颜色格式，会导致渲染出来对比度过低，所以，要做预计算贴图，靠谱的方法还是自己写个工具来计算&lt;/p&gt;
+&lt;h4&gt;HDR格式在Android的支持&lt;/h4&gt;
+&lt;p&gt;HDR格式的图片，同样，在Android系统中原生接口中是没办法直接解码的，但png有支持到64位的颜色格式，所以我们可以先将hdr格式图片转成png再来做贴图的预计算&lt;/p&gt;
+&lt;p&gt;本文可能有诸多错漏，作为一名图形学小白，数学功底也比较有限，各位看客求轻喷&lt;/p&gt;
+&lt;h3&gt;References&lt;/h3&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;a href="https://zhuanlan.zhihu.com/p/53086060"&gt;https://zhuanlan.zhihu.com/p/53086060&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href="https://learnopengl.com/PBR/IBL/Diffuse-irradiance"&gt;https://learnopengl.com/PBR/IBL/Diffuse-irradiance&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href="https://learnopengl.com/PBR/IBL/Specular-IBL"&gt;https://learnopengl.com/PBR/IBL/Specular-IBL&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href="https://zhuanlan.zhihu.com/p/34741174"&gt;https://zhuanlan.zhihu.com/p/34741174&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href="https://zhuanlan.zhihu.com/p/41150563"&gt;https://zhuanlan.zhihu.com/p/41150563&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href="https://zhuanlan.zhihu.com/p/21489591"&gt;https://zhuanlan.zhihu.com/p/21489591&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;script type="text/javascript"&gt;if (!document.getElementById('mathjaxscript_pelican_#%@#$@#')) {
+    var align = "center",
+        indent = "0em",
+        linebreak = "false";
+
+    if (true) {
+        align = (screen.width &lt; 768) ? "left" : align;
+        indent = (screen.width &lt; 768) ? "0em" : indent;
+        linebreak = (screen.width &lt; 768) ? 'true' : linebreak;
+    }
+
+    var mathjaxscript = document.createElement('script');
+    mathjaxscript.id = 'mathjaxscript_pelican_#%@#$@#';
+    mathjaxscript.type = 'text/javascript';
+    mathjaxscript.src = 'https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.3/latest.js?config=TeX-AMS-MML_HTMLorMML';
+
+    var configscript = document.createElement('script');
+    configscript.type = 'text/x-mathjax-config';
+    configscript[(window.opera ? "innerHTML" : "text")] =
+        "MathJax.Hub.Config({" +
+        "    config: ['MMLorHTML.js']," +
+        "    TeX: { extensions: ['AMSmath.js','AMSsymbols.js','noErrors.js','noUndefined.js'], equationNumbers: { autoNumber: 'none' } }," +
+        "    jax: ['input/TeX','input/MathML','output/HTML-CSS']," +
+        "    extensions: ['tex2jax.js','mml2jax.js','MathMenu.js','MathZoom.js']," +
+        "    displayAlign: '"+ align +"'," +
+        "    displayIndent: '"+ indent +"'," +
+        "    showMathMenu: true," +
+        "    messageStyle: 'normal'," +
+        "    tex2jax: { " +
+        "        inlineMath: [ ['\\\\(','\\\\)'] ], " +
+        "        displayMath: [ ['$$','$$'] ]," +
+        "        processEscapes: true," +
+        "        preview: 'TeX'," +
+        "    }, " +
+        "    'HTML-CSS': { " +
+        "        availableFonts: ['STIX', 'TeX']," +
+        "        preferredFont: 'STIX'," +
+        "        styles: { '.MathJax_Display, .MathJax .mo, .MathJax .mi, .MathJax .mn': {color: 'inherit ! important'} }," +
+        "        linebreaks: { automatic: "+ linebreak +", width: '90% container' }," +
+        "    }, " +
+        "}); " +
+        "if ('default' !== 'default') {" +
+            "MathJax.Hub.Register.StartupHook('HTML-CSS Jax Ready',function () {" +
+                "var VARIANT = MathJax.OutputJax['HTML-CSS'].FONTDATA.VARIANT;" +
+                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
+                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
+                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
+                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
+            "});" +
+            "MathJax.Hub.Register.StartupHook('SVG Jax Ready',function () {" +
+                "var VARIANT = MathJax.OutputJax.SVG.FONTDATA.VARIANT;" +
+                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
+                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
+                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
+                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
+            "});" +
+        "}";
+
+    (document.body || document.getElementsByTagName('head')[0]).appendChild(configscript);
+    (document.body || document.getElementsByTagName('head')[0]).appendChild(mathjaxscript);
+}
+&lt;/script&gt;</content></entry><entry><title>尝试在Android中实现PBR管线——基本原理以及直接光照明</title><link href="http://ragnraok.github.io/try_android_implement_pbr_thery_direct_light.html" rel="alternate"></link><published>2019-08-18T00:00:00+08:00</published><updated>2019-08-18T00:00:00+08:00</updated><author><name>Ragnarok Zhou</name></author><id>tag:ragnraok.github.io,2019-08-18:/try_android_implement_pbr_thery_direct_light.html</id><summary type="html">&lt;p&gt;从本个世代起，基于物理的渲染（Physically Based Rendering，简称PBR）基本上就成为了事实上当下3A大作的渲染标准，自从迪士尼在在SIGGRAPH 2012上提出的著名的“迪士尼原则的BRDF”以及基于金属工作流来实现的方案，由于高度的易用性，美术设计师可以根据现实物理的参数来构建表面材质，可以实现惊人的显示效果，目前已经被广泛的在业界中使用&lt;/p&gt;
 &lt;p&gt;这篇文章将会尝试在Android中基于Kotlin来实现PBR管线，在正式开始代码实现之前，我们先来讨论下PBR管线的基础理论。&lt;/p&gt;
 &lt;hr&gt;
 &lt;h2&gt;Before PBR&lt;/h2&gt;
@@ -76,16 +488,16 @@
 &lt;h3&gt;基于物理的BRDF&lt;/h3&gt;
 &lt;p&gt;BRDF（Bidirectional Reflectance Distribution Function），即为双向反射分布函数，是整个PBR管线中最为重要的函数之一，可以用来求出每条光线对了一个给定材质属性的表面上，最终反射出来的光线的贡献程度。类比Blinn-Phong模型来说，我们拿漫反射项颜色乘以NdotL，其实也是一种BRDF计算方式，只是没有基于物理理论来建模，所以没有办法得出令人信服的效果。&lt;/p&gt;
 &lt;p&gt;类似Blinn-Phong模型，PBR的BRDF也是接受入射光方向Wi，反射光方向Wo，以及一个跟微平面理论相关的物理参数粗糙度（Roughness），实际实现中，最为常用的则是被称为Cook-Torrance的BRDF模型，同时兼具漫反射以及镜面反射两部分：&lt;/p&gt;
-&lt;div class="math"&gt;$$L=K_{d}\int_{lambert} + K_{s}\int_{cook-torrance}$$&lt;/div&gt;
+&lt;div class="math"&gt;$$L=K_{d}f_{lambert} + K_{s}f_{cook-torrance}$$&lt;/div&gt;
 &lt;ul&gt;
 &lt;li&gt;其中Kd表示漫反射光照的能量占比，Ks则表示镜面反射的能量占比，两项加起来为1，而对于漫反射中的Lambert项，我们经常用这个公式计算：&lt;/li&gt;
 &lt;/ul&gt;
-&lt;div class="math"&gt;$$\int_{lambert}=\frac{diffuse}{\pi}$$&lt;/div&gt;
+&lt;div class="math"&gt;$$f_{lambert}=\frac{diffuse}{\pi}$$&lt;/div&gt;
 &lt;p&gt;我们将漫反射颜色除以PI，作为BRDF公式的漫反射部分。这部分并没有什么特别的，实际上在Blinn-Phong模型的改进版本中，也有将漫反射颜色除以PI的做法，用于得到更加真实的效果&lt;/p&gt;
 &lt;ul&gt;
 &lt;li&gt;而BRDF公式的镜面高光部分则比较复杂：&lt;/li&gt;
 &lt;/ul&gt;
-&lt;div class="math"&gt;$$\int_{cook-torrance}=\frac{DFG}{4(W_{o}\cdot n)(W_{i}\cdot n)}$$&lt;/div&gt;
+&lt;div class="math"&gt;$$f_{cook-torrance}=\frac{DFG}{4(W_{o}\cdot n)(W_{i}\cdot n)}$$&lt;/div&gt;
 &lt;p&gt;这里包含了三个主要的参数，D/F/G分别代表三种不同种类的函数，分别用来模拟反射的不同部分的特性，分母则为一个配平参数用来作为标准化因子。D/F/G三个函数则分别为：&lt;/p&gt;
 &lt;ul&gt;
 &lt;li&gt;法线分布函数（Normal Distribution Function）：用于估算在收到表面粗糙度的影响下，取向方向与半程向量一致的微平面向量&lt;/li&gt;

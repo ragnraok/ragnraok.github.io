@@ -23,6 +23,14 @@
 <h2>Articles by Ragnarok Zhou</h2>
 
         <article class="hentry">
+                <header> <h2 class="entry-title"><a href="http://ragnraok.github.io/try_android_implement_pbr_ambient_lighting.html" rel="bookmark" title="Permalink to 尝试在Android中实现PBR管线——环境光照明">尝试在Android中实现PBR管线——环境光照明</a></h2> </header>
+                <div class="entry-content"> <p>在上一篇文章中，我们讨论了PBR管线的基础理论，以及实现了场景中直接光（点光源/方向光源）照明的计算，对比与Blinn-Phong模型，PBR使用了微平面理论来对现实世界建模，而在BRDF项计算中，使用了法线分布函数/几何函数/菲涅尔方程构成的BRDF方程来计算光线对某种材质最终输出光照的影响。</p>
+<p>但单纯看直接光照明，PBR管线似乎跟上一个世代的效果差不多，真正让PBR得到超越上一个世代效果的，是其环境光照明部分，所谓的<strong>动态全局光照</strong>的实体</p>
+<p>首先我们来重新看下，在直接光照明下，我们的渲染方程：</p>
+<div class="math">$$L=(K_{d}f_{lambert} + K_{s}f_{cook-torrance})L_{i}(w_{i}\cdot n)$$</div>
+<div class="math">$$L=(K_{d}\frac{diffuse}{\pi} +K_{s}\frac{DFG}{4(W_{o …</div> </div><!-- entry-content -->
+        </article>
+        <article class="hentry">
                 <header> <h2 class="entry-title"><a href="http://ragnraok.github.io/try_android_implement_pbr_thery_direct_light.html" rel="bookmark" title="Permalink to 尝试在Android中实现PBR管线——基本原理以及直接光照明">尝试在Android中实现PBR管线——基本原理以及直接光照明</a></h2> </header>
                 <div class="entry-content"> <p>从本个世代起，基于物理的渲染（Physically Based Rendering，简称PBR）基本上就成为了事实上当下3A大作的渲染标准，自从迪士尼在在SIGGRAPH 2012上提出的著名的“迪士尼原则的BRDF”以及基于金属工作流来实现的方案，由于高度的易用性，美术设计师可以根据现实物理的参数来构建表面材质，可以实现惊人的显示效果，目前已经被广泛的在业界中使用</p>
 <p>这篇文章将会尝试在Android中基于Kotlin来实现PBR管线，在正式开始代码实现之前，我们先来讨论下PBR管线的基础理论。</p>
@@ -99,17 +107,6 @@
 <li>获取的信息过于分散，中间夹杂着不少其他的信息，不完全是app申请的，可能需要进行不少查找才能定位到具体的问题</li>
 <li>跟TraceView一样，无法做到自动化分析，每次都需要开发者手工开始/结束，对于某些问题的分析可能会造成不便，而且对于批量分析来说也比较困难</li>
 <li>虽然在allocation …</li></ol> </div><!-- entry-content -->
-        </article>
-        <article class="hentry">
-                <header> <h2 class="entry-title"><a href="http://ragnraok.github.io/tricking-android-memoryfile.html" rel="bookmark" title="Permalink to Tricking Android MemoryFile">Tricking Android MemoryFile</a></h2> </header>
-                <div class="entry-content"> <p>之前在做一个内存优化的时候，使用到了MemoryFile，由此发现了MemoryFile的一些特性以及一个非常trickly的使用方法，因此在这里记录一下</p>
-<h3>What is it</h3>
-<p>MemoryFile是android在最开始就引入的一套框架，其内部实际上是封装了android特有的内存共享机制<a href="http://elinux.org/Android_Kernel_Features#ashmem">Ashmem</a>匿名共享内存，简单来说，Ashmem在Android内核中是被注册成一个特殊的字符设备，Ashmem驱动通过在内核的一个自定义<a href="https://en.wikipedia.org/wiki/Slab_allocation">slab</a>缓冲区中初始化一段内存区域，然后通过mmap把申请的内存映射到用户的进程空间中（通过<a href="https://en.wikipedia.org/wiki/Tmpfs">tmpfs</a>），这样子就可以在用户进程中使用这里申请的内存了，另外，Ashmem的一个特性就是可以在系统内存不足的时候，回收掉被标记为"unpin"的内存，这个后面会讲到，另外，MemoryFile也可以通过Binder跨进程调用来让两个进程共享一段内存区域。由于整个申请内存的过程并不再Java层上，可以很明显的看出使用MemoryFile申请的内存实际上是<strong>并不会</strong>占用Java堆内存的。</p>
-<p>MemoryFile暴露出来的用户接口可以说跟他的名字一样，基本上跟我们平时的文件的读写基本一致，也可以使用InputStream和OutputStream来对其进行读写等操作：</p>
-<div class="highlight"><pre><span></span><span class="n">MemoryFile</span> <span class="n">memoryFile</span> <span class="o">=</span> <span class="k">new</span> <span class="n">MemoryFile</span><span class="o">(</span><span class="kc">null</span><span class="o">,</span> <span class="n">inputStream</span><span class="o">.</span><span class="na">available</span><span class="o">());</span>
-<span class="n">memoryFile</span><span class="o">.</span><span class="na">allowPurging</span><span class="o">(</span><span class="kc">false</span><span class="o">);</span>
-<span class="n">OutputStream</span> <span class="n">outputStream</span> <span class="o">=</span> <span class="n">memoryFile</span><span class="o">.</span><span class="na">getOutputStream</span><span class="o">();</span>
-<span class="n">outputStream …</span></pre></div> </div><!-- entry-content -->
         </article>
 <div class="pager">
       <ul>

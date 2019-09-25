@@ -89,16 +89,16 @@
 <h3>基于物理的BRDF</h3>
 <p>BRDF（Bidirectional Reflectance Distribution Function），即为双向反射分布函数，是整个PBR管线中最为重要的函数之一，可以用来求出每条光线对了一个给定材质属性的表面上，最终反射出来的光线的贡献程度。类比Blinn-Phong模型来说，我们拿漫反射项颜色乘以NdotL，其实也是一种BRDF计算方式，只是没有基于物理理论来建模，所以没有办法得出令人信服的效果。</p>
 <p>类似Blinn-Phong模型，PBR的BRDF也是接受入射光方向Wi，反射光方向Wo，以及一个跟微平面理论相关的物理参数粗糙度（Roughness），实际实现中，最为常用的则是被称为Cook-Torrance的BRDF模型，同时兼具漫反射以及镜面反射两部分：</p>
-<div class="math">$$L=K_{d}\int_{lambert} + K_{s}\int_{cook-torrance}$$</div>
+<div class="math">$$L=K_{d}f_{lambert} + K_{s}f_{cook-torrance}$$</div>
 <ul>
 <li>其中Kd表示漫反射光照的能量占比，Ks则表示镜面反射的能量占比，两项加起来为1，而对于漫反射中的Lambert项，我们经常用这个公式计算：</li>
 </ul>
-<div class="math">$$\int_{lambert}=\frac{diffuse}{\pi}$$</div>
+<div class="math">$$f_{lambert}=\frac{diffuse}{\pi}$$</div>
 <p>我们将漫反射颜色除以PI，作为BRDF公式的漫反射部分。这部分并没有什么特别的，实际上在Blinn-Phong模型的改进版本中，也有将漫反射颜色除以PI的做法，用于得到更加真实的效果</p>
 <ul>
 <li>而BRDF公式的镜面高光部分则比较复杂：</li>
 </ul>
-<div class="math">$$\int_{cook-torrance}=\frac{DFG}{4(W_{o}\cdot n)(W_{i}\cdot n)}$$</div>
+<div class="math">$$f_{cook-torrance}=\frac{DFG}{4(W_{o}\cdot n)(W_{i}\cdot n)}$$</div>
 <p>这里包含了三个主要的参数，D/F/G分别代表三种不同种类的函数，分别用来模拟反射的不同部分的特性，分母则为一个配平参数用来作为标准化因子。D/F/G三个函数则分别为：</p>
 <ul>
 <li>法线分布函数（Normal Distribution Function）：用于估算在收到表面粗糙度的影响下，取向方向与半程向量一致的微平面向量</li>
