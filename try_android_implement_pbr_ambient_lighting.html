@@ -366,6 +366,7 @@
 <p>cmft工具导出来的预计算贴图格式，一般是DDS，而在Android上，是没有办法直接通过原生接口解码DDS格式的，另外，cmft中导出的DDS格式也没办法指定支持rgba16这种颜色格式，会导致渲染出来对比度过低，所以，要做预计算贴图，靠谱的方法还是自己写个工具来计算</p>
 <h4>HDR格式在Android的支持</h4>
 <p>HDR格式的图片，同样，在Android系统中原生接口中是没办法直接解码的，但png有支持到64位的颜色格式，所以我们可以先将hdr格式图片转成png再来做贴图的预计算</p>
+<p>本文的代码最后也host在了这个仓库上：<a href="https://github.com/ragnraok/AndroidPBR">AndroidPBR</a></p>
 <p>本文可能有诸多错漏，作为一名图形学小白，数学功底也比较有限，各位看客求轻喷</p>
 <h3>References</h3>
 <ul>
