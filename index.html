@@ -4,25 +4,25 @@
         <title>Ragnarok Note</title>
         <meta charset="utf-8" />
         <link href="//netdna.bootstrapcdn.com/bootstrap/3.0.0/css/bootstrap.min.css" rel="stylesheet" />
-        <link href="/theme/static/css/style.css" rel="stylesheet" />
+        <link href="http://ragnraok.github.io/theme/static/css/style.css" rel="stylesheet" />
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-        <link href="/feeds/atom.xml" type="application/atom+xml" rel="alternate" title="Ragnarok Note Full Atom Feed" />
+        <link href="http://ragnraok.github.io/feeds/atom.xml" type="application/atom+xml" rel="alternate" title="Ragnarok Note Full Atom Feed" />
     </head>
 
     <body id="index" class="archive">
         <div class="container">
             <div class="header">
                 <ul class="nav nav-pills pull-right">
-                    <li class="active"><a href="">Home</a></li>
-                    <li><a href="/archives.html">Archives</a></li>
+                    <li class="active"><a href="http://ragnraok.github.io">Home</a></li>
+                    <li><a href="http://ragnraok.github.io/archives.html">Archives</a></li>
                 </ul>
-                <h3 class="text-muted"><a href="">Ragnarok Note</a></h3>
+                <h3 class="text-muted"><a href="http://ragnraok.github.io">Ragnarok Note</a></h3>
 				<h2 class="text-muted"></h2>
              </div>
 <section id="content" class="content">
 
         <article class="hentry">
-                <header> <h2 class="entry-title"><a href="/try_android_implement_path_tracer.html" rel="bookmark" title="Permalink to 尝试在Android中实现实时光线追踪">尝试在Android中实现实时光线追踪</a></h2> </header>
+                <header> <h2 class="entry-title"><a href="http://ragnraok.github.io/try_android_implement_path_tracer.html" rel="bookmark" title="Permalink to 尝试在Android中实现实时光线追踪">尝试在Android中实现实时光线追踪</a></h2> </header>
                 <div class="entry-content"> <p>最近索尼跟微软都已经发布下世代游戏主机的硬件信息，随着NVDIA/AMD开始发布各自的硬件光线追踪管线，特别是微软的DXR发布，可以预见下一世代开始会有越来越多光线追踪的游戏发布。而光线追踪实际上是一个很古老的算法了，但是囿于计算成本非常高，虽然天然适合并行化，但在之前世代还是无法完全在实时场景中使用，而应用了光线追踪之后，对比原先实时渲染的各种对环境光反射的各种hack，光线追踪渲染的场景会对场景的光照质量提升明显一个档次：</p>
 <p><img alt="" src="static/images/raytracing_diff.png"></p>
 <p>可以看出来在使用了光线追踪之后，地板上更加真实的反射了场景中其他物体的光照，令整个场景显得更加真实</p>
@@ -34,7 +34,7 @@
 <div class="math">$$L …</div> </div><!-- entry-content -->
         </article>
         <article class="hentry">
-                <header> <h2 class="entry-title"><a href="/try_android_implement_pbr_ambient_lighting.html" rel="bookmark" title="Permalink to 尝试在Android中实现PBR管线——环境光照明">尝试在Android中实现PBR管线——环境光照明</a></h2> </header>
+                <header> <h2 class="entry-title"><a href="http://ragnraok.github.io/try_android_implement_pbr_ambient_lighting.html" rel="bookmark" title="Permalink to 尝试在Android中实现PBR管线——环境光照明">尝试在Android中实现PBR管线——环境光照明</a></h2> </header>
                 <div class="entry-content"> <p>在上一篇文章中，我们讨论了PBR管线的基础理论，以及实现了场景中直接光（点光源/方向光源）照明的计算，对比与Blinn-Phong模型，PBR使用了微平面理论来对现实世界建模，而在BRDF项计算中，使用了法线分布函数/几何函数/菲涅尔方程构成的BRDF方程来计算光线对某种材质最终输出光照的影响。</p>
 <p>但单纯看直接光照明，PBR管线似乎跟上一个世代的效果差不多，真正让PBR得到超越上一个世代效果的，是其环境光照明部分，所谓的<strong>动态全局光照</strong>的实体</p>
 <p>首先我们来重新看下，在直接光照明下，我们的渲染方程：</p>
@@ -42,7 +42,7 @@
 <div class="math">$$L=(K_{d}\frac{diffuse}{\pi} +K_{s}\frac{DFG}{4(W_{o …</div> </div><!-- entry-content -->
         </article>
         <article class="hentry">
-                <header> <h2 class="entry-title"><a href="/try_android_implement_pbr_thery_direct_light.html" rel="bookmark" title="Permalink to 尝试在Android中实现PBR管线——基本原理以及直接光照明">尝试在Android中实现PBR管线——基本原理以及直接光照明</a></h2> </header>
+                <header> <h2 class="entry-title"><a href="http://ragnraok.github.io/try_android_implement_pbr_thery_direct_light.html" rel="bookmark" title="Permalink to 尝试在Android中实现PBR管线——基本原理以及直接光照明">尝试在Android中实现PBR管线——基本原理以及直接光照明</a></h2> </header>
                 <div class="entry-content"> <p>从本个世代起，基于物理的渲染（Physically Based Rendering，简称PBR）基本上就成为了事实上当下3A大作的渲染标准，自从迪士尼在在SIGGRAPH 2012上提出的著名的“迪士尼原则的BRDF”以及基于金属工作流来实现的方案，由于高度的易用性，美术设计师可以根据现实物理的参数来构建表面材质，可以实现惊人的显示效果，目前已经被广泛的在业界中使用</p>
 <p>这篇文章将会尝试在Android中基于Kotlin来实现PBR管线，在正式开始代码实现之前，我们先来讨论下PBR管线的基础理论。</p>
 <hr>
@@ -63,7 +63,7 @@
 <p><span class="math">\(N\cdot L …</span></p></li></ul> </div><!-- entry-content -->
         </article>
         <article class="hentry">
-                <header> <h2 class="entry-title"><a href="/surface_display_lag.html" rel="bookmark" title="Permalink to 浅谈Android中Surface显示延迟处理">浅谈Android中Surface显示延迟处理</a></h2> </header>
+                <header> <h2 class="entry-title"><a href="http://ragnraok.github.io/surface_display_lag.html" rel="bookmark" title="Permalink to 浅谈Android中Surface显示延迟处理">浅谈Android中Surface显示延迟处理</a></h2> </header>
                 <div class="entry-content"> <p>最近在使用GLES在Surface上渲染结果的时候，遇到了一个显示延迟的问题，当渲染时间过长，同时帧率要求比较高的时候，如果不加控制，就会造成显示的延迟，如果界面没有交互，倒是不会看出什么问题，如果是强交互的场景，这种情况下就会造成可感知的用户使用延迟了。处理这种情况的其中一种方式是给渲染的一帧赋予一个时间戳，用于给SurfaceFlinger进行对应的丢帧控制，具体什么原理呢，让我们一步一步来说明一下</p>
 <h3>Surface是什么？</h3>
 <hr>
@@ -79,7 +79,7 @@
 <p>SurfaceTexture是从Android 3 …</p></li></ul> </div><!-- entry-content -->
         </article>
         <article class="hentry">
-                <header> <h2 class="entry-title"><a href="/android_video_record.html" rel="bookmark" title="Permalink to 谈谈关于Android视频编码的那些坑">谈谈关于Android视频编码的那些坑</a></h2> </header>
+                <header> <h2 class="entry-title"><a href="http://ragnraok.github.io/android_video_record.html" rel="bookmark" title="Permalink to 谈谈关于Android视频编码的那些坑">谈谈关于Android视频编码的那些坑</a></h2> </header>
                 <div class="entry-content"> <p>Android的视频相关的开发，大概一直是整个Android生态，以及Android API中，最为分裂以及兼容性问题最为突出的一部分。摄像头，以及视频编码相关的API，Google一直对这方面的控制力非常差，导致不同厂商对这两个API的实现有不少差异，而且从API的设计来看，一直以来优化也相当有限，甚至有人认为这是“Android上最难用的API之一”</p>
 <p>以微信为例，我们录制一个540p的mp4文件，对于Android来说，大体上是遵循这么一个流程：</p>
 <hr>
@@ -107,16 +107,16 @@
 <div class="pager">
       <ul>
                         <li class="previous disabled"><a>← Previous</a></li>
-						<li class="next"><a href="/index2.html">Next →</a></li>
+						<li class="next"><a href="http://ragnraok.github.io/index2.html">Next →</a></li>
       </ul>
     </div>
 </section><!-- content -->
             <footer id="contentinfo" class="footer">
                     <nav class="pull-right bottom-nav">
-                        <a href="/feeds/atom.xml">RSS</a>
+                        <a href="http://ragnraok.github.io/feeds/atom.xml">RSS</a>
                     </nav>
                     <address id="about" class="vcard body">
-                    &copy; <a href="">Ragnarok Note</a> Proudly powered by <a href="http://getpelican.com/">Pelican</a>
+                    &copy; <a href="http://ragnraok.github.io">Ragnarok Note</a> Proudly powered by <a href="http://getpelican.com/">Pelican</a>
                     </address><!-- /#about -->
             </footer><!-- /#contentinfo -->
         </div><!-- container -->
