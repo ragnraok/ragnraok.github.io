@@ -25,10 +25,6 @@
 &lt;p&gt;蒙特卡洛方法在数学上的表示如下，对于某个积分&lt;span class="math"&gt;\(\int_{a}^{b}f(x)\)&lt;/span&gt;，我们可以近似的计算为：&lt;/p&gt;
 &lt;div class="math"&gt;$$\int_{a}^{b}f(x)=F_{N}=\frac{1}{N}\sum_{N}^{i=1}\frac{f(x_{i})}{pdf(x_{i})}$$&lt;/div&gt;
 &lt;p&gt;其中&lt;span class="math"&gt;\(pdf(x_{i})\)&lt;/span&gt;为概率密度函数，从公式上可以看出，当我们渲染的次数越多的时候，就越符合最终计算的结果。&lt;/p&gt;
-&lt;p&gt;~~至于pdf的选取，选择的方式有很多，对于本片文章的实现来说，我们直接选取最简单的一种:~~
-~~  &lt;/p&gt;
-&lt;div class="math"&gt;$$pdf=\frac{1}{\sum_{i}f(x_{i})}$$&lt;/div&gt;
-&lt;p&gt;~~&lt;/p&gt;
 &lt;h2&gt;Android中光线追踪的实现&lt;/h2&gt;
 &lt;p&gt;这篇文章的标题说的是实现“实时”的光线追踪，但事实上，对于现有的手机GPU管线来说，是不可能做到类似DXR那样的实时效果的，因此这里的“实时”光线追踪，实际上也只是渐进式渲染，通过多次渲染结果的叠加，我们实际上对于每个像素进行了多次采样，采样次数累加的越多，渲染结果越清晰（图源自pbrt）：&lt;/p&gt;
 &lt;p&gt;&lt;img alt="" src="static/images/path_tracing_sampling_times.jpeg"&gt;&lt;/p&gt;
