@@ -220,7 +220,8 @@
 
 &lt;p&gt;而对于环境光部分，我们需要使用半球积分来计算半球空间中所有环境光的总和：&lt;/p&gt;
 &lt;div class="math"&gt;$$L(p, w_{o})=\int_{\Omega }(K_{d}f_{lambert})L_{i}(w_{i}\cdot n)dw_{i} + \int_{\Omega }(K_{s}f_{cook-torrance})L_{i}(w_{i}\cdot n)dw_{i}$$&lt;/div&gt;
-&lt;p&gt;漫反射部分为：&lt;/p&gt;
+&lt;p&gt;左右两边分别是漫反射跟高光部分的颜色的半球空间积分&lt;/p&gt;
+&lt;p&gt;漫反射部分的为：&lt;/p&gt;
 &lt;div class="math"&gt;$$L(p, w_{o})=\int_{\Omega }(K_{d}\frac{diffuse}{\pi})L_{i}(w_{i}\cdot n)dw_{i}$$&lt;/div&gt;
 &lt;p&gt;高光部分为：&lt;/p&gt;
 &lt;div class="math"&gt;$$L(p, w_{o})=\int_{\Omega }(K_{s}\frac{DFG}{4(W_{o}\cdot n)(W_{i}\cdot n)})L_{i}(w_{i}\cdot n)dw_{i}$$&lt;/div&gt;
@@ -255,7 +256,7 @@
 &lt;/pre&gt;&lt;/div&gt;
 
 
-&lt;p&gt;而材质本身的颜色我们也需要进行计算：&lt;/p&gt;
+&lt;p&gt;另外，我们也要计算漫反射跟高光部分的颜色：&lt;/p&gt;
 &lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="k"&gt;vec3&lt;/span&gt; &lt;span class="n"&gt;brdfMaterialColor&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="k"&gt;vec3&lt;/span&gt; &lt;span class="n"&gt;N&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="k"&gt;vec3&lt;/span&gt; &lt;span class="n"&gt;L&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="k"&gt;vec3&lt;/span&gt; &lt;span class="n"&gt;V&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;Material&lt;/span&gt; &lt;span class="n"&gt;material&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="k"&gt;bool&lt;/span&gt; &lt;span class="n"&gt;diffuse&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
     &lt;span class="k"&gt;vec3&lt;/span&gt; &lt;span class="n"&gt;baseColor&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;material&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;color&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
     &lt;span class="k"&gt;float&lt;/span&gt; &lt;span class="n"&gt;metallic&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;material&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;metallic&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
@@ -286,6 +287,7 @@
         &lt;span class="k"&gt;float&lt;/span&gt; &lt;span class="n"&gt;G&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;GeometrySmith&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;N&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;V&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;L&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;roughness&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
         &lt;span class="k"&gt;float&lt;/span&gt; &lt;span class="n"&gt;Vis&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;G&lt;/span&gt; &lt;span class="o"&gt;*&lt;/span&gt; &lt;span class="n"&gt;VdotH&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="o"&gt;/&lt;/span&gt; &lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;NdotH&lt;/span&gt; &lt;span class="o"&gt;*&lt;/span&gt; &lt;span class="n"&gt;NdotV&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
 
+        &lt;span class="k"&gt;vec3&lt;/span&gt; &lt;span class="n"&gt;specularColor&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt;  &lt;span class="n"&gt;Vis&lt;/span&gt; &lt;span class="o"&gt;*&lt;/span&gt; &lt;span class="n"&gt;F&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
         &lt;span class="n"&gt;specularColor&lt;/span&gt; &lt;span class="o"&gt;*=&lt;/span&gt; &lt;span class="n"&gt;NdotL&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
 
         &lt;span class="n"&gt;color&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;specularColor&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;

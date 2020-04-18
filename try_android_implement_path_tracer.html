@@ -242,7 +242,8 @@
 
 <p>而对于环境光部分，我们需要使用半球积分来计算半球空间中所有环境光的总和：</p>
 <div class="math">$$L(p, w_{o})=\int_{\Omega }(K_{d}f_{lambert})L_{i}(w_{i}\cdot n)dw_{i} + \int_{\Omega }(K_{s}f_{cook-torrance})L_{i}(w_{i}\cdot n)dw_{i}$$</div>
-<p>漫反射部分为：</p>
+<p>左右两边分别是漫反射跟高光部分的颜色的半球空间积分</p>
+<p>漫反射部分的为：</p>
 <div class="math">$$L(p, w_{o})=\int_{\Omega }(K_{d}\frac{diffuse}{\pi})L_{i}(w_{i}\cdot n)dw_{i}$$</div>
 <p>高光部分为：</p>
 <div class="math">$$L(p, w_{o})=\int_{\Omega }(K_{s}\frac{DFG}{4(W_{o}\cdot n)(W_{i}\cdot n)})L_{i}(w_{i}\cdot n)dw_{i}$$</div>
@@ -277,7 +278,7 @@
 </pre></div>
 
 
-<p>而材质本身的颜色我们也需要进行计算：</p>
+<p>另外，我们也要计算漫反射跟高光部分的颜色：</p>
 <div class="highlight"><pre><span></span><span class="k">vec3</span> <span class="n">brdfMaterialColor</span><span class="p">(</span><span class="k">vec3</span> <span class="n">N</span><span class="p">,</span> <span class="k">vec3</span> <span class="n">L</span><span class="p">,</span> <span class="k">vec3</span> <span class="n">V</span><span class="p">,</span> <span class="n">Material</span> <span class="n">material</span><span class="p">,</span> <span class="k">bool</span> <span class="n">diffuse</span><span class="p">)</span> <span class="p">{</span>
     <span class="k">vec3</span> <span class="n">baseColor</span> <span class="o">=</span> <span class="n">material</span><span class="p">.</span><span class="n">color</span><span class="p">;</span>
     <span class="k">float</span> <span class="n">metallic</span> <span class="o">=</span> <span class="n">material</span><span class="p">.</span><span class="n">metallic</span><span class="p">;</span>
@@ -308,6 +309,7 @@
         <span class="k">float</span> <span class="n">G</span> <span class="o">=</span> <span class="n">GeometrySmith</span><span class="p">(</span><span class="n">N</span><span class="p">,</span> <span class="n">V</span><span class="p">,</span> <span class="n">L</span><span class="p">,</span> <span class="n">roughness</span><span class="p">);</span>
         <span class="k">float</span> <span class="n">Vis</span> <span class="o">=</span> <span class="p">(</span><span class="n">G</span> <span class="o">*</span> <span class="n">VdotH</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">NdotH</span> <span class="o">*</span> <span class="n">NdotV</span><span class="p">);</span>
 
+        <span class="k">vec3</span> <span class="n">specularColor</span> <span class="o">=</span>  <span class="n">Vis</span> <span class="o">*</span> <span class="n">F</span><span class="p">;</span>
         <span class="n">specularColor</span> <span class="o">*=</span> <span class="n">NdotL</span><span class="p">;</span>
 
         <span class="n">color</span> <span class="o">=</span> <span class="n">specularColor</span><span class="p">;</span>
