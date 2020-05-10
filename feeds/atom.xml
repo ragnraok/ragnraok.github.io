@@ -159,6 +159,8 @@
 &lt;/pre&gt;&lt;/div&gt;
 
 
+&lt;p&gt;其中多次反射颜色叠加的计算参考pbrt中对Light Transport Equation的推导：
+&lt;a href="http://www.pbr-book.org/3ed-2018/Light_Transport_I_Surface_Reflection/The_Light_Transport_Equation.html#eq:throughput-definition"&gt;http://www.pbr-book.org/3ed-2018/Light_Transport_I_Surface_Reflection/The_Light_Transport_Equation.html#eq:throughput-definition&lt;/a&gt;&lt;/p&gt;
 &lt;p&gt;整个迭代循环大概如此，注意到当我们跟场景中物体没有交点的时候，才去判断是否到达了光源，另外，最后我们还计算了环境光反射&lt;/p&gt;
 &lt;h3&gt;渲染结果叠加&lt;/h3&gt;
 &lt;p&gt;上述只是单次渲染结果的循环，因为循环迭代次数有限，因此单次drawcall绘制的结果往往会有明显的噪点，在最初介绍光线追踪时候提到使用蒙特卡洛方法对多次渲染结果叠加，因此，实际实现的时候我们会做成一个Ping-Pong纹理，将单次渲染的结果输出到单独纹理上，然后上一次结果跟当次渲染结果叠加再输出到另外一张纹理上，循环往复。这里我们对上次渲染结果以及当次渲染结果进行加权平均：&lt;/p&gt;
@@ -339,6 +341,7 @@
 &lt;h3&gt;References&lt;/h3&gt;
 &lt;ul&gt;
 &lt;li&gt;&lt;a href="http://www.pbr-book.org/3ed-2018/Light_Transport_I_Surface_Reflection/Path_Tracing.html"&gt;http://www.pbr-book.org/3ed-2018/Light_Transport_I_Surface_Reflection/Path_Tracing.html&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href="http://www.pbr-book.org/3ed-2018/Light_Transport_I_Surface_Reflection/The_Light_Transport_Equation.html#eq:throughput-definition"&gt;http://www.pbr-book.org/3ed-2018/Light_Transport_I_Surface_Reflection/The_Light_Transport_Equation.html#eq:throughput-definition&lt;/a&gt;&lt;/li&gt;
 &lt;li&gt;&lt;a href="http://www.pbr-book.org/3ed-2018/Monte_Carlo_Integration/Importance_Sampling.html"&gt;http://www.pbr-book.org/3ed-2018/Monte_Carlo_Integration/Importance_Sampling.html&lt;/a&gt;&lt;/li&gt;
 &lt;li&gt;&lt;a href="http://www.pbr-book.org/3ed-2018/Light_Transport_I_Surface_Reflection/Sampling_Light_Sources.html"&gt;http://www.pbr-book.org/3ed-2018/Light_Transport_I_Surface_Reflection/Sampling_Light_Sources.html&lt;/a&gt;&lt;/li&gt;
 &lt;li&gt;&lt;a href="http://iquilezles.org/www/articles/intersectors/intersectors.htm"&gt;http://iquilezles.org/www/articles/intersectors/intersectors.htm&lt;/a&gt;&lt;/li&gt;
