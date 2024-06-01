@@ -1,36 +1,35 @@
 <!DOCTYPE html>
-<html lang="zh">
-<head>
-          <title>Ragnarok Note - 使用JDK的Parser来解析Java源代码</title>
+<html>
+    <head>
+        <title>使用JDK的Parser来解析Java源代码 - Ragnarok Note</title>
         <meta charset="utf-8" />
-        <meta name="generator" content="Pelican" />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <link href="//netdna.bootstrapcdn.com/bootstrap/3.0.0/css/bootstrap.min.css" rel="stylesheet" />
+        <link href="https://ragnraok.github.io/theme/static/css/style.css" rel="stylesheet" />
+        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
         <link href="https://ragnraok.github.io/feeds/atom.xml" type="application/atom+xml" rel="alternate" title="Ragnarok Note Full Atom Feed" />
+    </head>
 
-
-
-
-
-</head>
-
-<body>
-        <header>
-              <hgroup><h1><a href="https://ragnraok.github.io/">Ragnarok Note</a></h1></hgroup>
-        <nav><ul>
-            <li><a href="https://ragnraok.github.io/category/android.html" >Android</a></li>
-            <li><a href="https://ragnraok.github.io/category/hack.html"  aria-current="page" >Hack</a></li>
-            <li><a href="https://ragnraok.github.io/category/living.html" >Living</a></li>
-        </ul></nav>
-        </header>
-        <main>
-<article>
+    <body id="index" class="archive">
+        <div class="container">
+            <div class="header">
+                <ul class="nav nav-pills pull-right">
+                    <li class=""><a href="https://ragnraok.github.io">Home</a></li>
+                    <li><a href="https://ragnraok.github.io/archives.html">Archives</a></li>
+                </ul>
+                <h3 class="text-muted"><a href="https://ragnraok.github.io">Ragnarok Note</a></h3>
+				<h2 class="text-muted"></h2>
+             </div>
+<section id="content" class="article content">
   <header>
-    <h2>
+    <h2 class="entry-title">
       <a href="https://ragnraok.github.io/using-jdk-parser.html" rel="bookmark"
          title="Permalink to 使用JDK的Parser来解析Java源代码">使用JDK的Parser来解析Java源代码</a></h2>
  
   </header>
-  <p>在JDK中，自带了一套相关的编译API，可以在Java中发起编译流程，解析Java源文件然后获取其语法树，在JDK的<code>tools.jar</code>（OSX下可以在/Library/Java/JavaVirtualMachines/jdk_version/Contents/Home/lib中找到）中包含着这整套API，但是这却不是Oracle和OpenJDK发布中的公开API，因此对于这套API，并没有官方的正式文档来进行说明。但是，也有不少项目利用了这套API来做了不少事情，例如大名鼎鼎的<a href="https://github.com/rzwitserloot/lombok.git">lombok</a>使用了这套API在Annotation Processing阶段修改了源代码中的语法树，最终结果相当于直接在源文件中插入了新的代码！</p>
+  
+     
+  <div class="entry-content">
+    <p>在JDK中，自带了一套相关的编译API，可以在Java中发起编译流程，解析Java源文件然后获取其语法树，在JDK的<code>tools.jar</code>（OSX下可以在/Library/Java/JavaVirtualMachines/jdk_version/Contents/Home/lib中找到）中包含着这整套API，但是这却不是Oracle和OpenJDK发布中的公开API，因此对于这套API，并没有官方的正式文档来进行说明。但是，也有不少项目利用了这套API来做了不少事情，例如大名鼎鼎的<a href="https://github.com/rzwitserloot/lombok.git">lombok</a>使用了这套API在Annotation Processing阶段修改了源代码中的语法树，最终结果相当于直接在源文件中插入了新的代码！</p>
 <p>由于这套API目前缺少相关文档，使用起来比较困难，例如，解析源代码中的所有变量，并打印出来：</p>
 <div class="highlight"><pre><span></span><code><span class="n">public</span><span class="w"> </span><span class="k">class</span><span class="w"> </span><span class="n">JavaParser</span><span class="w"> </span><span class="p">{</span>
 
@@ -148,24 +147,39 @@
 <p>可以看出我们把类名以及类中的变量都打印了出来。而在<code>visitClass</code>方法中，我们可以通过<code>getMembers</code>方法拿到类中所有的成员，包括变量，方法，annotation等，分别对应着不同的类型，例如变量就对应着<code>VariableTree</code>类型，方法就对应的<code>MethodTree</code>类型。</p>
 <hr>
 <p>总得来说，虽然实际上使用并不算特别复杂，但是由于缺少文档，对使用造成了很大的障碍，而且目前所介绍的只是这套API的一少部分，后续我将会继续研究这套API的相关函数。</p>
-  <footer>
-    <p>Published: <time datetime="2015-04-12T00:00:00+08:00">
+  </div><!-- /.entry-content -->
+   <footer class="post-info text-muted">
+    Posted on <abbr class="published" title="2015-04-12T00:00:00+08:00">
       日 12 四月 2015
-    </time></p>
-    <address>
-      By           <a href="https://ragnraok.github.io/author/ragnarok-zhou.html">Ragnarok Zhou</a>
-    </address>
-    <p>
-        Category: <a href="https://ragnraok.github.io/category/hack.html">Hack</a>
-    </p>
-  </footer>
-  </article>
-        </main>
-        <footer>
-                <address>
-                Proudly powered by <a rel="nofollow" href="https://getpelican.com/">Pelican</a>,
-                which takes great advantage of <a rel="nofollow" href="https://www.python.org/">Python</a>.
-                </address>
-        </footer>
-</body>
+    </abbr>
+    <address class="vcard author">
+      by <a class="url fn" href="https://ragnraok.github.io/author/ragnarok-zhou.html">Ragnarok Zhou</a>
+    </address> in <a href="https://ragnraok.github.io/category/hack.html">Hack</a> Tagged   </footer><!-- /.post-info -->
+</section>
+    <div class="comment">
+        <div id="disqus_thread"></div> <!-- comment app container -->
+    </div>
+	<!-- Comment BEGIN -->
+    <script type="text/javascript">
+        var disqus_shortname = 'ragnaroknote'; // required: replace example with your forum shortname
+
+        /* * * DON'T EDIT BELOW THIS LINE * * */
+        (function() {
+            var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+            dsq.src = 'https://' + disqus_shortname + '.disqus.com/embed.js';
+            (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+        })();
+    </script>
+    <noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+     <!-- Comment END -->
+            <footer id="contentinfo" class="footer">
+                    <nav class="pull-right bottom-nav">
+                        <a href="https://ragnraok.github.io/feeds/atom.xml">RSS</a>
+                    </nav>
+                    <address id="about" class="vcard body">
+                    &copy; <a href="https://ragnraok.github.io">Ragnarok Note</a> Proudly powered by <a href="http://getpelican.com/">Pelican</a>
+                    </address><!-- /#about -->
+            </footer><!-- /#contentinfo -->
+        </div><!-- container -->
+    </body>
 </html>

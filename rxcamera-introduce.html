@@ -1,36 +1,35 @@
 <!DOCTYPE html>
-<html lang="zh">
-<head>
-          <title>Ragnarok Note - RxCamera, 一个RxJava风格的android camera封装</title>
+<html>
+    <head>
+        <title>RxCamera,  一个RxJava风格的android camera封装 - Ragnarok Note</title>
         <meta charset="utf-8" />
-        <meta name="generator" content="Pelican" />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <link href="//netdna.bootstrapcdn.com/bootstrap/3.0.0/css/bootstrap.min.css" rel="stylesheet" />
+        <link href="https://ragnraok.github.io/theme/static/css/style.css" rel="stylesheet" />
+        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
         <link href="https://ragnraok.github.io/feeds/atom.xml" type="application/atom+xml" rel="alternate" title="Ragnarok Note Full Atom Feed" />
+    </head>
 
-
-
-
-
-</head>
-
-<body>
-        <header>
-              <hgroup><h1><a href="https://ragnraok.github.io/">Ragnarok Note</a></h1></hgroup>
-        <nav><ul>
-            <li><a href="https://ragnraok.github.io/category/android.html"  aria-current="page" >Android</a></li>
-            <li><a href="https://ragnraok.github.io/category/hack.html" >Hack</a></li>
-            <li><a href="https://ragnraok.github.io/category/living.html" >Living</a></li>
-        </ul></nav>
-        </header>
-        <main>
-<article>
+    <body id="index" class="archive">
+        <div class="container">
+            <div class="header">
+                <ul class="nav nav-pills pull-right">
+                    <li class=""><a href="https://ragnraok.github.io">Home</a></li>
+                    <li><a href="https://ragnraok.github.io/archives.html">Archives</a></li>
+                </ul>
+                <h3 class="text-muted"><a href="https://ragnraok.github.io">Ragnarok Note</a></h3>
+				<h2 class="text-muted"></h2>
+             </div>
+<section id="content" class="article content">
   <header>
-    <h2>
+    <h2 class="entry-title">
       <a href="https://ragnraok.github.io/rxcamera-introduce.html" rel="bookmark"
          title="Permalink to RxCamera, 一个RxJava风格的android camera封装">RxCamera,  一个RxJava风格的android camera封装</a></h2>
  
   </header>
-  <p>事实上这个库写了已经有一段时间了，由于最近工作上比较忙，所以现在才写一篇文章来总结</p>
+  
+     
+  <div class="entry-content">
+    <p>事实上这个库写了已经有一段时间了，由于最近工作上比较忙，所以现在才写一篇文章来总结</p>
 <h3>What's this</h3>
 <p>正如标题所说，<a href="https://github.com/ragnraok/RxCamera">RxCamera</a>是一个基于RxJava而构建的一套<a href="http://developer.android.com/intl/es/reference/android/hardware/Camera.html">android.hardware.camera</a>封装的库。最初写这个库的目的是为了熟悉RxJava，并且而且也看到虽然在android开发已经有不少基于RxJava的库，但是关于音视频相关却少之又少，于是就动手实现了一下。目前这个库还处于非常早期的状态，API比较简陋，并且关于camera的设置还有很多没有做</p>
 <h3>How to use</h3>
@@ -101,24 +100,39 @@
 <p>很明显这个库目前还处于非常早期的状态，API还比较简单，并且很多摄像头的参数也没有加入到进行设置，例如白平衡，闪光灯，测光等，后续这里将会逐渐完善丰富摄像头的各种设置。另外，由于是完全基于RxJava来构建的库，大部分接口都会直接返回Observable对象，这对于没有熟悉RxJava的人来说可能还是会有点距离，因此这里后续对接口的封装还是需要继续改进，对外可能不再暴露Observable对象</p>
 <h3>About camera2</h3>
 <p>熟悉android开发的人估计都已经知道在Lollipop，Google新增一套<a href="http://developer.android.com/intl/es/reference/android/hardware/camera2/package-summary.html">camera2</a>API用以取代之前的camera API，camera2提供了对摄像头更加精细化的控制，相对来说比起老的API，对摄像头的可控程度高了非常多。但我个人觉得新的API还不是特别好用，并且由于目前还是比较新，在使用新的camera2 API的时候，<a href="http://source.android.com/devices/camera/versioning.html#camera_api2_capabilities_and_support_levels">还需要查询手机上有哪些特性是有实现的</a>，目前使用起来相当麻烦。所以RxCamera暂时还不打算支持camera2</p>
-  <footer>
-    <p>Published: <time datetime="2015-12-20T00:00:00+08:00">
+  </div><!-- /.entry-content -->
+   <footer class="post-info text-muted">
+    Posted on <abbr class="published" title="2015-12-20T00:00:00+08:00">
       日 20 十二月 2015
-    </time></p>
-    <address>
-      By           <a href="https://ragnraok.github.io/author/ragnarok-zhou.html">Ragnarok Zhou</a>
-    </address>
-    <p>
-        Category: <a href="https://ragnraok.github.io/category/android.html">Android</a>
-    </p>
-  </footer>
-  </article>
-        </main>
-        <footer>
-                <address>
-                Proudly powered by <a rel="nofollow" href="https://getpelican.com/">Pelican</a>,
-                which takes great advantage of <a rel="nofollow" href="https://www.python.org/">Python</a>.
-                </address>
-        </footer>
-</body>
+    </abbr>
+    <address class="vcard author">
+      by <a class="url fn" href="https://ragnraok.github.io/author/ragnarok-zhou.html">Ragnarok Zhou</a>
+    </address> in <a href="https://ragnraok.github.io/category/android.html">Android</a> Tagged   </footer><!-- /.post-info -->
+</section>
+    <div class="comment">
+        <div id="disqus_thread"></div> <!-- comment app container -->
+    </div>
+	<!-- Comment BEGIN -->
+    <script type="text/javascript">
+        var disqus_shortname = 'ragnaroknote'; // required: replace example with your forum shortname
+
+        /* * * DON'T EDIT BELOW THIS LINE * * */
+        (function() {
+            var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+            dsq.src = 'https://' + disqus_shortname + '.disqus.com/embed.js';
+            (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+        })();
+    </script>
+    <noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+     <!-- Comment END -->
+            <footer id="contentinfo" class="footer">
+                    <nav class="pull-right bottom-nav">
+                        <a href="https://ragnraok.github.io/feeds/atom.xml">RSS</a>
+                    </nav>
+                    <address id="about" class="vcard body">
+                    &copy; <a href="https://ragnraok.github.io">Ragnarok Note</a> Proudly powered by <a href="http://getpelican.com/">Pelican</a>
+                    </address><!-- /#about -->
+            </footer><!-- /#contentinfo -->
+        </div><!-- container -->
+    </body>
 </html>

@@ -1,36 +1,35 @@
 <!DOCTYPE html>
-<html lang="zh">
-<head>
-          <title>Ragnarok Note - TextView预渲染研究</title>
+<html>
+    <head>
+        <title>TextView预渲染研究 - Ragnarok Note</title>
         <meta charset="utf-8" />
-        <meta name="generator" content="Pelican" />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <link href="//netdna.bootstrapcdn.com/bootstrap/3.0.0/css/bootstrap.min.css" rel="stylesheet" />
+        <link href="https://ragnraok.github.io/theme/static/css/style.css" rel="stylesheet" />
+        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
         <link href="https://ragnraok.github.io/feeds/atom.xml" type="application/atom+xml" rel="alternate" title="Ragnarok Note Full Atom Feed" />
+    </head>
 
-
-
-
-
-</head>
-
-<body>
-        <header>
-              <hgroup><h1><a href="https://ragnraok.github.io/">Ragnarok Note</a></h1></hgroup>
-        <nav><ul>
-            <li><a href="https://ragnraok.github.io/category/android.html"  aria-current="page" >Android</a></li>
-            <li><a href="https://ragnraok.github.io/category/hack.html" >Hack</a></li>
-            <li><a href="https://ragnraok.github.io/category/living.html" >Living</a></li>
-        </ul></nav>
-        </header>
-        <main>
-<article>
+    <body id="index" class="archive">
+        <div class="container">
+            <div class="header">
+                <ul class="nav nav-pills pull-right">
+                    <li class=""><a href="https://ragnraok.github.io">Home</a></li>
+                    <li><a href="https://ragnraok.github.io/archives.html">Archives</a></li>
+                </ul>
+                <h3 class="text-muted"><a href="https://ragnraok.github.io">Ragnarok Note</a></h3>
+				<h2 class="text-muted"></h2>
+             </div>
+<section id="content" class="article content">
   <header>
-    <h2>
+    <h2 class="entry-title">
       <a href="https://ragnraok.github.io/textview-pre-render-research.html" rel="bookmark"
          title="Permalink to TextView预渲染研究">TextView预渲染研究</a></h2>
  
   </header>
-  <p>Android中的TextView是整个framework中最复杂的控件之一，负责Android中显示文本的大部分工作，framwork中的许多控件也直接或者间接的继承于TextView，例如Button，EditText等。其内部实现也相当复杂，单论代码行数来说，android-22中TextView有足足9509行，另外，TextView中许多操作都非常繁重，例如<code>setText</code>操作，需要设置SpanWatcher，或者需要重现创建一个SpannableString，还需要根据情况重新创建Text Layout，这些操作加起来之后令一次setText操作非常耗时。为了提升TextView的渲染效率，最近研究了一下预渲染的方法，接下来给大家讲解一下原理。</p>
+  
+     
+  <div class="entry-content">
+    <p>Android中的TextView是整个framework中最复杂的控件之一，负责Android中显示文本的大部分工作，framwork中的许多控件也直接或者间接的继承于TextView，例如Button，EditText等。其内部实现也相当复杂，单论代码行数来说，android-22中TextView有足足9509行，另外，TextView中许多操作都非常繁重，例如<code>setText</code>操作，需要设置SpanWatcher，或者需要重现创建一个SpannableString，还需要根据情况重新创建Text Layout，这些操作加起来之后令一次setText操作非常耗时。为了提升TextView的渲染效率，最近研究了一下预渲染的方法，接下来给大家讲解一下原理。</p>
 <h3>TextView渲染基本原理</h3>
 <p>首先来介绍下TextView的基本渲染原理，总的来说，TextView中负责渲染文字的主要是这三个类：</p>
 <ol>
@@ -107,24 +106,39 @@
 <h3>References</h3>
 <p><a href="http://instagram-engineering.tumblr.com/post/114508858967/improving-comment-rendering-on-android">Improving Comment Rendering on Android</a>   <br />
 这篇文章介绍了Instagram如何优化他们的TextView渲染的效率，这也是这里优化方法的来源，Instagram也是直接使用StaticLayout并通过预先创建Layout的方法来减少了ListView滚动过程中的掉帧率，并且效果非常显著。这篇文章算是给出了这里的原理解析以及一个简单的实现</p>
-  <footer>
-    <p>Published: <time datetime="2015-07-26T00:00:00+08:00">
+  </div><!-- /.entry-content -->
+   <footer class="post-info text-muted">
+    Posted on <abbr class="published" title="2015-07-26T00:00:00+08:00">
       日 26 七月 2015
-    </time></p>
-    <address>
-      By           <a href="https://ragnraok.github.io/author/ragnarok-zhou.html">Ragnarok Zhou</a>
-    </address>
-    <p>
-        Category: <a href="https://ragnraok.github.io/category/android.html">Android</a>
-    </p>
-  </footer>
-  </article>
-        </main>
-        <footer>
-                <address>
-                Proudly powered by <a rel="nofollow" href="https://getpelican.com/">Pelican</a>,
-                which takes great advantage of <a rel="nofollow" href="https://www.python.org/">Python</a>.
-                </address>
-        </footer>
-</body>
+    </abbr>
+    <address class="vcard author">
+      by <a class="url fn" href="https://ragnraok.github.io/author/ragnarok-zhou.html">Ragnarok Zhou</a>
+    </address> in <a href="https://ragnraok.github.io/category/android.html">Android</a> Tagged   </footer><!-- /.post-info -->
+</section>
+    <div class="comment">
+        <div id="disqus_thread"></div> <!-- comment app container -->
+    </div>
+	<!-- Comment BEGIN -->
+    <script type="text/javascript">
+        var disqus_shortname = 'ragnaroknote'; // required: replace example with your forum shortname
+
+        /* * * DON'T EDIT BELOW THIS LINE * * */
+        (function() {
+            var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+            dsq.src = 'https://' + disqus_shortname + '.disqus.com/embed.js';
+            (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+        })();
+    </script>
+    <noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+     <!-- Comment END -->
+            <footer id="contentinfo" class="footer">
+                    <nav class="pull-right bottom-nav">
+                        <a href="https://ragnraok.github.io/feeds/atom.xml">RSS</a>
+                    </nav>
+                    <address id="about" class="vcard body">
+                    &copy; <a href="https://ragnraok.github.io">Ragnarok Note</a> Proudly powered by <a href="http://getpelican.com/">Pelican</a>
+                    </address><!-- /#about -->
+            </footer><!-- /#contentinfo -->
+        </div><!-- container -->
+    </body>
 </html>
