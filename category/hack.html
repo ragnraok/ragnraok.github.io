@@ -4,46 +4,32 @@
         <title> Articles in Hack category - Ragnarok Note</title>
         <meta charset="utf-8" />
         <link href="//netdna.bootstrapcdn.com/bootstrap/3.0.0/css/bootstrap.min.css" rel="stylesheet" />
-        <link href="http://ragnraok.github.io/theme/static/css/style.css" rel="stylesheet" />
+        <link href="https://ragnraok.github.io/theme/static/css/style.css" rel="stylesheet" />
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-        <link href="http://ragnraok.github.io/feeds/atom.xml" type="application/atom+xml" rel="alternate" title="Ragnarok Note Full Atom Feed" />
+        <link href="https://ragnraok.github.io/feeds/atom.xml" type="application/atom+xml" rel="alternate" title="Ragnarok Note Full Atom Feed" />
     </head>
 
     <body id="index" class="archive">
         <div class="container">
             <div class="header">
                 <ul class="nav nav-pills pull-right">
-                    <li class=""><a href="http://ragnraok.github.io">Home</a></li>
-                    <li class="active"><a href="http://ragnraok.github.io/archives.html">Archives</a></li>
+                    <li class=""><a href="https://ragnraok.github.io">Home</a></li>
+                    <li class="active"><a href="https://ragnraok.github.io/archives.html">Archives</a></li>
                 </ul>
-                <h3 class="text-muted"><a href="http://ragnraok.github.io">Ragnarok Note</a></h3>
+                <h3 class="text-muted"><a href="https://ragnraok.github.io">Ragnarok Note</a></h3>
 				<h2 class="text-muted"></h2>
              </div>
 <section id="content" class="content">
 <h2>Articles in the Hack category</h2>
 
         <article class="hentry">
-                <header> <h2 class="entry-title"><a href="http://ragnraok.github.io/project-lacie-initiate.html" rel="bookmark" title="Permalink to Project Lacie Initiate">Project Lacie Initiate</a></h2> </header>
+                <header> <h2 class="entry-title"><a href="https://ragnraok.github.io/project-lacie-initiate.html" rel="bookmark" title="Permalink to Project Lacie Initiate">Project Lacie Initiate</a></h2> </header>
                 <div class="entry-content"> <h3>Motivation</h3>
-<p>我记得去年在组内介绍Annotation和<a href="http://docs.oracle.com/javase/7/docs/technotes/guides/apt/">Annotation Process Tool</a>的时候，当时不少小伙伴都认为这个是一个非常棒的工具，用来做代码生成非常合适，但是也存在不少问题，主要的争论点在于，对于大型的项目，其代码量非常大，无论是在IDE内或者在命令行中进行编译，即使只是普通的增量编译，打包，也需要耗上非常长的时间。而普通的APT则需要每次都先拉起一次编译过程，因为实际上整个Annotation Processing是Java编译中的一个<a href="http://openjdk.java.net/groups/compiler/doc/compilation-overview/index.html">步骤</a>，另外如果在Annotation Processing的过程中另外产生了新的代码的话，还需要重新编译生成的代码，这会导致整个编译过程变得更加漫长，如下图，为Java源码编译的过程，摘自OpenJDK官网。</p>
-<p><img alt="" src="static/images/javac-flow.png"></p>
-<p>于是，后续我就逐渐开始想方法实现有一个类似Annotation Processor的API的工具，但并不需要拉起Javac进行编译，只需要输入源码即可，然后由开发者自行定义生成代码的规则，即可完成APT的功能。</p>
-<h3>Research</h3>
-<p>要实现这样的一个工具，最先迫切的就是需要一个语法解析器，这样子才能从源码中提取出所需要的信息。当时候的想法是自己来实现Tokenizer和Parser（真庆幸大学的时候教编译原理的灭绝大法师的训练，我还记得怎么写哈哈哈哈），但很快我就找到了<a href="https://javacc.java.net/">JavaCC</a>这个工具，这玩意可以说是Java编译器的生成工具，实际上Javac的前端也是这个东西来生成的。但是JavaCC生成的代码非常乱并且其API并不是很好用。当时候我想当JDK中一定是有单独Javac前端独立出来的，于是我又找到了JDK中的<code>tools …</code></p> </div><!-- entry-content -->
+<p>我记得去年在组内介绍Annotation和<a href="http://docs.oracle.com/javase/7/docs/technotes/guides/apt/">Annotation Process Tool</a>的时候，当时不少小伙伴都认为这个是一个非常棒的工具，用来做代码生成非常合适 …</p> </div><!-- entry-content -->
         </article>
         <article class="hentry">
-                <header> <h2 class="entry-title"><a href="http://ragnraok.github.io/using-jdk-parser.html" rel="bookmark" title="Permalink to 使用JDK的Parser来解析Java源代码">使用JDK的Parser来解析Java源代码</a></h2> </header>
-                <div class="entry-content"> <p>在JDK中，自带了一套相关的编译API，可以在Java中发起编译流程，解析Java源文件然后获取其语法树，在JDK的<code>tools.jar</code>（OSX下可以在/Library/Java/JavaVirtualMachines/jdk_version/Contents/Home/lib中找到）中包含着这整套API，但是这却不是Oracle和OpenJDK发布中的公开API，因此对于这套API，并没有官方的正式文档来进行说明。但是，也有不少项目利用了这套API来做了不少事情，例如大名鼎鼎的<a href="https://github.com/rzwitserloot/lombok.git">lombok</a>使用了这套API在Annotation Processing阶段修改了源代码中的语法树，最终结果相当于直接在源文件中插入了新的代码！</p>
-<p>由于这套API目前缺少相关文档，使用起来比较困难，例如，解析源代码中的所有变量，并打印出来：</p>
-<div class="highlight"><pre><span></span><span class="kr">public</span> <span class="kr">class</span> <span class="nx">JavaParser</span> <span class="p">{</span>
-
-    <span class="kr">private</span> <span class="kr">static</span> <span class="kr">final</span> <span class="nb">String</span> <span class="nx">path</span> <span class="o">=</span> <span class="s2">&quot;User.java&quot;</span><span class="p">;</span>
-
-    <span class="kr">private</span> <span class="nx">JavacFileManager</span> <span class="nx">fileManager</span><span class="p">;</span>
-    <span class="kr">private</span> <span class="nx">JavacTool</span> <span class="nx">javacTool</span><span class="p">;</span>
-
-    <span class="kr">public</span> <span class="nx">JavaParser</span><span class="p">()</span> <span class="p">{</span>
-        <span class="nx">Context …</span></pre></div> </div><!-- entry-content -->
+                <header> <h2 class="entry-title"><a href="https://ragnraok.github.io/using-jdk-parser.html" rel="bookmark" title="Permalink to 使用JDK的Parser来解析Java源代码">使用JDK的Parser来解析Java源代码</a></h2> </header>
+                <div class="entry-content"> <p>在JDK中，自带了一套相关的编译API，可以在Java中发起编译流程，解析Java源文件然后获取其语法树，在JDK的<code>tools.jar</code>（OSX下可以在/Library/Java/JavaVirtualMachines/jdk_version/Contents/Home/lib中找到）中包含着这整套API，但是这却不是Oracle和OpenJDK发布中的公开API，因此对 …</p> </div><!-- entry-content -->
         </article>
 <div class="pager">
       <ul>
@@ -54,10 +40,10 @@
 </section><!-- content -->
             <footer id="contentinfo" class="footer">
                     <nav class="pull-right bottom-nav">
-                        <a href="http://ragnraok.github.io/feeds/atom.xml">RSS</a>
+                        <a href="https://ragnraok.github.io/feeds/atom.xml">RSS</a>
                     </nav>
                     <address id="about" class="vcard body">
-                    &copy; <a href="http://ragnraok.github.io">Ragnarok Note</a> Proudly powered by <a href="http://getpelican.com/">Pelican</a>
+                    &copy; <a href="https://ragnraok.github.io">Ragnarok Note</a> Proudly powered by <a href="http://getpelican.com/">Pelican</a>
                     </address><!-- /#about -->
             </footer><!-- /#contentinfo -->
         </div><!-- container -->

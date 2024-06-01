@@ -4,25 +4,25 @@
         <title>探索在Android中使用Emoji Font的方法 - Ragnarok Note</title>
         <meta charset="utf-8" />
         <link href="//netdna.bootstrapcdn.com/bootstrap/3.0.0/css/bootstrap.min.css" rel="stylesheet" />
-        <link href="http://ragnraok.github.io/theme/static/css/style.css" rel="stylesheet" />
+        <link href="https://ragnraok.github.io/theme/static/css/style.css" rel="stylesheet" />
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-        <link href="http://ragnraok.github.io/feeds/atom.xml" type="application/atom+xml" rel="alternate" title="Ragnarok Note Full Atom Feed" />
+        <link href="https://ragnraok.github.io/feeds/atom.xml" type="application/atom+xml" rel="alternate" title="Ragnarok Note Full Atom Feed" />
     </head>
 
     <body id="index" class="archive">
         <div class="container">
             <div class="header">
                 <ul class="nav nav-pills pull-right">
-                    <li class=""><a href="http://ragnraok.github.io">Home</a></li>
-                    <li><a href="http://ragnraok.github.io/archives.html">Archives</a></li>
+                    <li class=""><a href="https://ragnraok.github.io">Home</a></li>
+                    <li><a href="https://ragnraok.github.io/archives.html">Archives</a></li>
                 </ul>
-                <h3 class="text-muted"><a href="http://ragnraok.github.io">Ragnarok Note</a></h3>
+                <h3 class="text-muted"><a href="https://ragnraok.github.io">Ragnarok Note</a></h3>
 				<h2 class="text-muted"></h2>
              </div>
 <section id="content" class="article content">
   <header>
     <h2 class="entry-title">
-      <a href="http://ragnraok.github.io/android-emoji-font-method.html" rel="bookmark"
+      <a href="https://ragnraok.github.io/android-emoji-font-method.html" rel="bookmark"
          title="Permalink to 探索在Android中使用Emoji Font的方法">探索在Android中使用Emoji Font的方法</a></h2>
  
   </header>
@@ -42,7 +42,7 @@
 <li>上述文章中作者提供了一个FontTools的扩展，叫做<code>sbix_code.zip</code>，<a href="http://www.kutilek.de/download/sbix_code.zip">下载</a>之后解压缩，将里面的文件复制到FontTools在python的site-packages目录下，如果是在OSX上，假设你使用的是python 2.7，那一般是在<code>/Library/Python/2.7/site-packages/FontTools</code>目录下。</li>
 <li>该作者还提供了一个使用的demo：<a href="http://www.kutilek.de/download/sbix_demo.zip">sbix_demo.zip</a>，解压缩之后编辑里面的<code>extractSbixImages.py</code>，修改如下：</li>
 </ul>
-<div class="highlight"><pre><span></span><span class="ch">#! /usr/bin/env/python</span>
+<div class="highlight"><pre><span></span><code><span class="ch">#! /usr/bin/env/python</span>
 <span class="kn">from</span> <span class="nn">fontTools.ttLib</span> <span class="kn">import</span> <span class="n">TTFont</span>
 <span class="kn">from</span> <span class="nn">os.path</span> <span class="kn">import</span> <span class="n">exists</span><span class="p">,</span> <span class="n">join</span>
 <span class="kn">from</span> <span class="nn">os</span> <span class="kn">import</span> <span class="n">makedirs</span>
@@ -57,20 +57,19 @@
             <span class="k">if</span> <span class="ow">not</span> <span class="n">exists</span><span class="p">(</span><span class="n">setpath</span><span class="p">):</span>
                 <span class="n">makedirs</span><span class="p">(</span><span class="n">setpath</span><span class="p">)</span>
 
-            <span class="k">print</span> <span class="s2">&quot;Writing bitmap set to &lt;</span><span class="si">%s</span><span class="s2">&gt;&quot;</span> <span class="o">%</span> <span class="n">setpath</span>
+            <span class="nb">print</span> <span class="s2">&quot;Writing bitmap set to &lt;</span><span class="si">%s</span><span class="s2">&gt;&quot;</span> <span class="o">%</span> <span class="n">setpath</span>
             <span class="k">for</span> <span class="n">bm</span> <span class="ow">in</span> <span class="n">bs</span><span class="o">.</span><span class="n">bitmaps</span><span class="o">.</span><span class="n">itervalues</span><span class="p">():</span>
-                <span class="k">if</span> <span class="n">bm</span><span class="o">.</span><span class="n">imageFormatTag</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">bm</span><span class="o">.</span><span class="n">imageFormatTag</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
                     <span class="n">filename</span> <span class="o">=</span> <span class="n">join</span><span class="p">(</span><span class="n">setpath</span><span class="p">,</span> <span class="s2">&quot;</span><span class="si">%s</span><span class="s2">.png&quot;</span> <span class="o">%</span> <span class="n">bm</span><span class="o">.</span><span class="n">glyphName</span><span class="p">)</span>
-                    <span class="n">pf</span> <span class="o">=</span> <span class="nb">file</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="s2">&quot;wb&quot;</span><span class="p">)</span>
+                    <span class="n">pf</span> <span class="o">=</span> <span class="n">file</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="s2">&quot;wb&quot;</span><span class="p">)</span>
                     <span class="n">pf</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">bm</span><span class="o">.</span><span class="n">imageData</span><span class="p">)</span>
                     <span class="n">pf</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
     <span class="k">else</span><span class="p">:</span>
-        <span class="k">print</span> <span class="s2">&quot;Font has no sbix table.&quot;</span>
+        <span class="nb">print</span> <span class="s2">&quot;Font has no sbix table.&quot;</span>
 
 <span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
     <span class="n">main</span><span class="p">()</span>
-</pre></div>
-
+</code></pre></div>
 
 <p>其中<code>"Apple Color Emoji.ttf"</code>请改成Apple Color Emoji.ttf这个文件对应的目录</p>
 <ul>
@@ -132,8 +131,8 @@
       三 14 一月 2015
     </abbr>
     <address class="vcard author">
-      by <a class="url fn" href="http://ragnraok.github.io/author/ragnarok-zhou.html">Ragnarok Zhou</a>
-    </address> in <a href="http://ragnraok.github.io/category/android.html">Android</a> Tagged   </footer><!-- /.post-info -->
+      by <a class="url fn" href="https://ragnraok.github.io/author/ragnarok-zhou.html">Ragnarok Zhou</a>
+    </address> in <a href="https://ragnraok.github.io/category/android.html">Android</a> Tagged   </footer><!-- /.post-info -->
 </section>
     <div class="comment">
         <div id="disqus_thread"></div> <!-- comment app container -->
@@ -145,7 +144,7 @@
         /* * * DON'T EDIT BELOW THIS LINE * * */
         (function() {
             var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
-            dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+            dsq.src = 'https://' + disqus_shortname + '.disqus.com/embed.js';
             (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
         })();
     </script>
@@ -153,10 +152,10 @@
      <!-- Comment END -->
             <footer id="contentinfo" class="footer">
                     <nav class="pull-right bottom-nav">
-                        <a href="http://ragnraok.github.io/feeds/atom.xml">RSS</a>
+                        <a href="https://ragnraok.github.io/feeds/atom.xml">RSS</a>
                     </nav>
                     <address id="about" class="vcard body">
-                    &copy; <a href="http://ragnraok.github.io">Ragnarok Note</a> Proudly powered by <a href="http://getpelican.com/">Pelican</a>
+                    &copy; <a href="https://ragnraok.github.io">Ragnarok Note</a> Proudly powered by <a href="http://getpelican.com/">Pelican</a>
                     </address><!-- /#about -->
             </footer><!-- /#contentinfo -->
         </div><!-- container -->

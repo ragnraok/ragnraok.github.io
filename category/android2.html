@@ -4,131 +4,62 @@
         <title> Articles in Android category - Ragnarok Note</title>
         <meta charset="utf-8" />
         <link href="//netdna.bootstrapcdn.com/bootstrap/3.0.0/css/bootstrap.min.css" rel="stylesheet" />
-        <link href="http://ragnraok.github.io/theme/static/css/style.css" rel="stylesheet" />
+        <link href="https://ragnraok.github.io/theme/static/css/style.css" rel="stylesheet" />
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-        <link href="http://ragnraok.github.io/feeds/atom.xml" type="application/atom+xml" rel="alternate" title="Ragnarok Note Full Atom Feed" />
+        <link href="https://ragnraok.github.io/feeds/atom.xml" type="application/atom+xml" rel="alternate" title="Ragnarok Note Full Atom Feed" />
     </head>
 
     <body id="index" class="archive">
         <div class="container">
             <div class="header">
                 <ul class="nav nav-pills pull-right">
-                    <li class=""><a href="http://ragnraok.github.io">Home</a></li>
-                    <li class="active"><a href="http://ragnraok.github.io/archives.html">Archives</a></li>
+                    <li class=""><a href="https://ragnraok.github.io">Home</a></li>
+                    <li class="active"><a href="https://ragnraok.github.io/archives.html">Archives</a></li>
                 </ul>
-                <h3 class="text-muted"><a href="http://ragnraok.github.io">Ragnarok Note</a></h3>
+                <h3 class="text-muted"><a href="https://ragnraok.github.io">Ragnarok Note</a></h3>
 				<h2 class="text-muted"></h2>
              </div>
 <section id="content" class="content">
 <h2>Articles in the Android category</h2>
 
         <article class="hentry">
-                <header> <h2 class="entry-title"><a href="http://ragnraok.github.io/get_android_alloc_object_info.html" rel="bookmark" title="Permalink to 如何获取Android系统中申请对象的信息">如何获取Android系统中申请对象的信息</a></h2> </header>
-                <div class="entry-content"> <p>最近一直在做有关内存方面的优化工作，在做优化的过程，除了关注内存的申请量以及GC的情况之外，我们经常需要想方法找出是那些对象占用了大量内存，以及他们是如何导致GC的，这意味着我们需要获取对象申请的信息（大小，类型，堆栈等），我们这篇文章来介绍下几种获取对象申请信息的方法</p>
-<h3>Allocation Tracker</h3>
-<p>Allocation Tracker是android studio自带的一个功能，我们可以在MemoryMonitor中打开使用：</p>
-<p><img alt="" src="static/images/memorymonitor_1.jpeg"></p>
-<p>如上图，点击红框按钮，然后操作app，开始allocation tracking，当认为需要结束的时候，再次点击按钮，稍等片刻，即可以在android studio中dump出在 <strong>这段时间</strong> 内 <strong>新申请</strong> 对象的信息：</p>
-<p><img alt="" src="static/images/memorymonitor_2.png"></p>
-<p>这种使用方式相当直观，可以看到申请对象大小，数量，还有堆栈等，通过这些信息，我们可以作为我们接下来进行内存优化的参考</p>
-<p>但是，对于这种获取申请对象信息的方法，会存在几个问题：</p>
-<ol>
-<li>获取的信息过于分散，中间夹杂着不少其他的信息，不完全是app申请的，可能需要进行不少查找才能定位到具体的问题</li>
-<li>跟TraceView一样，无法做到自动化分析，每次都需要开发者手工开始/结束，对于某些问题的分析可能会造成不便，而且对于批量分析来说也比较困难</li>
-<li>虽然在allocation …</li></ol> </div><!-- entry-content -->
+                <header> <h2 class="entry-title"><a href="https://ragnraok.github.io/get_android_alloc_object_info.html" rel="bookmark" title="Permalink to 如何获取Android系统中申请对象的信息">如何获取Android系统中申请对象的信息</a></h2> </header>
+                <div class="entry-content"> <p>最近一直在做有关内存方面的优化工作，在做优化的过程，除了关注内存的申请量以及GC的情况之外，我们经常需要想方法找出是那 …</p> </div><!-- entry-content -->
         </article>
         <article class="hentry">
-                <header> <h2 class="entry-title"><a href="http://ragnraok.github.io/tricking-android-memoryfile.html" rel="bookmark" title="Permalink to Tricking Android MemoryFile">Tricking Android MemoryFile</a></h2> </header>
+                <header> <h2 class="entry-title"><a href="https://ragnraok.github.io/tricking-android-memoryfile.html" rel="bookmark" title="Permalink to Tricking Android MemoryFile">Tricking Android MemoryFile</a></h2> </header>
                 <div class="entry-content"> <p>之前在做一个内存优化的时候，使用到了MemoryFile，由此发现了MemoryFile的一些特性以及一个非常trickly的使用方法，因此在这里记录一下</p>
 <h3>What is it</h3>
-<p>MemoryFile是android在最开始就引入的一套框架，其内部实际上是封装了android特有的内存共享机制<a href="http://elinux.org/Android_Kernel_Features#ashmem">Ashmem</a>匿名共享内存，简单来说，Ashmem在Android内核中是被注册成一个特殊的字符设备，Ashmem驱动通过在内核的一个自定义<a href="https://en.wikipedia.org/wiki/Slab_allocation">slab</a>缓冲区中初始化一段内存区域，然后通过mmap把申请的内存映射到用户的进程空间中（通过<a href="https://en.wikipedia.org/wiki/Tmpfs">tmpfs</a>），这样子就可以在用户进程中使用这里申请的内存了，另外，Ashmem的一个特性就是可以在系统内存不足的时候，回收掉被标记为"unpin"的内存，这个后面会讲到，另外，MemoryFile也可以通过Binder跨进程调用来让两个进程共享一段内存区域。由于整个申请内存的过程并不再Java层上，可以很明显的看出使用MemoryFile申请的内存实际上是<strong>并不会</strong>占用Java堆内存的。</p>
-<p>MemoryFile暴露出来的用户接口可以说跟他的名字一样，基本上跟我们平时的文件的读写基本一致，也可以使用InputStream和OutputStream来对其进行读写等操作：</p>
-<div class="highlight"><pre><span></span><span class="n">MemoryFile</span> <span class="n">memoryFile</span> <span class="o">=</span> <span class="k">new</span> <span class="n">MemoryFile</span><span class="o">(</span><span class="kc">null</span><span class="o">,</span> <span class="n">inputStream</span><span class="o">.</span><span class="na">available</span><span class="o">());</span>
-<span class="n">memoryFile</span><span class="o">.</span><span class="na">allowPurging</span><span class="o">(</span><span class="kc">false</span><span class="o">);</span>
-<span class="n">OutputStream</span> <span class="n">outputStream</span> <span class="o">=</span> <span class="n">memoryFile</span><span class="o">.</span><span class="na">getOutputStream</span><span class="o">();</span>
-<span class="n">outputStream …</span></pre></div> </div><!-- entry-content -->
+<p>MemoryFile是android在最开始就引入的一套框架，其内部实际上是封装了android特有的内存共享机制<a href="http://elinux.org/Android_Kernel_Features#ashmem">Ashmem</a>匿 …</p> </div><!-- entry-content -->
         </article>
         <article class="hentry">
-                <header> <h2 class="entry-title"><a href="http://ragnraok.github.io/rxcamera-introduce.html" rel="bookmark" title="Permalink to RxCamera, 一个RxJava风格的android camera封装">RxCamera,  一个RxJava风格的android camera封装</a></h2> </header>
+                <header> <h2 class="entry-title"><a href="https://ragnraok.github.io/rxcamera-introduce.html" rel="bookmark" title="Permalink to RxCamera, 一个RxJava风格的android camera封装">RxCamera,  一个RxJava风格的android camera封装</a></h2> </header>
                 <div class="entry-content"> <p>事实上这个库写了已经有一段时间了，由于最近工作上比较忙，所以现在才写一篇文章来总结</p>
 <h3>What's this</h3>
-<p>正如标题所说，<a href="https://github.com/ragnraok/RxCamera">RxCamera</a>是一个基于RxJava而构建的一套<a href="http://developer.android.com/intl/es/reference/android/hardware/Camera.html">android.hardware.camera</a>封装的库。最初写这个库的目的是为了熟悉RxJava，并且而且也看到虽然在android开发已经有不少基于RxJava的库，但是关于音视频相关却少之又少，于是就动手实现了一下。目前这个库还处于非常早期的状态，API比较简陋，并且关于camera的设置还有很多没有做</p>
-<h3>How to use</h3>
-<p>在<a href="https://github.com/ragnraok/RxCamera">RxCamera</a>的README中已经有关于这个库使用的比较详细介绍了，我在这里再说明一下：</p>
-<h4>加入依赖</h4>
-<p>首先你需要在项目中加入对RxCamera项目的依赖:</p>
-<div class="highlight"><pre><span></span>repositories {
-        jcenter()
-}
-dependencies {
-    compile &#39;com.ragnarok.rxcamera:lib:0.0.1&#39;
-}
-</pre></div>
-
-
-<h4>基本的使用</h4>
-<ul>
-<li>配置camera的参数</li>
-</ul>
-<p>android的原生camera api提供了不少的选项来配置打开摄像头时候的参数，例如预览的帧率，预览的分辨率，自动对焦等，在RxCamera中主要是通过一个<code>RxCameraConfig</code>对象来管理这些对象，并通过 …</p> </div><!-- entry-content -->
+<p>正如标题所说，<a href="https://github.com/ragnraok/RxCamera">RxCamera</a>是一 …</p> </div><!-- entry-content -->
         </article>
         <article class="hentry">
-                <header> <h2 class="entry-title"><a href="http://ragnraok.github.io/textview-pre-render-research.html" rel="bookmark" title="Permalink to TextView预渲染研究">TextView预渲染研究</a></h2> </header>
-                <div class="entry-content"> <p>Android中的TextView是整个framework中最复杂的控件之一，负责Android中显示文本的大部分工作，framwork中的许多控件也直接或者间接的继承于TextView，例如Button，EditText等。其内部实现也相当复杂，单论代码行数来说，android-22中TextView有足足9509行，另外，TextView中许多操作都非常繁重，例如<code>setText</code>操作，需要设置SpanWatcher，或者需要重现创建一个SpannableString，还需要根据情况重新创建Text Layout，这些操作加起来之后令一次setText操作非常耗时。为了提升TextView的渲染效率，最近研究了一下预渲染的方法，接下来给大家讲解一下原理。</p>
-<h3>TextView渲染基本原理</h3>
-<p>首先来介绍下TextView的基本渲染原理，总的来说，TextView中负责渲染文字的主要是这三个类：</p>
-<ol>
-<li>
-<p><a href="http://developer.android.com/intl/zh-cn/reference/android/text/BoringLayout.html">BoringLayout</a> <br />
-    主要负责显示单行文本，并提供了isBoring方法来判断是否满足单行文本的条件。</p>
-</li>
-<li>
-<p><a href="http://developer.android.com/intl/zh-cn/reference/android/text/DynamicLayout.html">DynamicLayout</a> <br />
-    当文本为Spannable的时候，TextView就会使用它来负责文本的显示，在内部设置了SpanWatcher，当检测到span改变的时候，会进行reflow，重新计算布局。</p>
-</li>
-<li>
-<p><a href="http://developer.android.com/intl/zh-cn/reference/android/text/StaticLayout.html">StaticLayout</a> <br />
-    当文本为非单行文本，且非Spannable的时候，就会使用StaticLayout，内部并不会监听span的变化，因此效率上会比DynamicLayout高，只需一次布局的创建即可，但其实内部也能显示SpannableString，只是不能在span变化之后重新进行布局而已。</p>
-</li>
-</ol>
-<p>另外，以上三个类都继承于<a href="http://developer.android.com/intl/zh-cn/reference/android/text/Layout.html">Layout</a>类，在此类中统一负责文本的具体绘制，在Layout …</p> </div><!-- entry-content -->
+                <header> <h2 class="entry-title"><a href="https://ragnraok.github.io/textview-pre-render-research.html" rel="bookmark" title="Permalink to TextView预渲染研究">TextView预渲染研究</a></h2> </header>
+                <div class="entry-content"> <p>Android中的TextView是整个framework中最复杂的控件之一，负责Android中显示文本的大部分工作，framwork中的许多控件也直接或者间接的继承于TextView，例如Button，EditText等。其内部实现也相当复杂，单论代码行数来说，android-22中TextView有足足9509行，另外，TextView中许多操作都非常繁重，例如<code>setText</code>操作，需要设置SpanWatcher，或者需要重现创建一 …</p> </div><!-- entry-content -->
         </article>
         <article class="hentry">
-                <header> <h2 class="entry-title"><a href="http://ragnraok.github.io/using-kotlin-to-write-android-app.html" rel="bookmark" title="Permalink to 使用Kotlin进行Android开发">使用Kotlin进行Android开发</a></h2> </header>
+                <header> <h2 class="entry-title"><a href="https://ragnraok.github.io/using-kotlin-to-write-android-app.html" rel="bookmark" title="Permalink to 使用Kotlin进行Android开发">使用Kotlin进行Android开发</a></h2> </header>
                 <div class="entry-content"> <h3>What is Kotlin</h3>
-<p>Kotlin，原意是在俄罗斯的一个<a href="https://zh.wikipedia.org/wiki/%E7%A7%91%E7%89%B9%E6%9E%97%E5%B3%B6">小岛</a>，JetBrain在2011年推出了以这个来命名的一个运行在JVM上的语言， 看上去有点类似C#和Scala的结合，并且同为静态类型，作为一门JVM上的语言，可以轻松兼容Java，并且整个语言设计的非常轻量。目前的版本为<code>0.12.200</code>，尚未发布正式版。</p>
-<hr>
-<p>Kotlin的下载和配置在其<a href="http://kotlinlang.org/docs/tutorials/getting-started.html">官网</a>上有，在这里就不再赘述了，值得一提的是，作为JetBrains家出品的语言，自家的IDEA当然全力支持！</p>
-<h3>基本语法介绍</h3>
-<p>Kotlin的语法非常简洁，熟悉Java或者Scala的人都可以快速上手：</p>
-<h4>函数声明：</h4>
-<div class="highlight"><pre><span></span>fun foo(va: Int): Int {
-    return 1
-}
-</pre></div>
-
-
-<p>也可以单行声明：</p>
-<div class="highlight"><pre><span></span>fun foo(va: Int): Int = 1
-</pre></div>
-
-
-<p>lambda当然也是支持的：</p>
-<div class="highlight"><pre><span></span>var c = {foo: Int -&gt; println(foo …</pre></div> </div><!-- entry-content -->
+<p>Kotlin，原意是在俄罗斯的一个<a href="https://zh.wikipedia.org/wiki/%E7%A7%91%E7%89%B9%E6%9E%97%E5%B3%B6">小岛</a>，JetBrain在2011年推出了以这个来命名的一个运行在JVM上的语言， 看上去有点类似C#和Scala的结合，并且同为静态类型，作为一门JVM上的语言，可以轻松兼容Java，并且整 …</p> </div><!-- entry-content -->
         </article>
 <div class="pager">
       <ul>
-						<li class="previous"><a href="http://ragnraok.github.io/category/android.html">← Previous</a></li>
-						<li class="next"><a href="http://ragnraok.github.io/category/android3.html">Next →</a></li>
+						<li class="previous"><a href="https://ragnraok.github.io/category/android.html">← Previous</a></li>
+						<li class="next"><a href="https://ragnraok.github.io/category/android3.html">Next →</a></li>
       </ul>
     </div>
 </section><!-- content -->
             <footer id="contentinfo" class="footer">
                     <nav class="pull-right bottom-nav">
-                        <a href="http://ragnraok.github.io/feeds/atom.xml">RSS</a>
+                        <a href="https://ragnraok.github.io/feeds/atom.xml">RSS</a>
                     </nav>
                     <address id="about" class="vcard body">
-                    &copy; <a href="http://ragnraok.github.io">Ragnarok Note</a> Proudly powered by <a href="http://getpelican.com/">Pelican</a>
+                    &copy; <a href="https://ragnraok.github.io">Ragnarok Note</a> Proudly powered by <a href="http://getpelican.com/">Pelican</a>
                     </address><!-- /#about -->
             </footer><!-- /#contentinfo -->
         </div><!-- container -->

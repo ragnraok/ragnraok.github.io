@@ -4,25 +4,25 @@
         <title>尝试在Android中实现PBR管线——环境光照明 - Ragnarok Note</title>
         <meta charset="utf-8" />
         <link href="//netdna.bootstrapcdn.com/bootstrap/3.0.0/css/bootstrap.min.css" rel="stylesheet" />
-        <link href="http://ragnraok.github.io/theme/static/css/style.css" rel="stylesheet" />
+        <link href="https://ragnraok.github.io/theme/static/css/style.css" rel="stylesheet" />
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-        <link href="http://ragnraok.github.io/feeds/atom.xml" type="application/atom+xml" rel="alternate" title="Ragnarok Note Full Atom Feed" />
+        <link href="https://ragnraok.github.io/feeds/atom.xml" type="application/atom+xml" rel="alternate" title="Ragnarok Note Full Atom Feed" />
     </head>
 
     <body id="index" class="archive">
         <div class="container">
             <div class="header">
                 <ul class="nav nav-pills pull-right">
-                    <li class=""><a href="http://ragnraok.github.io">Home</a></li>
-                    <li><a href="http://ragnraok.github.io/archives.html">Archives</a></li>
+                    <li class=""><a href="https://ragnraok.github.io">Home</a></li>
+                    <li><a href="https://ragnraok.github.io/archives.html">Archives</a></li>
                 </ul>
-                <h3 class="text-muted"><a href="http://ragnraok.github.io">Ragnarok Note</a></h3>
+                <h3 class="text-muted"><a href="https://ragnraok.github.io">Ragnarok Note</a></h3>
 				<h2 class="text-muted"></h2>
              </div>
 <section id="content" class="article content">
   <header>
     <h2 class="entry-title">
-      <a href="http://ragnraok.github.io/try_android_implement_pbr_ambient_lighting.html" rel="bookmark"
+      <a href="https://ragnraok.github.io/try_android_implement_pbr_ambient_lighting.html" rel="bookmark"
          title="Permalink to 尝试在Android中实现PBR管线——环境光照明">尝试在Android中实现PBR管线——环境光照明</a></h2>
  
   </header>
@@ -32,109 +32,101 @@
     <p>在上一篇文章中，我们讨论了PBR管线的基础理论，以及实现了场景中直接光（点光源/方向光源）照明的计算，对比与Blinn-Phong模型，PBR使用了微平面理论来对现实世界建模，而在BRDF项计算中，使用了法线分布函数/几何函数/菲涅尔方程构成的BRDF方程来计算光线对某种材质最终输出光照的影响。</p>
 <p>但单纯看直接光照明，PBR管线似乎跟上一个世代的效果差不多，真正让PBR得到超越上一个世代效果的，是其环境光照明部分，所谓的<strong>动态全局光照</strong>的实体</p>
 <p>首先我们来重新看下，在直接光照明下，我们的渲染方程：</p>
-<div class="math">$$L=(K_{d}f_{lambert} + K_{s}f_{cook-torrance})L_{i}(w_{i}\cdot n)$$</div>
-<div class="math">$$L=(K_{d}\frac{diffuse}{\pi} +K_{s}\frac{DFG}{4(W_{o}\cdot n)(W_{i}\cdot n)})L_{i}(w_{i}\cdot n)$$</div>
+<p>$$L=(K_{d}f_{lambert} + K_{s}f_{cook-torrance})L_{i}(w_{i}\cdot n)$$</p>
+<p>$$L=(K_{d}\frac{diffuse}{\pi} +K_{s}\frac{DFG}{4(W_{o}\cdot n)(W_{i}\cdot n)})L_{i}(w_{i}\cdot n)$$</p>
 <p>这里我们只考虑了场景中的直接光源，但除了直接光源，场景中还会有来自环境本身的光源，如下图所示</p>
 <p><img alt="" src="static/images/pbr_indirect_light.png"></p>
 <p>场景中的环境光照是指，来自环境中各个方向的光源，照射到物体，然后反射到观察者方向的照相机中，在实际中，要计算总的反射光，我们会对于场景中的每个片断点，计算以片断点中法向量n为轴的半球体中所有入射光的总和：</p>
 <p><img alt="" src="static/images/pbr_indirect_lignht_semisphere.jpg"></p>
 <p>而在数学上，我们会使用半球积分来计算场景中所有环境光的总和：</p>
-<div class="math">$$L=\int_{\Omega }(K_{d}f_{lambert} + K_{s}f_{cook-torrance})L_{i}(w_{i}\cdot n)dw_{i}$$</div>
-<p>可以看到因为是对所有方向入射光做计算，因此我们的被积变量是<span class="math">\(w_{i}\)</span>，另外，如果我们将公式整理简化一下表达：</p>
-<div class="math">$$L(p, w_{o})=\int_{\Omega }f_{r}(p, w_{i}, w_{o})L_{i}(w_{i}\cdot n)dw_{i}$$</div>
-<p>（这里<span class="math">\(p\)</span>是要计算的片段点，<span class="math">\(w_{o}\)</span>是出射光的方向，<span class="math">\(w_{i}\)</span>是入射光的方向，<span class="math">\(n\)</span>则是法线，<span class="math">\(f_{r}\)</span>则是BRDF）</p>
+<p>$$L=\int_{\Omega }(K_{d}f_{lambert} + K_{s}f_{cook-torrance})L_{i}(w_{i}\cdot n)dw_{i}$$</p>
+<p>可以看到因为是对所有方向入射光做计算，因此我们的被积变量是$w_{i}$，另外，如果我们将公式整理简化一下表达：</p>
+<p>$$L(p, w_{o})=\int_{\Omega }f_{r}(p, w_{i}, w_{o})L_{i}(w_{i}\cdot n)dw_{i}$$</p>
+<p>（这里$p$是要计算的片段点，$w_{o}$是出射光的方向，$w_{i}$是入射光的方向，$n$则是法线，$f_{r}$则是BRDF）</p>
 <p>可以看出来，这个方程可以看做是标准<a href="https://zh.wikipedia.org/wiki/%E6%B8%B2%E6%9F%93%E6%96%B9%E7%A8%8B">渲染方程</a>的一个近似解</p>
 <h3>完整的PBR渲染方程</h3>
-<p>在加上了环境光之后，对于场景中某一点<span class="math">\(p\)</span>，想要得到最终的光照输出<span class="math">\(L\)</span>，完整的PBR渲染方程就变成了这样：</p>
-<div class="math">$$L(p, w_{o})=\int_{\Omega }f_{r}(p, w_{i}, w_{o})L_{i}(w_{i}\cdot n)dw_{i}$$</div>
+<p>在加上了环境光之后，对于场景中某一点$p$，想要得到最终的光照输出$L$，完整的PBR渲染方程就变成了这样：</p>
+<p>$$L(p, w_{o})=\int_{\Omega }f_{r}(p, w_{i}, w_{o})L_{i}(w_{i}\cdot n)dw_{i}$$</p>
 <p>可以看到要真正计算完整的光照，外面是一个半球积分，然而，这个半球积分并没有解析解，而计算机是离散的，所以我们通常会采用某种<strong>采样</strong>的方法，来近似计算积分的值：</p>
-<div class="highlight"><pre><span></span><span class="k">int</span> <span class="n">steps</span> <span class="o">=</span> <span class="mi">100</span><span class="p">;</span>
-<span class="k">float</span> <span class="n">sum</span> <span class="o">=</span> <span class="mf">0.0</span><span class="n">f</span><span class="p">;</span>
-<span class="k">vec3</span> <span class="n">P</span>    <span class="o">=</span> <span class="p">...;</span>
-<span class="k">vec3</span> <span class="n">Wo</span>   <span class="o">=</span> <span class="p">...;</span>
-<span class="k">vec3</span> <span class="n">N</span>    <span class="o">=</span> <span class="p">...;</span>
-<span class="k">float</span> <span class="n">dW</span>  <span class="o">=</span> <span class="mf">1.0</span><span class="n">f</span> <span class="o">/</span> <span class="n">steps</span><span class="p">;</span>
-<span class="k">for</span><span class="p">(</span><span class="k">int</span> <span class="n">i</span> <span class="o">=</span> <span class="mo">0</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">steps</span><span class="p">;</span> <span class="o">++</span><span class="n">i</span><span class="p">)</span>
+<div class="highlight"><pre><span></span><code><span class="kt">int</span><span class="w"> </span><span class="n">steps</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">100</span><span class="p">;</span>
+<span class="kt">float</span><span class="w"> </span><span class="n">sum</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mf">0.0</span><span class="n">f</span><span class="p">;</span>
+<span class="kt">vec3</span><span class="w"> </span><span class="n">P</span><span class="w">    </span><span class="o">=</span><span class="w"> </span><span class="p">...;</span>
+<span class="kt">vec3</span><span class="w"> </span><span class="n">Wo</span><span class="w">   </span><span class="o">=</span><span class="w"> </span><span class="p">...;</span>
+<span class="kt">vec3</span><span class="w"> </span><span class="n">N</span><span class="w">    </span><span class="o">=</span><span class="w"> </span><span class="p">...;</span>
+<span class="kt">float</span><span class="w"> </span><span class="n">dW</span><span class="w">  </span><span class="o">=</span><span class="w"> </span><span class="mf">1.0</span><span class="n">f</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="n">steps</span><span class="p">;</span>
+<span class="k">for</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mo">0</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">steps</span><span class="p">;</span><span class="w"> </span><span class="o">++</span><span class="n">i</span><span class="p">)</span>
 <span class="p">{</span>
-    <span class="k">vec3</span> <span class="n">Wi</span> <span class="o">=</span> <span class="n">getNextIncomingLightDir</span><span class="p">(</span><span class="n">i</span><span class="p">);</span>
-    <span class="n">sum</span> <span class="o">+=</span> <span class="n">Fr</span><span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="n">Wi</span><span class="p">,</span> <span class="n">Wo</span><span class="p">)</span> <span class="o">*</span> <span class="n">L</span><span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="n">Wi</span><span class="p">)</span> <span class="o">*</span> <span class="n">dot</span><span class="p">(</span><span class="n">N</span><span class="p">,</span> <span class="n">Wi</span><span class="p">)</span> <span class="o">*</span> <span class="n">dW</span><span class="p">;</span>
+<span class="w">    </span><span class="kt">vec3</span><span class="w"> </span><span class="n">Wi</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">getNextIncomingLightDir</span><span class="p">(</span><span class="n">i</span><span class="p">);</span>
+<span class="w">    </span><span class="n">sum</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="n">Fr</span><span class="p">(</span><span class="n">p</span><span class="p">,</span><span class="w"> </span><span class="n">Wi</span><span class="p">,</span><span class="w"> </span><span class="n">Wo</span><span class="p">)</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">L</span><span class="p">(</span><span class="n">p</span><span class="p">,</span><span class="w"> </span><span class="n">Wi</span><span class="p">)</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">dot</span><span class="p">(</span><span class="n">N</span><span class="p">,</span><span class="w"> </span><span class="n">Wi</span><span class="p">)</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">dW</span><span class="p">;</span>
 <span class="p">}</span>
-</pre></div>
-
+</code></pre></div>
 
 <p>为了计算这个积分的近似值，我们再将积分函数展开：</p>
-<div class="math">$$L(p, w_{o})=\int_{\Omega }(K_{d}f_{lambert} + K_{s}f_{cook-torrance})L_{i}(w_{i}\cdot n)dw_{i}$$</div>
+<p>$$L(p, w_{o})=\int_{\Omega }(K_{d}f_{lambert} + K_{s}f_{cook-torrance})L_{i}(w_{i}\cdot n)dw_{i}$$</p>
 <p>因为积分中漫反射跟高光部分是加法，我们可以对积分进行拆解：</p>
-<div class="math">$$L(p, w_{o})=\int_{\Omega }(K_{d}f_{lambert})L_{i}(w_{i}\cdot n)dw_{i} + \int_{\Omega }(K_{s}f_{cook-torrance})L_{i}(w_{i}\cdot n)dw_{i}$$</div>
+<p>$$L(p, w_{o})=\int_{\Omega }(K_{d}f_{lambert})L_{i}(w_{i}\cdot n)dw_{i} + \int_{\Omega }(K_{s}f_{cook-torrance})L_{i}(w_{i}\cdot n)dw_{i}$$</p>
 <p>于是我们将积分拆解成了漫反射部分跟高光部分，我们拆开来，再将公式展开：</p>
 <p>则漫反射部分为：
-</p>
-<div class="math">$$L(p, w_{o})=\int_{\Omega }(K_{d}\frac{diffuse}{\pi})L_{i}(w_{i}\cdot n)dw_{i}$$</div>
+$$L(p, w_{o})=\int_{\Omega }(K_{d}\frac{diffuse}{\pi})L_{i}(w_{i}\cdot n)dw_{i}$$</p>
 <p>高光部分为：</p>
-<div class="math">$$L(p, w_{o})=\int_{\Omega }(K_{s}\frac{DFG}{4(W_{o}\cdot n)(W_{i}\cdot n)})L_{i}(w_{i}\cdot n)dw_{i}$$</div>
+<p>$$L(p, w_{o})=\int_{\Omega }(K_{s}\frac{DFG}{4(W_{o}\cdot n)(W_{i}\cdot n)})L_{i}(w_{i}\cdot n)dw_{i}$$</p>
 <p>以上是渲染的方程，而在具体的工程实现上，我们对场景中环境光源的模拟，则使用所谓的<strong>Imaged Based Lighting(IBL)</strong>，即为基于图片的光照，通过在场景中添加环境贴图，也就是cubemap，作为环境中的光源的采样来源，然后再来照明物体</p>
 <p>接下来我们再分别对漫反射和高光部分的光照分别求解</p>
 <h3>漫反射环境光照</h3>
 <p>首先，对于场景中的某一点，漫反射部分光照的积分公式为：</p>
-<div class="math">$$L(p, w_{o})=\int_{\Omega }(K_{d}\frac{diffuse}{\pi})L_{i}(w_{i}\cdot n)dw_{i}$$</div>
+<p>$$L(p, w_{o})=\int_{\Omega }(K_{d}\frac{diffuse}{\pi})L_{i}(w_{i}\cdot n)dw_{i}$$</p>
 <p>我们先把常量部分拆出来：</p>
-<div class="math">$$L(p, w_{o})=K_{d}\frac{diffuse}{\pi}\int_{\Omega }L_{i}(w_{i}\cdot n)dw_{i}$$</div>
+<p>$$L(p, w_{o})=K_{d}\frac{diffuse}{\pi}\int_{\Omega }L_{i}(w_{i}\cdot n)dw_{i}$$</p>
 <p>因为计算机是离散的，要直接计算这个积分是不可能的，因此，我们通过连续采样，然后计算平均值的方法，来近似的计算这个积分的值，我们参考<a href="http://www.codinglabs.net/article_physically_based_rendering.aspx">这里</a>的推导：</p>
 <p>首先，我们将半球积分，转换成为普通的半球二重积分：</p>
-<div class="math">$$L(p, w_{o})=K_{d}\frac{diffuse}{\pi}\int_{-\pi}^{\pi}\int_{0}^{\frac{\pi}{2}}L_{i}cos(\theta _{i})sin(\theta _{i})d\phi _{i}$$</div>
-<p>其中<span class="math">\(\theta _{i}\)</span>则为光线方向跟半球法线方向的夹角</p>
-<p>然后，对于积分，计算机中常见的计算方式是，使用<a href="https://en.wikipedia.org/wiki/Monte_Carlo_method">蒙特卡洛方法</a>来近似计算，令我们在球坐标系下的两个方向上采样数为<span class="math">\(N_{1}\)</span>和<span class="math">\(N_{2}\)</span>，代入如下：</p>
-<div class="math">$$L(p, w_{o})=K_{d}\frac{diffuse}{\pi}\frac{2\pi}{N_{1}}\frac{\pi}{2N_{2}} L_{i}cos(\theta _{i})sin(\theta _{i})$$</div>
-<p>
+<p>$$L(p, w_{o})=K_{d}\frac{diffuse}{\pi}\int_{-\pi}^{\pi}\int_{0}^{\frac{\pi}{2}}L_{i}cos(\theta <em i>{i})sin(\theta </em>$$})d\phi _{i</p>
+<p>其中$\theta _{i}$则为光线方向跟半球法线方向的夹角</p>
+<p>然后，对于积分，计算机中常见的计算方式是，使用<a href="https://en.wikipedia.org/wiki/Monte_Carlo_method">蒙特卡洛方法</a>来近似计算，令我们在球坐标系下的两个方向上采样数为$N_{1}$和$N_{2}$，代入如下：</p>
+<p>$$L(p, w_{o})=K_{d}\frac{diffuse}{\pi}\frac{2\pi}{N_{1}}\frac{\pi}{2N_{2}} L_{i}cos(\theta <em i>{i})sin(\theta </em>)$$
 消去多余项之后则如下
-</p>
-<div class="math">$$L(p, w_{o})=K_{d}\frac{\pi diffuse}{N_{1}N_{2}} L_{i}cos(\theta _{i})sin(\theta _{i})$$</div>
-<p>
-我们稍微简化一下表达，令<span class="math">\(c=diffuse\)</span>：
-</p>
-<div class="math">$$L(p, w_{o})=K_{d}\frac{\pi c}{N_{1}N_{2}} L_{i}cos(\theta _{i})sin(\theta _{i})$$</div>
+$$L(p, w_{o})=K_{d}\frac{\pi diffuse}{N_{1}N_{2}} L_{i}cos(\theta <em i>{i})sin(\theta </em>)$$
+我们稍微简化一下表达，令$c=diffuse$：
+$$L(p, w_{o})=K_{d}\frac{\pi c}{N_{1}N_{2}} L_{i}cos(\theta <em i>{i})sin(\theta </em>)$$</p>
 <p>得到了这个公式之后，我们实现就很明确了，因为想要计算的是环境的漫反射光照，因此：</p>
 <ol>
-<li><span class="math">\(L_{i}\)</span> 可以采样为环境中天空盒纹理中的颜色作为光照来源，这就是字面意义的<strong>基于图片的光照</strong>，对于场景中的一点我们都通过积分计算得到了来自半球上各个方向的光照，对于PBR管线来说，需要在线性空间计算光照，因此天空盒的纹理必须是HDR图片，对于GLES来说，就是GL_RGB16F的颜色格式，否则最终渲染的结果，对比度会明显不够</li>
+<li>$L_{i}$ 可以采样为环境中天空盒纹理中的颜色作为光照来源，这就是字面意义的<strong>基于图片的光照</strong>，对于场景中的一点我们都通过积分计算得到了来自半球上各个方向的光照，对于PBR管线来说，需要在线性空间计算光照，因此天空盒的纹理必须是HDR图片，对于GLES来说，就是GL_RGB16F的颜色格式，否则最终渲染的结果，对比度会明显不够</li>
 <li>对于这个公式，我们可以在当前片断方向周围进行连续采样来计算积分，采样次数越多，积分结果越准确</li>
 <li>最终，我们可以通过对天空盒纹理上的每个片断进行各个方向上的连续采样，将得到的结果存储在另外一张cubemap纹理中，最终直接采样这张纹理即可作为环境中的漫反射光照了</li>
 </ol>
 <p>上面计算的代码如下</p>
-<div class="highlight"><pre><span></span><span class="k">vec3</span> <span class="n">N</span> <span class="o">=</span> <span class="n">normalize</span><span class="p">(</span><span class="n">WorldPos</span><span class="p">);</span>
+<div class="highlight"><pre><span></span><code><span class="kt">vec3</span><span class="w"> </span><span class="n">N</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">normalize</span><span class="p">(</span><span class="n">WorldPos</span><span class="p">);</span>
 
-<span class="k">vec3</span> <span class="n">irradiance</span> <span class="o">=</span> <span class="k">vec3</span><span class="p">(</span><span class="mf">0.0</span><span class="p">);</span>
+<span class="kt">vec3</span><span class="w"> </span><span class="n">irradiance</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kt">vec3</span><span class="p">(</span><span class="mf">0.0</span><span class="p">);</span>
 
 <span class="c1">// tangent space calculation from origin point</span>
-<span class="k">vec3</span> <span class="n">up</span>    <span class="o">=</span> <span class="k">vec3</span><span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">);</span>
-<span class="k">vec3</span> <span class="n">right</span> <span class="o">=</span> <span class="n">cross</span><span class="p">(</span><span class="n">up</span><span class="p">,</span> <span class="n">N</span><span class="p">);</span>
-<span class="n">up</span>            <span class="o">=</span> <span class="n">cross</span><span class="p">(</span><span class="n">N</span><span class="p">,</span> <span class="n">right</span><span class="p">);</span>
+<span class="kt">vec3</span><span class="w"> </span><span class="n">up</span><span class="w">    </span><span class="o">=</span><span class="w"> </span><span class="kt">vec3</span><span class="p">(</span><span class="mf">0.0</span><span class="p">,</span><span class="w"> </span><span class="mf">1.0</span><span class="p">,</span><span class="w"> </span><span class="mf">0.0</span><span class="p">);</span>
+<span class="kt">vec3</span><span class="w"> </span><span class="n">right</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">cross</span><span class="p">(</span><span class="n">up</span><span class="p">,</span><span class="w"> </span><span class="n">N</span><span class="p">);</span>
+<span class="n">up</span><span class="w">            </span><span class="o">=</span><span class="w"> </span><span class="n">cross</span><span class="p">(</span><span class="n">N</span><span class="p">,</span><span class="w"> </span><span class="n">right</span><span class="p">);</span>
 
-<span class="k">float</span> <span class="n">sampleDelta</span> <span class="o">=</span> <span class="mf">0.025</span><span class="p">;</span>
-<span class="k">float</span> <span class="n">nrSamples</span> <span class="o">=</span> <span class="mf">0.0</span><span class="n">f</span><span class="p">;</span>
-<span class="k">for</span><span class="p">(</span><span class="k">float</span> <span class="n">phi</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">;</span> <span class="n">phi</span> <span class="o">&lt;</span> <span class="mf">2.0</span> <span class="o">*</span> <span class="n">PI</span><span class="p">;</span> <span class="n">phi</span> <span class="o">+=</span> <span class="n">sampleDelta</span><span class="p">)</span>
+<span class="kt">float</span><span class="w"> </span><span class="n">sampleDelta</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mf">0.025</span><span class="p">;</span>
+<span class="kt">float</span><span class="w"> </span><span class="n">nrSamples</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mf">0.0</span><span class="n">f</span><span class="p">;</span>
+<span class="k">for</span><span class="p">(</span><span class="kt">float</span><span class="w"> </span><span class="n">phi</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mf">0.0</span><span class="p">;</span><span class="w"> </span><span class="n">phi</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="mf">2.0</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">PI</span><span class="p">;</span><span class="w"> </span><span class="n">phi</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="n">sampleDelta</span><span class="p">)</span>
 <span class="p">{</span>
-    <span class="k">for</span><span class="p">(</span><span class="k">float</span> <span class="n">theta</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">;</span> <span class="n">theta</span> <span class="o">&lt;</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="n">PI</span><span class="p">;</span> <span class="n">theta</span> <span class="o">+=</span> <span class="n">sampleDelta</span><span class="p">)</span>
-    <span class="p">{</span>
-        <span class="c1">// spherical to cartesian (in tangent space)</span>
-        <span class="k">vec3</span> <span class="n">tangentSample</span> <span class="o">=</span> <span class="k">vec3</span><span class="p">(</span><span class="n">sin</span><span class="p">(</span><span class="n">theta</span><span class="p">)</span> <span class="o">*</span> <span class="n">cos</span><span class="p">(</span><span class="n">phi</span><span class="p">),</span>  <span class="n">sin</span><span class="p">(</span><span class="n">theta</span><span class="p">)</span> <span class="o">*</span> <span class="n">sin</span><span class="p">(</span><span class="n">phi</span><span class="p">),</span> <span class="n">cos</span><span class="p">(</span><span class="n">theta</span><span class="p">));</span>
-        <span class="c1">// tangent space to world</span>
-        <span class="k">vec3</span> <span class="n">sampleVec</span> <span class="o">=</span> <span class="n">tangentSample</span><span class="p">.</span><span class="n">x</span> <span class="o">*</span> <span class="n">right</span> <span class="o">+</span> <span class="n">tangentSample</span><span class="p">.</span><span class="n">y</span> <span class="o">*</span> <span class="n">up</span> <span class="o">+</span> <span class="n">tangentSample</span><span class="p">.</span><span class="n">z</span> <span class="o">*</span> <span class="n">N</span><span class="p">;</span>
+<span class="w">    </span><span class="k">for</span><span class="p">(</span><span class="kt">float</span><span class="w"> </span><span class="n">theta</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mf">0.0</span><span class="p">;</span><span class="w"> </span><span class="n">theta</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="mf">0.5</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">PI</span><span class="p">;</span><span class="w"> </span><span class="n">theta</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="n">sampleDelta</span><span class="p">)</span>
+<span class="w">    </span><span class="p">{</span>
+<span class="w">        </span><span class="c1">// spherical to cartesian (in tangent space)</span>
+<span class="w">        </span><span class="kt">vec3</span><span class="w"> </span><span class="n">tangentSample</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kt">vec3</span><span class="p">(</span><span class="n">sin</span><span class="p">(</span><span class="n">theta</span><span class="p">)</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">cos</span><span class="p">(</span><span class="n">phi</span><span class="p">),</span><span class="w">  </span><span class="n">sin</span><span class="p">(</span><span class="n">theta</span><span class="p">)</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">sin</span><span class="p">(</span><span class="n">phi</span><span class="p">),</span><span class="w"> </span><span class="n">cos</span><span class="p">(</span><span class="n">theta</span><span class="p">));</span>
+<span class="w">        </span><span class="c1">// tangent space to world</span>
+<span class="w">        </span><span class="kt">vec3</span><span class="w"> </span><span class="n">sampleVec</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">tangentSample</span><span class="p">.</span><span class="n">x</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">right</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">tangentSample</span><span class="p">.</span><span class="n">y</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">up</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">tangentSample</span><span class="p">.</span><span class="n">z</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">N</span><span class="p">;</span>
 
-        <span class="n">irradiance</span> <span class="o">+=</span> <span class="n">texture</span><span class="p">(</span><span class="n">environmentMap</span><span class="p">,</span> <span class="n">sampleVec</span><span class="p">).</span><span class="n">rgb</span> <span class="o">*</span> <span class="n">cos</span><span class="p">(</span><span class="n">theta</span><span class="p">)</span> <span class="o">*</span> <span class="n">sin</span><span class="p">(</span><span class="n">theta</span><span class="p">);</span>
-        <span class="n">nrSamples</span><span class="o">++</span><span class="p">;</span>
-    <span class="p">}</span>
+<span class="w">        </span><span class="n">irradiance</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="n">texture</span><span class="p">(</span><span class="n">environmentMap</span><span class="p">,</span><span class="w"> </span><span class="n">sampleVec</span><span class="p">).</span><span class="n">rgb</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">cos</span><span class="p">(</span><span class="n">theta</span><span class="p">)</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">sin</span><span class="p">(</span><span class="n">theta</span><span class="p">);</span>
+<span class="w">        </span><span class="n">nrSamples</span><span class="o">++</span><span class="p">;</span>
+<span class="w">    </span><span class="p">}</span>
 <span class="p">}</span>
-<span class="n">irradiance</span> <span class="o">=</span> <span class="n">PI</span> <span class="o">*</span> <span class="n">irradiance</span> <span class="o">*</span> <span class="p">(</span><span class="mf">1.0</span> <span class="o">/</span> <span class="k">float</span><span class="p">(</span><span class="n">nrSamples</span><span class="p">));</span>
+<span class="n">irradiance</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">PI</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">irradiance</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="p">(</span><span class="mf">1.0</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="kt">float</span><span class="p">(</span><span class="n">nrSamples</span><span class="p">));</span>
 
-<span class="n">FragColor</span> <span class="o">=</span> <span class="k">vec4</span><span class="p">(</span><span class="n">irradiance</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">);</span>
-</pre></div>
-
+<span class="n">FragColor</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kt">vec4</span><span class="p">(</span><span class="n">irradiance</span><span class="p">,</span><span class="w"> </span><span class="mf">1.0</span><span class="p">);</span>
+</code></pre></div>
 
 <p>将上面预采样的结果存储在另外一张cubemap纹理中，而在主shader中，我们对场景漫反射的采样只需要这样子计算就可以了：</p>
-<div class="highlight"><pre><span></span><span class="k">vec3</span> <span class="n">irradiance</span> <span class="o">=</span> <span class="n">texture</span><span class="p">(</span><span class="n">irradianceMap</span><span class="p">,</span> <span class="n">N</span><span class="p">).</span><span class="n">rgb</span><span class="p">;</span>
-<span class="k">vec3</span> <span class="n">diffuse</span> <span class="o">=</span> <span class="n">irradiance</span> <span class="o">*</span> <span class="n">albedo</span><span class="p">;</span>
-</pre></div>
-
+<div class="highlight"><pre><span></span><code><span class="kt">vec3</span><span class="w"> </span><span class="n">irradiance</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">texture</span><span class="p">(</span><span class="n">irradianceMap</span><span class="p">,</span><span class="w"> </span><span class="n">N</span><span class="p">).</span><span class="n">rgb</span><span class="p">;</span>
+<span class="kt">vec3</span><span class="w"> </span><span class="n">diffuse</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">irradiance</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">albedo</span><span class="p">;</span>
+</code></pre></div>
 
 <p>预计算之后，我们得到了的纹理大概是这个样子的：</p>
 <p><img alt="" src="static/images/ibl_irradiance.png"></p>
@@ -142,217 +134,207 @@
 <p><img alt="" src="static/images/irradiance_ibl_render_result.png"></p>
 <p>可以看到，因为有了漫反射光照，我们渲染的结果比原来稍微亮了一些</p>
 <p>另外，除了直接计算，我们也可以利用<a href="https://github.com/dariomanesku/cmft">cmft</a>来生成这张预计算贴图：</p>
-<div class="highlight"><pre><span></span>cmft --input <span class="s2">&quot;xx.hdr&quot;</span>           <span class="se">\</span>
-            --filter irradiance               <span class="se">\</span>
-            --srcFaceSize <span class="m">0</span>                   <span class="se">\</span>
-            --dstFaceSize <span class="m">256</span>                   <span class="se">\</span>
-            --outputNum <span class="m">1</span>                     <span class="se">\</span>
-            --output0 <span class="s2">&quot;xx_irradiance&quot;</span>         <span class="se">\</span>
-            --output0params dds,bgra8,cubemap
-</pre></div>
-
+<div class="highlight"><pre><span></span><code>cmft<span class="w"> </span>--input<span class="w"> </span><span class="s2">&quot;xx.hdr&quot;</span><span class="w">           </span><span class="se">\</span>
+<span class="w">            </span>--filter<span class="w"> </span>irradiance<span class="w">               </span><span class="se">\</span>
+<span class="w">            </span>--srcFaceSize<span class="w"> </span><span class="m">0</span><span class="w">                   </span><span class="se">\</span>
+<span class="w">            </span>--dstFaceSize<span class="w"> </span><span class="m">256</span><span class="w">                   </span><span class="se">\</span>
+<span class="w">            </span>--outputNum<span class="w"> </span><span class="m">1</span><span class="w">                     </span><span class="se">\</span>
+<span class="w">            </span>--output0<span class="w"> </span><span class="s2">&quot;xx_irradiance&quot;</span><span class="w">         </span><span class="se">\</span>
+<span class="w">            </span>--output0params<span class="w"> </span>dds,bgra8,cubemap
+</code></pre></div>
 
 <p>这里最终会生成一张DDS格式的纹理，不过，在Android直接使用会有问题，这里会在文章后面说下这里的坑</p>
 <h3>高光环境光照</h3>
 <p>接下来我们再来继续实现高光部分，首先，我们再来看下高光部分的渲染方程为：</p>
-<div class="math">$$L(p, w_{o})=\int_{\Omega }(K_{s}\frac{DFG}{4(W_{o}\cdot n)(W_{i}\cdot n)})L_{i}(w_{i}\cdot n)dw_{i}$$</div>
+<p>$$L(p, w_{o})=\int_{\Omega }(K_{s}\frac{DFG}{4(W_{o}\cdot n)(W_{i}\cdot n)})L_{i}(w_{i}\cdot n)dw_{i}$$</p>
 <p>我们稍微简化下表达，把BRDF部分收回去：</p>
-<div class="math">$$L(p, w_{o})=\int_{\Omega }f_{r}(p, w_{i}, w_{o})L_{i}(w_{i}\cdot n)dw_{i}$$</div>
+<p>$$L(p, w_{o})=\int_{\Omega }f_{r}(p, w_{i}, w_{o})L_{i}(w_{i}\cdot n)dw_{i}$$</p>
 <p>可以看出来高光部分的积分要比漫反射部分复杂得多，无论是直接求解或者是直接应用蒙特卡洛积分计算都会变得相当复杂，而在很多游戏引擎中，为了求解，都会对这个积分进行拆解，变成两个积分的乘积来近似，这种方法叫做<strong>Split Sum Approximation</strong>，拆解之后，我们的积分变成了这样子：</p>
-<div class="math">$$L(p, w_{o})=\int_{\Omega }L_{i}(w_{i}\cdot n)dw_{i} * \int_{\Omega }f_{r}(p, w_{i}, w_{o})(w_{i}\cdot n)dw_{i}$$</div>
+<p>$$L(p, w_{o})=\int_{\Omega }L_{i}(w_{i}\cdot n)dw_{i} * \int_{\Omega }f_{r}(p, w_{i}, w_{o})(w_{i}\cdot n)dw_{i}$$</p>
 <p>因此，我们的高光部分积分，就分成了两个部分</p>
 <h4>预过滤环境贴图（Pre-filtered environment map）</h4>
-<div class="math">$$L(p, w_{o})=\int_{\Omega }L_{i}(w_{i}\cdot n)dw_{i}$$</div>
+<p>$$L(p, w_{o})=\int_{\Omega }L_{i}(w_{i}\cdot n)dw_{i}$$</p>
 <p>类似针对漫反射光照的处理一样，对这个积分的计算，我们也采用蒙特卡洛积分来近似计算，但对于高光反射，我们会针对不同的粗糙度，生成不同大小的预计算纹理贴图，用来作为不同粗糙度下高光的环境光反射，这同样符合物理结果，粗糙度越高，对于高光反射越弱。而对于GLES来说，最合理的做法就是把不同粗糙度下的预计算结果存储在不同级别的mipMap level中，在使用的时候，再根据材质粗糙度插值来选取对应mipmap level的纹理：</p>
 <p><img alt="" src="static/images/ibl_prefilter_map.png"></p>
 <p>而在计算处理上，虽然我们也可以直接类似漫反射光照那样子，直接在半球空间内均匀采样然后再求值平均，但对于高光反射来说，由于表面粗糙度的影响，不同粗糙度的表面对光线的反射输出也不同</p>
 <p><img alt="" src="static/images/ibl_specular_lobe.png"></p>
 <p>可以看出来粗糙度越高的表面，反射的光线越分散，结合PBR的微表面模型，可以看出来对于某个片断点，高光反射的光线分布在半程向量的周围，因此我们可以结合粗糙度，以及法线分布函数，让计算时候的采样向量收敛在一个区间内，这就是<strong>重要性采样</strong>，结合蒙特卡洛方法的公式如下:</p>
-<div class="math">$$\int_{a}^{b}f(x)dx=\frac{1}{N}\sum_{i=0}^{N-1}\frac{f(x)}{pdf(x)}$$</div>
-<p>其中<span class="math">\(pdf(x)\)</span>为概率密度函数</p>
+<p>$$\int_{a}^{b}f(x)dx=\frac{1}{N}\sum_{i=0}^{N-1}\frac{f(x)}{pdf(x)}$$</p>
+<p>其中$pdf(x)$为概率密度函数</p>
 <p>因此，在得到采样点之后，我们的进行重要性采样计算代码为：</p>
-<div class="highlight"><pre><span></span><span class="k">vec3</span> <span class="n">ImportanceSampleGGX</span><span class="p">(</span><span class="k">vec2</span> <span class="n">Xi</span><span class="p">,</span> <span class="k">vec3</span> <span class="n">N</span><span class="p">,</span> <span class="k">float</span> <span class="n">roughness</span><span class="p">)</span>
+<div class="highlight"><pre><span></span><code><span class="kt">vec3</span><span class="w"> </span><span class="n">ImportanceSampleGGX</span><span class="p">(</span><span class="kt">vec2</span><span class="w"> </span><span class="n">Xi</span><span class="p">,</span><span class="w"> </span><span class="kt">vec3</span><span class="w"> </span><span class="n">N</span><span class="p">,</span><span class="w"> </span><span class="kt">float</span><span class="w"> </span><span class="n">roughness</span><span class="p">)</span>
 <span class="p">{</span>
-    <span class="k">float</span> <span class="n">a</span> <span class="o">=</span> <span class="n">roughness</span><span class="o">*</span><span class="n">roughness</span><span class="p">;</span>
+<span class="w">    </span><span class="kt">float</span><span class="w"> </span><span class="n">a</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">roughness</span><span class="o">*</span><span class="n">roughness</span><span class="p">;</span>
 
-    <span class="k">float</span> <span class="n">phi</span> <span class="o">=</span> <span class="mf">2.0</span> <span class="o">*</span> <span class="n">PI</span> <span class="o">*</span> <span class="n">Xi</span><span class="p">.</span><span class="n">x</span><span class="p">;</span>
-    <span class="k">float</span> <span class="n">cosTheta</span> <span class="o">=</span> <span class="n">sqrt</span><span class="p">((</span><span class="mf">1.0</span> <span class="o">-</span> <span class="n">Xi</span><span class="p">.</span><span class="n">y</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="mf">1.0</span> <span class="o">+</span> <span class="p">(</span><span class="n">a</span><span class="o">*</span><span class="n">a</span> <span class="o">-</span> <span class="mf">1.0</span><span class="p">)</span> <span class="o">*</span> <span class="n">Xi</span><span class="p">.</span><span class="n">y</span><span class="p">));</span>
-    <span class="k">float</span> <span class="n">sinTheta</span> <span class="o">=</span> <span class="n">sqrt</span><span class="p">(</span><span class="mf">1.0</span> <span class="o">-</span> <span class="n">cosTheta</span><span class="o">*</span><span class="n">cosTheta</span><span class="p">);</span>
+<span class="w">    </span><span class="kt">float</span><span class="w"> </span><span class="n">phi</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mf">2.0</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">PI</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">Xi</span><span class="p">.</span><span class="n">x</span><span class="p">;</span>
+<span class="w">    </span><span class="kt">float</span><span class="w"> </span><span class="n">cosTheta</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">sqrt</span><span class="p">((</span><span class="mf">1.0</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">Xi</span><span class="p">.</span><span class="n">y</span><span class="p">)</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="p">(</span><span class="mf">1.0</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="p">(</span><span class="n">a</span><span class="o">*</span><span class="n">a</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="mf">1.0</span><span class="p">)</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">Xi</span><span class="p">.</span><span class="n">y</span><span class="p">));</span>
+<span class="w">    </span><span class="kt">float</span><span class="w"> </span><span class="n">sinTheta</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">sqrt</span><span class="p">(</span><span class="mf">1.0</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">cosTheta</span><span class="o">*</span><span class="n">cosTheta</span><span class="p">);</span>
 
-    <span class="c1">// from spherical coordinates to cartesian coordinates - halfway vector</span>
-    <span class="k">vec3</span> <span class="n">H</span><span class="p">;</span>
-    <span class="n">H</span><span class="p">.</span><span class="n">x</span> <span class="o">=</span> <span class="n">cos</span><span class="p">(</span><span class="n">phi</span><span class="p">)</span> <span class="o">*</span> <span class="n">sinTheta</span><span class="p">;</span>
-    <span class="n">H</span><span class="p">.</span><span class="n">y</span> <span class="o">=</span> <span class="n">sin</span><span class="p">(</span><span class="n">phi</span><span class="p">)</span> <span class="o">*</span> <span class="n">sinTheta</span><span class="p">;</span>
-    <span class="n">H</span><span class="p">.</span><span class="n">z</span> <span class="o">=</span> <span class="n">cosTheta</span><span class="p">;</span>
+<span class="w">    </span><span class="c1">// from spherical coordinates to cartesian coordinates - halfway vector</span>
+<span class="w">    </span><span class="kt">vec3</span><span class="w"> </span><span class="n">H</span><span class="p">;</span>
+<span class="w">    </span><span class="n">H</span><span class="p">.</span><span class="n">x</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">cos</span><span class="p">(</span><span class="n">phi</span><span class="p">)</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">sinTheta</span><span class="p">;</span>
+<span class="w">    </span><span class="n">H</span><span class="p">.</span><span class="n">y</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">sin</span><span class="p">(</span><span class="n">phi</span><span class="p">)</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">sinTheta</span><span class="p">;</span>
+<span class="w">    </span><span class="n">H</span><span class="p">.</span><span class="n">z</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">cosTheta</span><span class="p">;</span>
 
-    <span class="c1">// from tangent-space H vector to world-space sample vector</span>
-    <span class="k">vec3</span> <span class="n">up</span>          <span class="o">=</span> <span class="n">abs</span><span class="p">(</span><span class="n">N</span><span class="p">.</span><span class="n">z</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mf">0.999</span> <span class="o">?</span> <span class="k">vec3</span><span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">)</span> <span class="o">:</span> <span class="k">vec3</span><span class="p">(</span><span class="mf">1.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">);</span>
-    <span class="k">vec3</span> <span class="n">tangent</span>   <span class="o">=</span> <span class="n">normalize</span><span class="p">(</span><span class="n">cross</span><span class="p">(</span><span class="n">up</span><span class="p">,</span> <span class="n">N</span><span class="p">));</span>
-    <span class="k">vec3</span> <span class="n">bitangent</span> <span class="o">=</span> <span class="n">cross</span><span class="p">(</span><span class="n">N</span><span class="p">,</span> <span class="n">tangent</span><span class="p">);</span>
+<span class="w">    </span><span class="c1">// from tangent-space H vector to world-space sample vector</span>
+<span class="w">    </span><span class="kt">vec3</span><span class="w"> </span><span class="n">up</span><span class="w">          </span><span class="o">=</span><span class="w"> </span><span class="n">abs</span><span class="p">(</span><span class="n">N</span><span class="p">.</span><span class="n">z</span><span class="p">)</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="mf">0.999</span><span class="w"> </span><span class="o">?</span><span class="w"> </span><span class="kt">vec3</span><span class="p">(</span><span class="mf">0.0</span><span class="p">,</span><span class="w"> </span><span class="mf">0.0</span><span class="p">,</span><span class="w"> </span><span class="mf">1.0</span><span class="p">)</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="kt">vec3</span><span class="p">(</span><span class="mf">1.0</span><span class="p">,</span><span class="w"> </span><span class="mf">0.0</span><span class="p">,</span><span class="w"> </span><span class="mf">0.0</span><span class="p">);</span>
+<span class="w">    </span><span class="kt">vec3</span><span class="w"> </span><span class="n">tangent</span><span class="w">   </span><span class="o">=</span><span class="w"> </span><span class="n">normalize</span><span class="p">(</span><span class="n">cross</span><span class="p">(</span><span class="n">up</span><span class="p">,</span><span class="w"> </span><span class="n">N</span><span class="p">));</span>
+<span class="w">    </span><span class="kt">vec3</span><span class="w"> </span><span class="n">bitangent</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">cross</span><span class="p">(</span><span class="n">N</span><span class="p">,</span><span class="w"> </span><span class="n">tangent</span><span class="p">);</span>
 
-    <span class="k">vec3</span> <span class="n">sampleVec</span> <span class="o">=</span> <span class="n">tangent</span> <span class="o">*</span> <span class="n">H</span><span class="p">.</span><span class="n">x</span> <span class="o">+</span> <span class="n">bitangent</span> <span class="o">*</span> <span class="n">H</span><span class="p">.</span><span class="n">y</span> <span class="o">+</span> <span class="n">N</span> <span class="o">*</span> <span class="n">H</span><span class="p">.</span><span class="n">z</span><span class="p">;</span>
-    <span class="k">return</span> <span class="n">normalize</span><span class="p">(</span><span class="n">sampleVec</span><span class="p">);</span>
+<span class="w">    </span><span class="kt">vec3</span><span class="w"> </span><span class="n">sampleVec</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">tangent</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">H</span><span class="p">.</span><span class="n">x</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">bitangent</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">H</span><span class="p">.</span><span class="n">y</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">N</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">H</span><span class="p">.</span><span class="n">z</span><span class="p">;</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="n">normalize</span><span class="p">(</span><span class="n">sampleVec</span><span class="p">);</span>
 <span class="p">}</span>
-</pre></div>
-
+</code></pre></div>
 
 <p>这里我们先得到的采样向量，然后计算出对应世界坐标系下的向量作为半程向量返回</p>
 <p>这里我们还需要生成一个随机向量Xi，而对于蒙特卡洛积分来说，我们需要一种叫做<strong>低差异序列</strong>的特殊随机数：</p>
 <p><img alt="" src="static/images/ibl_low_discrepancy_sequence.png"></p>
 <p>而在这里我们则使用所谓的Hammersley序列来生成，代码如下</p>
-<div class="highlight"><pre><span></span><span class="c1">// ----------------------------------------------------------------------------</span>
+<div class="highlight"><pre><span></span><code><span class="c1">// ----------------------------------------------------------------------------</span>
 <span class="c1">// http://holger.dammertz.org/stuff/notes_HammersleyOnHemisphere.html</span>
 <span class="c1">// efficient VanDerCorpus calculation.</span>
-<span class="k">float</span> <span class="n">RadicalInverse_VdC</span><span class="p">(</span><span class="n">uint</span> <span class="n">bits</span><span class="p">)</span>
+<span class="kt">float</span><span class="w"> </span><span class="n">RadicalInverse_VdC</span><span class="p">(</span><span class="kt">uint</span><span class="w"> </span><span class="n">bits</span><span class="p">)</span>
 <span class="p">{</span>
-     <span class="n">bits</span> <span class="o">=</span> <span class="p">(</span><span class="n">bits</span> <span class="o">&lt;&lt;</span> <span class="mi">16</span><span class="n">u</span><span class="p">)</span> <span class="o">|</span> <span class="p">(</span><span class="n">bits</span> <span class="o">&gt;&gt;</span> <span class="mi">16</span><span class="n">u</span><span class="p">);</span>
-     <span class="n">bits</span> <span class="o">=</span> <span class="p">((</span><span class="n">bits</span> <span class="o">&amp;</span> <span class="mh">0x55555555</span><span class="n">u</span><span class="p">)</span> <span class="o">&lt;&lt;</span> <span class="mi">1</span><span class="n">u</span><span class="p">)</span> <span class="o">|</span> <span class="p">((</span><span class="n">bits</span> <span class="o">&amp;</span> <span class="mh">0xAAAAAAAA</span><span class="n">u</span><span class="p">)</span> <span class="o">&gt;&gt;</span> <span class="mi">1</span><span class="n">u</span><span class="p">);</span>
-     <span class="n">bits</span> <span class="o">=</span> <span class="p">((</span><span class="n">bits</span> <span class="o">&amp;</span> <span class="mh">0x33333333</span><span class="n">u</span><span class="p">)</span> <span class="o">&lt;&lt;</span> <span class="mi">2</span><span class="n">u</span><span class="p">)</span> <span class="o">|</span> <span class="p">((</span><span class="n">bits</span> <span class="o">&amp;</span> <span class="mh">0xCCCCCCCC</span><span class="n">u</span><span class="p">)</span> <span class="o">&gt;&gt;</span> <span class="mi">2</span><span class="n">u</span><span class="p">);</span>
-     <span class="n">bits</span> <span class="o">=</span> <span class="p">((</span><span class="n">bits</span> <span class="o">&amp;</span> <span class="mh">0x0F0F0F0F</span><span class="n">u</span><span class="p">)</span> <span class="o">&lt;&lt;</span> <span class="mi">4</span><span class="n">u</span><span class="p">)</span> <span class="o">|</span> <span class="p">((</span><span class="n">bits</span> <span class="o">&amp;</span> <span class="mh">0xF0F0F0F0</span><span class="n">u</span><span class="p">)</span> <span class="o">&gt;&gt;</span> <span class="mi">4</span><span class="n">u</span><span class="p">);</span>
-     <span class="n">bits</span> <span class="o">=</span> <span class="p">((</span><span class="n">bits</span> <span class="o">&amp;</span> <span class="mh">0x00FF00FF</span><span class="n">u</span><span class="p">)</span> <span class="o">&lt;&lt;</span> <span class="mi">8</span><span class="n">u</span><span class="p">)</span> <span class="o">|</span> <span class="p">((</span><span class="n">bits</span> <span class="o">&amp;</span> <span class="mh">0xFF00FF00</span><span class="n">u</span><span class="p">)</span> <span class="o">&gt;&gt;</span> <span class="mi">8</span><span class="n">u</span><span class="p">);</span>
-     <span class="k">return</span> <span class="k">float</span><span class="p">(</span><span class="n">bits</span><span class="p">)</span> <span class="o">*</span> <span class="mf">2.3283064365386963e-10</span><span class="p">;</span> <span class="c1">// / 0x100000000</span>
+<span class="w">     </span><span class="n">bits</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="n">bits</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="mi">16</span><span class="n">u</span><span class="p">)</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="p">(</span><span class="n">bits</span><span class="w"> </span><span class="o">&gt;&gt;</span><span class="w"> </span><span class="mi">16</span><span class="n">u</span><span class="p">);</span>
+<span class="w">     </span><span class="n">bits</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">((</span><span class="n">bits</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="mh">0x55555555</span><span class="n">u</span><span class="p">)</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="mi">1</span><span class="n">u</span><span class="p">)</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="p">((</span><span class="n">bits</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="mh">0xAAAAAAAA</span><span class="n">u</span><span class="p">)</span><span class="w"> </span><span class="o">&gt;&gt;</span><span class="w"> </span><span class="mi">1</span><span class="n">u</span><span class="p">);</span>
+<span class="w">     </span><span class="n">bits</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">((</span><span class="n">bits</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="mh">0x33333333</span><span class="n">u</span><span class="p">)</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="mi">2</span><span class="n">u</span><span class="p">)</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="p">((</span><span class="n">bits</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="mh">0xCCCCCCCC</span><span class="n">u</span><span class="p">)</span><span class="w"> </span><span class="o">&gt;&gt;</span><span class="w"> </span><span class="mi">2</span><span class="n">u</span><span class="p">);</span>
+<span class="w">     </span><span class="n">bits</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">((</span><span class="n">bits</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="mh">0x0F0F0F0F</span><span class="n">u</span><span class="p">)</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="mi">4</span><span class="n">u</span><span class="p">)</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="p">((</span><span class="n">bits</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="mh">0xF0F0F0F0</span><span class="n">u</span><span class="p">)</span><span class="w"> </span><span class="o">&gt;&gt;</span><span class="w"> </span><span class="mi">4</span><span class="n">u</span><span class="p">);</span>
+<span class="w">     </span><span class="n">bits</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">((</span><span class="n">bits</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="mh">0x00FF00FF</span><span class="n">u</span><span class="p">)</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="mi">8</span><span class="n">u</span><span class="p">)</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="p">((</span><span class="n">bits</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="mh">0xFF00FF00</span><span class="n">u</span><span class="p">)</span><span class="w"> </span><span class="o">&gt;&gt;</span><span class="w"> </span><span class="mi">8</span><span class="n">u</span><span class="p">);</span>
+<span class="w">     </span><span class="k">return</span><span class="w"> </span><span class="kt">float</span><span class="p">(</span><span class="n">bits</span><span class="p">)</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mf">2.3283064365386963e-10</span><span class="p">;</span><span class="w"> </span><span class="c1">// / 0x100000000</span>
 <span class="p">}</span>
 <span class="c1">// ----------------------------------------------------------------------------</span>
-<span class="k">vec2</span> <span class="n">Hammersley</span><span class="p">(</span><span class="n">uint</span> <span class="n">i</span><span class="p">,</span> <span class="n">uint</span> <span class="n">N</span><span class="p">)</span>
+<span class="kt">vec2</span><span class="w"> </span><span class="n">Hammersley</span><span class="p">(</span><span class="kt">uint</span><span class="w"> </span><span class="n">i</span><span class="p">,</span><span class="w"> </span><span class="kt">uint</span><span class="w"> </span><span class="n">N</span><span class="p">)</span>
 <span class="p">{</span>
-    <span class="k">return</span> <span class="k">vec2</span><span class="p">(</span><span class="k">float</span><span class="p">(</span><span class="n">i</span><span class="p">)</span><span class="o">/</span><span class="k">float</span><span class="p">(</span><span class="n">N</span><span class="p">),</span> <span class="n">RadicalInverse_VdC</span><span class="p">(</span><span class="n">i</span><span class="p">));</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="kt">vec2</span><span class="p">(</span><span class="kt">float</span><span class="p">(</span><span class="n">i</span><span class="p">)</span><span class="o">/</span><span class="kt">float</span><span class="p">(</span><span class="n">N</span><span class="p">),</span><span class="w"> </span><span class="n">RadicalInverse_VdC</span><span class="p">(</span><span class="n">i</span><span class="p">));</span>
 <span class="p">}</span>
-</pre></div>
-
+</code></pre></div>
 
 <p>在得到了采样向量之后，我们就可以最终计算出预计算的结果了：</p>
-<div class="highlight"><pre><span></span><span class="k">vec3</span> <span class="n">N</span> <span class="o">=</span> <span class="n">normalize</span><span class="p">(</span><span class="n">WorldPos</span><span class="p">);</span>
+<div class="highlight"><pre><span></span><code><span class="kt">vec3</span><span class="w"> </span><span class="n">N</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">normalize</span><span class="p">(</span><span class="n">WorldPos</span><span class="p">);</span>
 
 <span class="c1">// make the simplyfying assumption that V equals R equals the normal</span>
-<span class="k">vec3</span> <span class="n">R</span> <span class="o">=</span> <span class="n">N</span><span class="p">;</span>
-<span class="k">vec3</span> <span class="n">V</span> <span class="o">=</span> <span class="n">R</span><span class="p">;</span>
+<span class="kt">vec3</span><span class="w"> </span><span class="n">R</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">N</span><span class="p">;</span>
+<span class="kt">vec3</span><span class="w"> </span><span class="n">V</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">R</span><span class="p">;</span>
 
-<span class="k">const</span> <span class="n">uint</span> <span class="n">SAMPLE_COUNT</span> <span class="o">=</span> <span class="mi">1024</span><span class="n">u</span><span class="p">;</span>
-<span class="k">vec3</span> <span class="n">prefilteredColor</span> <span class="o">=</span> <span class="k">vec3</span><span class="p">(</span><span class="mf">0.0</span><span class="p">);</span>
-<span class="k">float</span> <span class="n">totalWeight</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">;</span>
+<span class="k">const</span><span class="w"> </span><span class="kt">uint</span><span class="w"> </span><span class="n">SAMPLE_COUNT</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1024</span><span class="n">u</span><span class="p">;</span>
+<span class="kt">vec3</span><span class="w"> </span><span class="n">prefilteredColor</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kt">vec3</span><span class="p">(</span><span class="mf">0.0</span><span class="p">);</span>
+<span class="kt">float</span><span class="w"> </span><span class="n">totalWeight</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mf">0.0</span><span class="p">;</span>
 
-<span class="k">for</span><span class="p">(</span><span class="n">uint</span> <span class="n">i</span> <span class="o">=</span> <span class="mo">0</span><span class="n">u</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">SAMPLE_COUNT</span><span class="p">;</span> <span class="o">++</span><span class="n">i</span><span class="p">)</span>
+<span class="k">for</span><span class="p">(</span><span class="kt">uint</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mo">0</span><span class="n">u</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">SAMPLE_COUNT</span><span class="p">;</span><span class="w"> </span><span class="o">++</span><span class="n">i</span><span class="p">)</span>
 <span class="p">{</span>
-    <span class="c1">// generates a sample vector that&#39;s biased towards the preferred alignment direction (importance sampling).</span>
-    <span class="k">vec2</span> <span class="n">Xi</span> <span class="o">=</span> <span class="n">Hammersley</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">SAMPLE_COUNT</span><span class="p">);</span>
-    <span class="k">vec3</span> <span class="n">H</span> <span class="o">=</span> <span class="n">ImportanceSampleGGX</span><span class="p">(</span><span class="n">Xi</span><span class="p">,</span> <span class="n">N</span><span class="p">,</span> <span class="n">roughness</span><span class="p">);</span>
-    <span class="k">vec3</span> <span class="n">L</span>  <span class="o">=</span> <span class="n">normalize</span><span class="p">(</span><span class="mf">2.0</span> <span class="o">*</span> <span class="n">dot</span><span class="p">(</span><span class="n">V</span><span class="p">,</span> <span class="n">H</span><span class="p">)</span> <span class="o">*</span> <span class="n">H</span> <span class="o">-</span> <span class="n">V</span><span class="p">);</span>
+<span class="w">    </span><span class="c1">// generates a sample vector that&#39;s biased towards the preferred alignment direction (importance sampling).</span>
+<span class="w">    </span><span class="kt">vec2</span><span class="w"> </span><span class="n">Xi</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Hammersley</span><span class="p">(</span><span class="n">i</span><span class="p">,</span><span class="w"> </span><span class="n">SAMPLE_COUNT</span><span class="p">);</span>
+<span class="w">    </span><span class="kt">vec3</span><span class="w"> </span><span class="n">H</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ImportanceSampleGGX</span><span class="p">(</span><span class="n">Xi</span><span class="p">,</span><span class="w"> </span><span class="n">N</span><span class="p">,</span><span class="w"> </span><span class="n">roughness</span><span class="p">);</span>
+<span class="w">    </span><span class="kt">vec3</span><span class="w"> </span><span class="n">L</span><span class="w">  </span><span class="o">=</span><span class="w"> </span><span class="n">normalize</span><span class="p">(</span><span class="mf">2.0</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">dot</span><span class="p">(</span><span class="n">V</span><span class="p">,</span><span class="w"> </span><span class="n">H</span><span class="p">)</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">H</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">V</span><span class="p">);</span>
 
-    <span class="k">float</span> <span class="n">NdotL</span> <span class="o">=</span> <span class="n">max</span><span class="p">(</span><span class="n">dot</span><span class="p">(</span><span class="n">N</span><span class="p">,</span> <span class="n">L</span><span class="p">),</span> <span class="mf">0.0</span><span class="p">);</span>
-    <span class="k">if</span><span class="p">(</span><span class="n">NdotL</span> <span class="o">&gt;</span> <span class="mf">0.0</span><span class="p">)</span>
-    <span class="p">{</span>
-        <span class="c1">// sample from the environment&#39;s mip level based on roughness/pdf</span>
-        <span class="k">float</span> <span class="n">D</span>   <span class="o">=</span> <span class="n">DistributionGGX</span><span class="p">(</span><span class="n">N</span><span class="p">,</span> <span class="n">H</span><span class="p">,</span> <span class="n">roughness</span><span class="p">);</span>
-        <span class="k">float</span> <span class="n">NdotH</span> <span class="o">=</span> <span class="n">max</span><span class="p">(</span><span class="n">dot</span><span class="p">(</span><span class="n">N</span><span class="p">,</span> <span class="n">H</span><span class="p">),</span> <span class="mf">0.0</span><span class="p">);</span>
-        <span class="k">float</span> <span class="n">HdotV</span> <span class="o">=</span> <span class="n">max</span><span class="p">(</span><span class="n">dot</span><span class="p">(</span><span class="n">H</span><span class="p">,</span> <span class="n">V</span><span class="p">),</span> <span class="mf">0.0</span><span class="p">);</span>
-        <span class="k">float</span> <span class="n">pdf</span> <span class="o">=</span> <span class="n">D</span> <span class="o">*</span> <span class="n">NdotH</span> <span class="o">/</span> <span class="p">(</span><span class="mf">4.0</span> <span class="o">*</span> <span class="n">HdotV</span><span class="p">)</span> <span class="o">+</span> <span class="mf">0.0001</span><span class="p">;</span>
+<span class="w">    </span><span class="kt">float</span><span class="w"> </span><span class="n">NdotL</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">max</span><span class="p">(</span><span class="n">dot</span><span class="p">(</span><span class="n">N</span><span class="p">,</span><span class="w"> </span><span class="n">L</span><span class="p">),</span><span class="w"> </span><span class="mf">0.0</span><span class="p">);</span>
+<span class="w">    </span><span class="k">if</span><span class="p">(</span><span class="n">NdotL</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="mf">0.0</span><span class="p">)</span>
+<span class="w">    </span><span class="p">{</span>
+<span class="w">        </span><span class="c1">// sample from the environment&#39;s mip level based on roughness/pdf</span>
+<span class="w">        </span><span class="kt">float</span><span class="w"> </span><span class="n">D</span><span class="w">   </span><span class="o">=</span><span class="w"> </span><span class="n">DistributionGGX</span><span class="p">(</span><span class="n">N</span><span class="p">,</span><span class="w"> </span><span class="n">H</span><span class="p">,</span><span class="w"> </span><span class="n">roughness</span><span class="p">);</span>
+<span class="w">        </span><span class="kt">float</span><span class="w"> </span><span class="n">NdotH</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">max</span><span class="p">(</span><span class="n">dot</span><span class="p">(</span><span class="n">N</span><span class="p">,</span><span class="w"> </span><span class="n">H</span><span class="p">),</span><span class="w"> </span><span class="mf">0.0</span><span class="p">);</span>
+<span class="w">        </span><span class="kt">float</span><span class="w"> </span><span class="n">HdotV</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">max</span><span class="p">(</span><span class="n">dot</span><span class="p">(</span><span class="n">H</span><span class="p">,</span><span class="w"> </span><span class="n">V</span><span class="p">),</span><span class="w"> </span><span class="mf">0.0</span><span class="p">);</span>
+<span class="w">        </span><span class="kt">float</span><span class="w"> </span><span class="n">pdf</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">D</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">NdotH</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="p">(</span><span class="mf">4.0</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">HdotV</span><span class="p">)</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mf">0.0001</span><span class="p">;</span>
 
-        <span class="k">float</span> <span class="n">resolution</span> <span class="o">=</span> <span class="mf">512.0</span><span class="p">;</span> <span class="c1">// resolution of source cubemap (per face)</span>
-        <span class="k">float</span> <span class="n">saTexel</span>  <span class="o">=</span> <span class="mf">4.0</span> <span class="o">*</span> <span class="n">PI</span> <span class="o">/</span> <span class="p">(</span><span class="err">$</span><span class="p">{</span><span class="n">RadianceMipmapLevel</span> <span class="o">-</span> <span class="mi">1</span><span class="p">}</span><span class="mf">.0</span> <span class="o">*</span> <span class="n">resolution</span> <span class="o">*</span> <span class="n">resolution</span><span class="p">);</span>
-        <span class="k">float</span> <span class="n">saSample</span> <span class="o">=</span> <span class="mf">1.0</span> <span class="o">/</span> <span class="p">(</span><span class="k">float</span><span class="p">(</span><span class="n">SAMPLE_COUNT</span><span class="p">)</span> <span class="o">*</span> <span class="n">pdf</span> <span class="o">+</span> <span class="mf">0.0001</span><span class="p">);</span>
+<span class="w">        </span><span class="kt">float</span><span class="w"> </span><span class="n">resolution</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mf">512.0</span><span class="p">;</span><span class="w"> </span><span class="c1">// resolution of source cubemap (per face)</span>
+<span class="w">        </span><span class="kt">float</span><span class="w"> </span><span class="n">saTexel</span><span class="w">  </span><span class="o">=</span><span class="w"> </span><span class="mf">4.0</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">PI</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="p">(</span><span class="err">$</span><span class="p">{</span><span class="n">RadianceMipmapLevel</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="mi">1</span><span class="p">}</span><span class="mf">.0</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">resolution</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">resolution</span><span class="p">);</span>
+<span class="w">        </span><span class="kt">float</span><span class="w"> </span><span class="n">saSample</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mf">1.0</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="p">(</span><span class="kt">float</span><span class="p">(</span><span class="n">SAMPLE_COUNT</span><span class="p">)</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">pdf</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mf">0.0001</span><span class="p">);</span>
 
-        <span class="k">float</span> <span class="n">mipLevel</span> <span class="o">=</span> <span class="n">roughness</span> <span class="o">==</span> <span class="mf">0.0</span> <span class="o">?</span> <span class="mf">0.0</span> <span class="o">:</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="n">log2</span><span class="p">(</span><span class="n">saSample</span> <span class="o">/</span> <span class="n">saTexel</span><span class="p">);</span>
+<span class="w">        </span><span class="kt">float</span><span class="w"> </span><span class="n">mipLevel</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">roughness</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="mf">0.0</span><span class="w"> </span><span class="o">?</span><span class="w"> </span><span class="mf">0.0</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="mf">0.5</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">log2</span><span class="p">(</span><span class="n">saSample</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="n">saTexel</span><span class="p">);</span>
 
-        <span class="n">prefilteredColor</span> <span class="o">+=</span> <span class="n">texture</span><span class="p">(</span><span class="n">environmentMap</span><span class="p">,</span> <span class="n">L</span><span class="p">,</span> <span class="n">mipLevel</span><span class="p">).</span><span class="n">rgb</span> <span class="o">*</span> <span class="n">NdotL</span><span class="p">;</span>
-        <span class="n">totalWeight</span>      <span class="o">+=</span> <span class="n">NdotL</span><span class="p">;</span>
-    <span class="p">}</span>
+<span class="w">        </span><span class="n">prefilteredColor</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="n">texture</span><span class="p">(</span><span class="n">environmentMap</span><span class="p">,</span><span class="w"> </span><span class="n">L</span><span class="p">,</span><span class="w"> </span><span class="n">mipLevel</span><span class="p">).</span><span class="n">rgb</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">NdotL</span><span class="p">;</span>
+<span class="w">        </span><span class="n">totalWeight</span><span class="w">      </span><span class="o">+=</span><span class="w"> </span><span class="n">NdotL</span><span class="p">;</span>
+<span class="w">    </span><span class="p">}</span>
 <span class="p">}</span>
 
-<span class="n">prefilteredColor</span> <span class="o">=</span> <span class="n">prefilteredColor</span> <span class="o">/</span> <span class="n">totalWeight</span><span class="p">;</span>
+<span class="n">prefilteredColor</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">prefilteredColor</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="n">totalWeight</span><span class="p">;</span>
 
-<span class="n">FragColor</span> <span class="o">=</span> <span class="k">vec4</span><span class="p">(</span><span class="n">prefilteredColor</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">);</span>
-</pre></div>
-
+<span class="n">FragColor</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kt">vec4</span><span class="p">(</span><span class="n">prefilteredColor</span><span class="p">,</span><span class="w"> </span><span class="mf">1.0</span><span class="p">);</span>
+</code></pre></div>
 
 <p>可以看到，在计算的时候，我们针对采样的半程向量，对其反射光线以及视角方向进行了N=V=R的假设，这个是因为在预计算的场景下，我们没有办法计算出真实的视角方向以及法线向量，只能进行一定的假设了，然后，按照反射模型倒推出了采样的光线方向，然后再对天空盒纹理采样。</p>
 <p>另外，注意到对于每次采样，我们都乘以了NdotL作为权重，因为在NdotL&lt;0的情况下，这个时候这个光线是对高光没有贡献的</p>
 <p>（这里数学推导过于复杂，我这里也没完全搞懂，有兴趣也可以继续看看这篇<a href="https://zhuanlan.zhihu.com/p/34741174">文章</a>了解下）</p>
 <p>而在采样的时候，对天空盒纹理的不同miplevel进行了采样，由于这段代码来自<a href="https://learnopengl.com/PBR/IBL/Specular-IBL">这里</a>，不过在Android上，我发现有没有按照粗糙度对天空盒mipmap level采样似乎没有太大差别，这里原因还没有深究</p>
 <p>另外，跟漫反射部分一样，这里的贴图，我们同样可以利用cmft来生成：</p>
-<div class="highlight"><pre><span></span>cmft --input <span class="s2">&quot;xxx.hdr&quot;</span>           <span class="se">\</span>
-              ::Filter options                  <span class="se">\</span>
-              --filter radiance                 <span class="se">\</span>
-              --srcFaceSize <span class="m">256</span>                 <span class="se">\</span>
-              --excludeBase <span class="nb">false</span>               <span class="se">\</span>
-              --mipCount <span class="m">7</span>                      <span class="se">\</span>
-              --glossScale <span class="m">10</span>                   <span class="se">\</span>
-              --glossBias <span class="m">3</span>                     <span class="se">\</span>
-              --lightingModel blinnbrdf         <span class="se">\</span>
-              --edgeFixup none                  <span class="se">\</span>
-              --dstFaceSize <span class="m">256</span>                 <span class="se">\</span>
-              ::Processing devices              <span class="se">\</span>
-              --numCpuProcessingThreads <span class="m">4</span>       <span class="se">\</span>
-              --useOpenCL <span class="nb">true</span>                  <span class="se">\</span>
-              --clVendor anyGpuVendor           <span class="se">\</span>
-              --deviceType gpu                  <span class="se">\</span>
-              --deviceIndex <span class="m">0</span>                   <span class="se">\</span>
-              ::Aditional operations            <span class="se">\</span>
-              --inputGammaNumerator <span class="m">2</span>.2         <span class="se">\</span>
-              --inputGammaDenominator <span class="m">1</span>.0       <span class="se">\</span>
-              --outputGammaNumerator <span class="m">1</span>.0        <span class="se">\</span>
-              --outputGammaDenominator <span class="m">2</span>.2      <span class="se">\</span>
-              --generateMipChain <span class="nb">false</span>          <span class="se">\</span>
-              ::Output                          <span class="se">\</span>
-              --outputNum <span class="m">1</span>                     <span class="se">\</span>
-              --output0 <span class="s2">&quot;xxx&quot;</span>       <span class="se">\</span>
-              --output0params dds,bgra8,cubemap <span class="se">\</span>
-              --output1 <span class="s2">&quot;xxx_preview&quot;</span>       <span class="se">\</span>
-              --output1params tga,rgba8,cubemap
-</pre></div>
-
+<div class="highlight"><pre><span></span><code>cmft<span class="w"> </span>--input<span class="w"> </span><span class="s2">&quot;xxx.hdr&quot;</span><span class="w">           </span><span class="se">\</span>
+<span class="w">              </span>::Filter<span class="w"> </span>options<span class="w">                  </span><span class="se">\</span>
+<span class="w">              </span>--filter<span class="w"> </span>radiance<span class="w">                 </span><span class="se">\</span>
+<span class="w">              </span>--srcFaceSize<span class="w"> </span><span class="m">256</span><span class="w">                 </span><span class="se">\</span>
+<span class="w">              </span>--excludeBase<span class="w"> </span><span class="nb">false</span><span class="w">               </span><span class="se">\</span>
+<span class="w">              </span>--mipCount<span class="w"> </span><span class="m">7</span><span class="w">                      </span><span class="se">\</span>
+<span class="w">              </span>--glossScale<span class="w"> </span><span class="m">10</span><span class="w">                   </span><span class="se">\</span>
+<span class="w">              </span>--glossBias<span class="w"> </span><span class="m">3</span><span class="w">                     </span><span class="se">\</span>
+<span class="w">              </span>--lightingModel<span class="w"> </span>blinnbrdf<span class="w">         </span><span class="se">\</span>
+<span class="w">              </span>--edgeFixup<span class="w"> </span>none<span class="w">                  </span><span class="se">\</span>
+<span class="w">              </span>--dstFaceSize<span class="w"> </span><span class="m">256</span><span class="w">                 </span><span class="se">\</span>
+<span class="w">              </span>::Processing<span class="w"> </span>devices<span class="w">              </span><span class="se">\</span>
+<span class="w">              </span>--numCpuProcessingThreads<span class="w"> </span><span class="m">4</span><span class="w">       </span><span class="se">\</span>
+<span class="w">              </span>--useOpenCL<span class="w"> </span><span class="nb">true</span><span class="w">                  </span><span class="se">\</span>
+<span class="w">              </span>--clVendor<span class="w"> </span>anyGpuVendor<span class="w">           </span><span class="se">\</span>
+<span class="w">              </span>--deviceType<span class="w"> </span>gpu<span class="w">                  </span><span class="se">\</span>
+<span class="w">              </span>--deviceIndex<span class="w"> </span><span class="m">0</span><span class="w">                   </span><span class="se">\</span>
+<span class="w">              </span>::Aditional<span class="w"> </span>operations<span class="w">            </span><span class="se">\</span>
+<span class="w">              </span>--inputGammaNumerator<span class="w"> </span><span class="m">2</span>.2<span class="w">         </span><span class="se">\</span>
+<span class="w">              </span>--inputGammaDenominator<span class="w"> </span><span class="m">1</span>.0<span class="w">       </span><span class="se">\</span>
+<span class="w">              </span>--outputGammaNumerator<span class="w"> </span><span class="m">1</span>.0<span class="w">        </span><span class="se">\</span>
+<span class="w">              </span>--outputGammaDenominator<span class="w"> </span><span class="m">2</span>.2<span class="w">      </span><span class="se">\</span>
+<span class="w">              </span>--generateMipChain<span class="w"> </span><span class="nb">false</span><span class="w">          </span><span class="se">\</span>
+<span class="w">              </span>::Output<span class="w">                          </span><span class="se">\</span>
+<span class="w">              </span>--outputNum<span class="w"> </span><span class="m">1</span><span class="w">                     </span><span class="se">\</span>
+<span class="w">              </span>--output0<span class="w"> </span><span class="s2">&quot;xxx&quot;</span><span class="w">       </span><span class="se">\</span>
+<span class="w">              </span>--output0params<span class="w"> </span>dds,bgra8,cubemap<span class="w"> </span><span class="se">\</span>
+<span class="w">              </span>--output1<span class="w"> </span><span class="s2">&quot;xxx_preview&quot;</span><span class="w">       </span><span class="se">\</span>
+<span class="w">              </span>--output1params<span class="w"> </span>tga,rgba8,cubemap
+</code></pre></div>
 
 <h4>环境光BRDF（Environment BRDF）</h4>
 <p>而对于积分的另外一部分，则为包含了BRDF部分的高光环境计算，这里我们同样可以类似上面那样，进行重要性采样，然后计算出一个预先采样的纹理，这这篇<a href="https://learnopengl.com/PBR/IBL/Specular-IBL">文章</a>中有比较详细的描述，经过对积分的公式变换之后，我们将第二部分的积分公式变换成这个形式：</p>
-<div class="math">$$F_{0}\int_{\Omega}f_{r}(p, w_{i}, w_{o})(1-(1-w_{o}\cdot h)^{5})w_{i}\cdot n dw_{i} + \int_{\Omega}f_{r}(p, w_{i}, w_{o})(1-w_{o} \cdot h)^{5}w_{i} \cdot n dw_{i}$$</div>
+<p>$$F_{0}\int_{\Omega}f_{r}(p, w_{i}, w_{o})(1-(1-w_{o}\cdot h)^{5})w_{i}\cdot n dw_{i} + \int_{\Omega}f_{r}(p, w_{i}, w_{o})(1-w_{o} \cdot h)^{5}w_{i} \cdot n dw_{i}$$</p>
 <p>这个公式可以表达成这个形式：</p>
-<div class="math">$$F_{0} * Scale + Bias$$</div>
-<p>于是我们可以预计算出<span class="math">\(Scale\)</span>跟<span class="math">\(Bias\)</span>的值，把结果存储在一张纹理上，计算出来的结果大概是这样子的：</p>
+<p>$$F_{0} * Scale + Bias$$</p>
+<p>于是我们可以预计算出$Scale$跟$Bias$的值，把结果存储在一张纹理上，计算出来的结果大概是这样子的：</p>
 <p><img alt="" src="static/images/ibl_brdf_lut.png"></p>
 <p>这是一张LUT纹理，使用NdotV以及roughness作为纹理坐标，采样就可以得到上面的计算结果，然后配合上面生成高光反射贴图，就可以得到高光部分的反射：</p>
-<div class="highlight"><pre><span></span><span class="k">vec3</span> <span class="n">radiance</span> <span class="o">=</span> <span class="n">textureLod</span><span class="p">(</span><span class="n">radianceMap</span><span class="p">,</span> <span class="n">R</span><span class="p">,</span> <span class="n">roughness</span> <span class="o">*</span> <span class="n">MAX_RADIANCE_LOD</span><span class="p">).</span><span class="n">rgb</span><span class="p">;</span>
-<span class="k">vec2</span> <span class="n">brdf</span> <span class="o">=</span> <span class="n">texture</span><span class="p">(</span><span class="n">envBrdfMap</span><span class="p">,</span> <span class="k">vec2</span><span class="p">(</span><span class="n">max</span><span class="p">(</span><span class="n">dot</span><span class="p">(</span><span class="n">N</span><span class="p">,</span> <span class="n">V</span><span class="p">),</span> <span class="mf">0.0</span><span class="p">),</span> <span class="n">roughness</span><span class="p">)).</span><span class="n">rg</span><span class="p">;</span>
-<span class="k">vec3</span> <span class="n">specular</span> <span class="o">=</span> <span class="n">radiance</span> <span class="o">*</span> <span class="p">(</span><span class="n">F</span> <span class="o">*</span> <span class="n">brdf</span><span class="p">.</span><span class="n">x</span> <span class="o">+</span> <span class="n">brdf</span><span class="p">.</span><span class="n">y</span><span class="p">);</span>
-</pre></div>
-
+<div class="highlight"><pre><span></span><code><span class="kt">vec3</span><span class="w"> </span><span class="n">radiance</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">textureLod</span><span class="p">(</span><span class="n">radianceMap</span><span class="p">,</span><span class="w"> </span><span class="n">R</span><span class="p">,</span><span class="w"> </span><span class="n">roughness</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">MAX_RADIANCE_LOD</span><span class="p">).</span><span class="n">rgb</span><span class="p">;</span>
+<span class="kt">vec2</span><span class="w"> </span><span class="n">brdf</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">texture</span><span class="p">(</span><span class="n">envBrdfMap</span><span class="p">,</span><span class="w"> </span><span class="kt">vec2</span><span class="p">(</span><span class="n">max</span><span class="p">(</span><span class="n">dot</span><span class="p">(</span><span class="n">N</span><span class="p">,</span><span class="w"> </span><span class="n">V</span><span class="p">),</span><span class="w"> </span><span class="mf">0.0</span><span class="p">),</span><span class="w"> </span><span class="n">roughness</span><span class="p">)).</span><span class="n">rg</span><span class="p">;</span>
+<span class="kt">vec3</span><span class="w"> </span><span class="n">specular</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">radiance</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="p">(</span><span class="n">F</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">brdf</span><span class="p">.</span><span class="n">x</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">brdf</span><span class="p">.</span><span class="n">y</span><span class="p">);</span>
+</code></pre></div>
 
 <p>但在移动平台上，更为经济的做法是，对这个积分本身做数值拟合，在<a href="https://zhuanlan.zhihu.com/p/53086060">PBR白皮书</a>，有看到介绍在使命召唤——黑色行动2中便使用了这个做法：</p>
-<div class="highlight"><pre><span></span><span class="k">vec3</span> <span class="n">EnvDFGLazarov</span><span class="p">(</span> <span class="k">vec3</span> <span class="n">specularColor</span><span class="p">,</span> <span class="k">float</span> <span class="n">gloss</span><span class="p">,</span> <span class="k">float</span> <span class="n">ndotv</span> <span class="p">)</span> <span class="p">{</span>
-    <span class="c1">//# [ Lazarov 2013, &quot;Getting More Physical in Call of Duty: Black Ops II&quot; ]</span>
-    <span class="c1">//# Adaptation to fit our G term.</span>
-    <span class="k">vec4</span> <span class="n">p0</span> <span class="o">=</span> <span class="k">vec4</span><span class="p">(</span> <span class="mf">0.5745</span><span class="p">,</span> <span class="mf">1.548</span><span class="p">,</span> <span class="o">-</span><span class="mf">0.02397</span><span class="p">,</span> <span class="mf">1.301</span> <span class="p">);</span>
-    <span class="k">vec4</span> <span class="n">p1</span> <span class="o">=</span> <span class="k">vec4</span><span class="p">(</span> <span class="mf">0.5753</span><span class="p">,</span> <span class="o">-</span><span class="mf">0.2511</span><span class="p">,</span> <span class="o">-</span><span class="mf">0.02066</span><span class="p">,</span> <span class="mf">0.4755</span> <span class="p">);</span>
-    <span class="k">vec4</span> <span class="n">t</span> <span class="o">=</span> <span class="n">gloss</span> <span class="o">*</span> <span class="n">p0</span> <span class="o">+</span> <span class="n">p1</span><span class="p">;</span>
-    <span class="k">float</span> <span class="n">bias</span> <span class="o">=</span> <span class="n">clamp</span><span class="p">(</span> <span class="n">t</span><span class="p">.</span><span class="n">x</span> <span class="o">*</span> <span class="n">min</span><span class="p">(</span> <span class="n">t</span><span class="p">.</span><span class="n">y</span><span class="p">,</span> <span class="n">exp2</span><span class="p">(</span> <span class="o">-</span><span class="mf">7.672</span> <span class="o">*</span> <span class="n">ndotv</span> <span class="p">)</span> <span class="p">)</span> <span class="o">+</span> <span class="n">t</span><span class="p">.</span><span class="n">z</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">);</span>
-    <span class="k">float</span> <span class="n">delta</span> <span class="o">=</span> <span class="n">clamp</span><span class="p">(</span> <span class="n">t</span><span class="p">.</span><span class="n">w</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">);</span>
-    <span class="k">float</span> <span class="n">scale</span> <span class="o">=</span> <span class="n">delta</span> <span class="o">-</span> <span class="n">bias</span><span class="p">;</span>
-    <span class="n">bias</span> <span class="o">*=</span> <span class="n">clamp</span><span class="p">(</span> <span class="mf">50.0</span> <span class="o">*</span> <span class="n">specularColor</span><span class="p">.</span><span class="n">y</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">);</span>
-    <span class="k">return</span> <span class="n">specularColor</span> <span class="o">*</span> <span class="n">scale</span> <span class="o">+</span> <span class="n">bias</span><span class="p">;</span>
+<div class="highlight"><pre><span></span><code><span class="kt">vec3</span><span class="w"> </span><span class="n">EnvDFGLazarov</span><span class="p">(</span><span class="w"> </span><span class="kt">vec3</span><span class="w"> </span><span class="n">specularColor</span><span class="p">,</span><span class="w"> </span><span class="kt">float</span><span class="w"> </span><span class="n">gloss</span><span class="p">,</span><span class="w"> </span><span class="kt">float</span><span class="w"> </span><span class="n">ndotv</span><span class="w"> </span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="c1">//# [ Lazarov 2013, &quot;Getting More Physical in Call of Duty: Black Ops II&quot; ]</span>
+<span class="w">    </span><span class="c1">//# Adaptation to fit our G term.</span>
+<span class="w">    </span><span class="kt">vec4</span><span class="w"> </span><span class="n">p0</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kt">vec4</span><span class="p">(</span><span class="w"> </span><span class="mf">0.5745</span><span class="p">,</span><span class="w"> </span><span class="mf">1.548</span><span class="p">,</span><span class="w"> </span><span class="o">-</span><span class="mf">0.02397</span><span class="p">,</span><span class="w"> </span><span class="mf">1.301</span><span class="w"> </span><span class="p">);</span>
+<span class="w">    </span><span class="kt">vec4</span><span class="w"> </span><span class="n">p1</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kt">vec4</span><span class="p">(</span><span class="w"> </span><span class="mf">0.5753</span><span class="p">,</span><span class="w"> </span><span class="o">-</span><span class="mf">0.2511</span><span class="p">,</span><span class="w"> </span><span class="o">-</span><span class="mf">0.02066</span><span class="p">,</span><span class="w"> </span><span class="mf">0.4755</span><span class="w"> </span><span class="p">);</span>
+<span class="w">    </span><span class="kt">vec4</span><span class="w"> </span><span class="n">t</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">gloss</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">p0</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">p1</span><span class="p">;</span>
+<span class="w">    </span><span class="kt">float</span><span class="w"> </span><span class="n">bias</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">clamp</span><span class="p">(</span><span class="w"> </span><span class="n">t</span><span class="p">.</span><span class="n">x</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">min</span><span class="p">(</span><span class="w"> </span><span class="n">t</span><span class="p">.</span><span class="n">y</span><span class="p">,</span><span class="w"> </span><span class="n">exp2</span><span class="p">(</span><span class="w"> </span><span class="o">-</span><span class="mf">7.672</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">ndotv</span><span class="w"> </span><span class="p">)</span><span class="w"> </span><span class="p">)</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">t</span><span class="p">.</span><span class="n">z</span><span class="p">,</span><span class="w"> </span><span class="mf">0.0</span><span class="p">,</span><span class="w"> </span><span class="mf">1.0</span><span class="p">);</span>
+<span class="w">    </span><span class="kt">float</span><span class="w"> </span><span class="n">delta</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">clamp</span><span class="p">(</span><span class="w"> </span><span class="n">t</span><span class="p">.</span><span class="n">w</span><span class="p">,</span><span class="w"> </span><span class="mf">0.0</span><span class="p">,</span><span class="w"> </span><span class="mf">1.0</span><span class="p">);</span>
+<span class="w">    </span><span class="kt">float</span><span class="w"> </span><span class="n">scale</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">delta</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">bias</span><span class="p">;</span>
+<span class="w">    </span><span class="n">bias</span><span class="w"> </span><span class="o">*=</span><span class="w"> </span><span class="n">clamp</span><span class="p">(</span><span class="w"> </span><span class="mf">50.0</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">specularColor</span><span class="p">.</span><span class="n">y</span><span class="p">,</span><span class="w"> </span><span class="mf">0.0</span><span class="p">,</span><span class="w"> </span><span class="mf">1.0</span><span class="p">);</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="n">specularColor</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">scale</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">bias</span><span class="p">;</span>
 <span class="p">}</span>
-</pre></div>
-
+</code></pre></div>
 
 <p>其中specularColor则为F0，而具体的推导可以在这篇<a href="https://zhuanlan.zhihu.com/p/41150563">文章</a>中得到答案，其实就是在Mathematica中进行不停的拟合得到的结果，但对于手机来说，省去了一张纹理的消耗，是一个不错的优化</p>
 <p>使用了这个方法来计算解析值之后，高光部分的反射结果就改成这样子计算出来：</p>
-<div class="highlight"><pre><span></span><span class="k">vec3</span> <span class="n">radiance</span> <span class="o">=</span> <span class="n">textureLod</span><span class="p">(</span><span class="n">radianceMap</span><span class="p">,</span> <span class="n">R</span><span class="p">,</span> <span class="n">roughness</span> <span class="o">*</span> <span class="n">MAX_RADIANCE_LOD</span><span class="p">).</span><span class="n">rgb</span><span class="p">;</span>
-<span class="k">vec3</span> <span class="n">envBrdf</span> <span class="o">=</span> <span class="n">EnvDFGLazarov</span><span class="p">(</span><span class="n">F0</span><span class="p">,</span> <span class="n">metallic</span><span class="p">,</span> <span class="n">max</span><span class="p">(</span><span class="n">dot</span><span class="p">(</span><span class="n">N</span><span class="p">,</span> <span class="n">V</span><span class="p">),</span> <span class="mf">0.0</span><span class="p">));</span>
-<span class="k">vec3</span> <span class="n">specular</span> <span class="o">=</span> <span class="n">radiance</span> <span class="o">*</span> <span class="p">(</span><span class="n">F</span> <span class="o">*</span> <span class="n">envBrdf</span><span class="p">);</span>
-</pre></div>
-
+<div class="highlight"><pre><span></span><code><span class="kt">vec3</span><span class="w"> </span><span class="n">radiance</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">textureLod</span><span class="p">(</span><span class="n">radianceMap</span><span class="p">,</span><span class="w"> </span><span class="n">R</span><span class="p">,</span><span class="w"> </span><span class="n">roughness</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">MAX_RADIANCE_LOD</span><span class="p">).</span><span class="n">rgb</span><span class="p">;</span>
+<span class="kt">vec3</span><span class="w"> </span><span class="n">envBrdf</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">EnvDFGLazarov</span><span class="p">(</span><span class="n">F0</span><span class="p">,</span><span class="w"> </span><span class="n">metallic</span><span class="p">,</span><span class="w"> </span><span class="n">max</span><span class="p">(</span><span class="n">dot</span><span class="p">(</span><span class="n">N</span><span class="p">,</span><span class="w"> </span><span class="n">V</span><span class="p">),</span><span class="w"> </span><span class="mf">0.0</span><span class="p">));</span>
+<span class="kt">vec3</span><span class="w"> </span><span class="n">specular</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">radiance</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="p">(</span><span class="n">F</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">envBrdf</span><span class="p">);</span>
+</code></pre></div>
 
 <h3>组合渲染输出</h3>
 <p>在得到高光以及漫反射部分的渲染结果之后，组合最终输出就很简单了：</p>
-<div class="highlight"><pre><span></span><span class="k">vec3</span> <span class="n">ambient</span> <span class="o">=</span> <span class="p">(</span><span class="n">kD</span> <span class="o">*</span> <span class="n">diffuse</span> <span class="o">+</span> <span class="n">specular</span><span class="p">)</span> <span class="o">*</span> <span class="n">ao</span><span class="p">;</span>
-<span class="k">vec3</span> <span class="n">color</span> <span class="o">=</span> <span class="n">ambient</span> <span class="o">+</span> <span class="n">Lo</span><span class="p">;</span>
-</pre></div>
-
+<div class="highlight"><pre><span></span><code><span class="kt">vec3</span><span class="w"> </span><span class="n">ambient</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="n">kD</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">diffuse</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">specular</span><span class="p">)</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">ao</span><span class="p">;</span>
+<span class="kt">vec3</span><span class="w"> </span><span class="n">color</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ambient</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">Lo</span><span class="p">;</span>
+</code></pre></div>
 
 <p>同样，因为显示到普通屏幕上，我们需要对输出进行色调映射跟Gamma校正：</p>
-<div class="highlight"><pre><span></span><span class="c1">// HDR tonemapping</span>
-<span class="n">color</span> <span class="o">=</span> <span class="n">color</span> <span class="o">/</span> <span class="p">(</span><span class="n">color</span> <span class="o">+</span> <span class="k">vec3</span><span class="p">(</span><span class="mf">1.0</span><span class="p">));</span>
+<div class="highlight"><pre><span></span><code><span class="c1">// HDR tonemapping</span>
+<span class="n">color</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">color</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="p">(</span><span class="n">color</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="kt">vec3</span><span class="p">(</span><span class="mf">1.0</span><span class="p">));</span>
 <span class="c1">// gamma correct</span>
-<span class="n">color</span> <span class="o">=</span> <span class="n">pow</span><span class="p">(</span><span class="n">color</span><span class="p">,</span> <span class="k">vec3</span><span class="p">(</span><span class="mf">1.0</span><span class="o">/</span><span class="mf">2.2</span><span class="p">)</span>
-</pre></div>
-
+<span class="n">color</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">pow</span><span class="p">(</span><span class="n">color</span><span class="p">,</span><span class="w"> </span><span class="kt">vec3</span><span class="p">(</span><span class="mf">1.0</span><span class="o">/</span><span class="mf">2.2</span><span class="p">)</span>
+</code></pre></div>
 
 <p>下面便是在加了高光跟漫反射环境光之后，在金属度为1，不同粗糙度下的渲染结果：</p>
 <p><img alt="" src="static/images/radiance_ibl_render_result.jpg"></p>
@@ -377,76 +359,14 @@
 <li><a href="https://zhuanlan.zhihu.com/p/41150563">https://zhuanlan.zhihu.com/p/41150563</a></li>
 <li><a href="https://zhuanlan.zhihu.com/p/21489591">https://zhuanlan.zhihu.com/p/21489591</a></li>
 </ul>
-<script type="text/javascript">if (!document.getElementById('mathjaxscript_pelican_#%@#$@#')) {
-    var align = "center",
-        indent = "0em",
-        linebreak = "false";
-
-    if (true) {
-        align = (screen.width < 768) ? "left" : align;
-        indent = (screen.width < 768) ? "0em" : indent;
-        linebreak = (screen.width < 768) ? 'true' : linebreak;
-    }
-
-    var mathjaxscript = document.createElement('script');
-    mathjaxscript.id = 'mathjaxscript_pelican_#%@#$@#';
-    mathjaxscript.type = 'text/javascript';
-    mathjaxscript.src = 'https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.3/latest.js?config=TeX-AMS-MML_HTMLorMML';
-
-    var configscript = document.createElement('script');
-    configscript.type = 'text/x-mathjax-config';
-    configscript[(window.opera ? "innerHTML" : "text")] =
-        "MathJax.Hub.Config({" +
-        "    config: ['MMLorHTML.js']," +
-        "    TeX: { extensions: ['AMSmath.js','AMSsymbols.js','noErrors.js','noUndefined.js'], equationNumbers: { autoNumber: 'none' } }," +
-        "    jax: ['input/TeX','input/MathML','output/HTML-CSS']," +
-        "    extensions: ['tex2jax.js','mml2jax.js','MathMenu.js','MathZoom.js']," +
-        "    displayAlign: '"+ align +"'," +
-        "    displayIndent: '"+ indent +"'," +
-        "    showMathMenu: true," +
-        "    messageStyle: 'normal'," +
-        "    tex2jax: { " +
-        "        inlineMath: [ ['\\\\(','\\\\)'] ], " +
-        "        displayMath: [ ['$$','$$'] ]," +
-        "        processEscapes: true," +
-        "        preview: 'TeX'," +
-        "    }, " +
-        "    'HTML-CSS': { " +
-        "        availableFonts: ['STIX', 'TeX']," +
-        "        preferredFont: 'STIX'," +
-        "        styles: { '.MathJax_Display, .MathJax .mo, .MathJax .mi, .MathJax .mn': {color: 'inherit ! important'} }," +
-        "        linebreaks: { automatic: "+ linebreak +", width: '90% container' }," +
-        "    }, " +
-        "}); " +
-        "if ('default' !== 'default') {" +
-            "MathJax.Hub.Register.StartupHook('HTML-CSS Jax Ready',function () {" +
-                "var VARIANT = MathJax.OutputJax['HTML-CSS'].FONTDATA.VARIANT;" +
-                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
-                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
-                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
-                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
-            "});" +
-            "MathJax.Hub.Register.StartupHook('SVG Jax Ready',function () {" +
-                "var VARIANT = MathJax.OutputJax.SVG.FONTDATA.VARIANT;" +
-                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
-                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
-                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
-                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
-            "});" +
-        "}";
-
-    (document.body || document.getElementsByTagName('head')[0]).appendChild(configscript);
-    (document.body || document.getElementsByTagName('head')[0]).appendChild(mathjaxscript);
-}
-</script>
   </div><!-- /.entry-content -->
    <footer class="post-info text-muted">
     Posted on <abbr class="published" title="2019-08-28T00:00:00+08:00">
       三 28 八月 2019
     </abbr>
     <address class="vcard author">
-      by <a class="url fn" href="http://ragnraok.github.io/author/ragnarok-zhou.html">Ragnarok Zhou</a>
-    </address> in <a href="http://ragnraok.github.io/category/android.html">Android</a> Tagged   </footer><!-- /.post-info -->
+      by <a class="url fn" href="https://ragnraok.github.io/author/ragnarok-zhou.html">Ragnarok Zhou</a>
+    </address> in <a href="https://ragnraok.github.io/category/android.html">Android</a> Tagged   </footer><!-- /.post-info -->
 </section>
     <div class="comment">
         <div id="disqus_thread"></div> <!-- comment app container -->
@@ -458,7 +378,7 @@
         /* * * DON'T EDIT BELOW THIS LINE * * */
         (function() {
             var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
-            dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+            dsq.src = 'https://' + disqus_shortname + '.disqus.com/embed.js';
             (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
         })();
     </script>
@@ -466,10 +386,10 @@
      <!-- Comment END -->
             <footer id="contentinfo" class="footer">
                     <nav class="pull-right bottom-nav">
-                        <a href="http://ragnraok.github.io/feeds/atom.xml">RSS</a>
+                        <a href="https://ragnraok.github.io/feeds/atom.xml">RSS</a>
                     </nav>
                     <address id="about" class="vcard body">
-                    &copy; <a href="http://ragnraok.github.io">Ragnarok Note</a> Proudly powered by <a href="http://getpelican.com/">Pelican</a>
+                    &copy; <a href="https://ragnraok.github.io">Ragnarok Note</a> Proudly powered by <a href="http://getpelican.com/">Pelican</a>
                     </address><!-- /#about -->
             </footer><!-- /#contentinfo -->
         </div><!-- container -->

@@ -66,11 +66,8 @@ body {
     text-decoration:none;
 }
 .entry-content{
-    padding:5px 0 15px;
+    padding:5px 0 15px;;
     line-height:1.8;
-}
-.entry-content img {
-  max-width: 100%;
 }
 .hentry{
     margin-bottom:18px;
@@ -99,7 +96,7 @@ body {
 .bottom-nav{display:none;}
 .bottom-nav a{margin-left:15px;}
 /* code style */
-.hightlight { background-color: #ffffcc }
+.highlight { background-color: #ffffcc }
 .c { color: #999988; font-style: italic } /* Comment */
 .err { color: #a61717; background-color: #e3d2d2 } /* Error */
 .k { color: #000000; font-weight: bold } /* Keyword */

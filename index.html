@@ -4,119 +4,56 @@
         <title>Ragnarok Note</title>
         <meta charset="utf-8" />
         <link href="//netdna.bootstrapcdn.com/bootstrap/3.0.0/css/bootstrap.min.css" rel="stylesheet" />
-        <link href="http://ragnraok.github.io/theme/static/css/style.css" rel="stylesheet" />
+        <link href="https://ragnraok.github.io/theme/static/css/style.css" rel="stylesheet" />
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-        <link href="http://ragnraok.github.io/feeds/atom.xml" type="application/atom+xml" rel="alternate" title="Ragnarok Note Full Atom Feed" />
+        <link href="https://ragnraok.github.io/feeds/atom.xml" type="application/atom+xml" rel="alternate" title="Ragnarok Note Full Atom Feed" />
     </head>
 
     <body id="index" class="archive">
         <div class="container">
             <div class="header">
                 <ul class="nav nav-pills pull-right">
-                    <li class="active"><a href="http://ragnraok.github.io">Home</a></li>
-                    <li><a href="http://ragnraok.github.io/archives.html">Archives</a></li>
+                    <li class="active"><a href="https://ragnraok.github.io">Home</a></li>
+                    <li><a href="https://ragnraok.github.io/archives.html">Archives</a></li>
                 </ul>
-                <h3 class="text-muted"><a href="http://ragnraok.github.io">Ragnarok Note</a></h3>
+                <h3 class="text-muted"><a href="https://ragnraok.github.io">Ragnarok Note</a></h3>
 				<h2 class="text-muted"></h2>
              </div>
 <section id="content" class="content">
 
         <article class="hentry">
-                <header> <h2 class="entry-title"><a href="http://ragnraok.github.io/try_android_implement_path_tracer.html" rel="bookmark" title="Permalink to 尝试在Android中实现实时光线追踪">尝试在Android中实现实时光线追踪</a></h2> </header>
-                <div class="entry-content"> <p>最近索尼跟微软都已经发布下世代游戏主机的硬件信息，随着NVDIA/AMD开始发布各自的硬件光线追踪管线，特别是微软的DXR发布，可以预见下一世代开始会有越来越多光线追踪的游戏发布。而光线追踪实际上是一个很古老的算法了，但是囿于计算成本非常高，虽然天然适合并行化，但在之前世代还是无法完全在实时场景中使用，而应用了光线追踪之后，对比原先实时渲染的各种对环境光反射的各种hack，光线追踪渲染的场景会对场景的光照质量提升明显一个档次：</p>
-<p><img alt="" src="static/images/raytracing_diff.png"></p>
-<p>可以看出来在使用了光线追踪之后，地板上更加真实的反射了场景中其他物体的光照，令整个场景显得更加真实</p>
-<p>光线追踪算法本身并不复杂，大概原理可以用下面这张图来展示：</p>
-<p><img alt="" src="static/images/path_tracing.png"></p>
-<p>其算法就是，从Camera出发，发射一条光线，光线往前走，碰到物体后根据物体的材质进行光照计算出反射的颜色，然后根据物体的材质，反射出第二条光线，然后继续往前走，一直重复这个过程，直到光线到达了场景中的光源，或者直到找不到碰撞物体到达了无限远为止。而实际在应用的过程中，为了减少计算消耗，还会设置另外一个终止条件，例如反射到了若干次数之后停止迭代。而最终这条光线的颜色，就是当前光线最终的颜色了。</p>
-<p>可以看出来，现代GPU，是天然适合并行化做这个事情的，对于OpenGL来说，我们可以在Fragment Shader中一个像素分别对应一条光线的发射，而且光线追踪算法本身各个点发射的光线本身是互不影响的，因此只要单个Shader就能完成整个光线追踪的任务。</p>
-<p>而对于上面来说，上述只是求了一条光线的追踪路径，对于场景中的具体某个物体来说，只是求到了某次反射的结果，而场景中物体的真实光照效果，根据渲染方程，是需要求解物体表面法线方向上的半球积分内的累计光照：</p>
-<div class="math">$$L …</div> </div><!-- entry-content -->
+                <header> <h2 class="entry-title"><a href="https://ragnraok.github.io/try_android_implement_path_tracer.html" rel="bookmark" title="Permalink to 尝试在Android中实现实时光线追踪">尝试在Android中实现实时光线追踪</a></h2> </header>
+                <div class="entry-content"> <p>最近索尼跟微软都已经发布下世代游戏主机的硬件信息，随着NVDIA/AMD开始发布各自的硬件光线追踪管线，特别是微软的DXR发布，可以预见下一世代开始会有越来越 …</p> </div><!-- entry-content -->
         </article>
         <article class="hentry">
-                <header> <h2 class="entry-title"><a href="http://ragnraok.github.io/try_android_implement_pbr_ambient_lighting.html" rel="bookmark" title="Permalink to 尝试在Android中实现PBR管线——环境光照明">尝试在Android中实现PBR管线——环境光照明</a></h2> </header>
-                <div class="entry-content"> <p>在上一篇文章中，我们讨论了PBR管线的基础理论，以及实现了场景中直接光（点光源/方向光源）照明的计算，对比与Blinn-Phong模型，PBR使用了微平面理论来对现实世界建模，而在BRDF项计算中，使用了法线分布函数/几何函数/菲涅尔方程构成的BRDF方程来计算光线对某种材质最终输出光照的影响。</p>
-<p>但单纯看直接光照明，PBR管线似乎跟上一个世代的效果差不多，真正让PBR得到超越上一个世代效果的，是其环境光照明部分，所谓的<strong>动态全局光照</strong>的实体</p>
-<p>首先我们来重新看下，在直接光照明下，我们的渲染方程：</p>
-<div class="math">$$L=(K_{d}f_{lambert} + K_{s}f_{cook-torrance})L_{i}(w_{i}\cdot n)$$</div>
-<div class="math">$$L=(K_{d}\frac{diffuse}{\pi} +K_{s}\frac{DFG}{4(W_{o …</div> </div><!-- entry-content -->
+                <header> <h2 class="entry-title"><a href="https://ragnraok.github.io/try_android_implement_pbr_ambient_lighting.html" rel="bookmark" title="Permalink to 尝试在Android中实现PBR管线——环境光照明">尝试在Android中实现PBR管线——环境光照明</a></h2> </header>
+                <div class="entry-content"> <p>在上一篇文章中，我们讨论了PBR管线的基础理论，以及实现了场景中直接光（点光源/方向光源）照明的计算，对比与Blinn-Phong模型，PBR使用了微平面理论来对现实世界建模，而在BRDF项计算中，使用了法线分 …</p> </div><!-- entry-content -->
         </article>
         <article class="hentry">
-                <header> <h2 class="entry-title"><a href="http://ragnraok.github.io/try_android_implement_pbr_thery_direct_light.html" rel="bookmark" title="Permalink to 尝试在Android中实现PBR管线——基本原理以及直接光照明">尝试在Android中实现PBR管线——基本原理以及直接光照明</a></h2> </header>
-                <div class="entry-content"> <p>从本个世代起，基于物理的渲染（Physically Based Rendering，简称PBR）基本上就成为了事实上当下3A大作的渲染标准，自从迪士尼在在SIGGRAPH 2012上提出的著名的“迪士尼原则的BRDF”以及基于金属工作流来实现的方案，由于高度的易用性，美术设计师可以根据现实物理的参数来构建表面材质，可以实现惊人的显示效果，目前已经被广泛的在业界中使用</p>
-<p>这篇文章将会尝试在Android中基于Kotlin来实现PBR管线，在正式开始代码实现之前，我们先来讨论下PBR管线的基础理论。</p>
-<hr>
-<h2>Before PBR</h2>
-<p>首先我们来看看，在PBR出现之前，传统的Blinn-Phong光照是怎么做的，我们先来看看渲染方程：</p>
-<!-- ![](static/images/Blinn_Phong.png) -->
-
-<div class="math">$$L=Diffuse\ast N\cdot L+Specular+(N\cdot L)^{shiness}$$</div>
-<p>我们可以看到，光照颜色的输出，主要有两部分构成，<strong>漫反射</strong>项以及<strong>高光项</strong>，在渲染方程中：</p>
-<ul>
-<li>
-<p><span class="math">\(Diffuse\)</span>是漫反射颜色</p>
-</li>
-<li>
-<p><span class="math">\(Specular\)</span>是高光颜色，或者叫做镜面反射的颜色</p>
-</li>
-<li>
-<p><span class="math">\(N\cdot L …</span></p></li></ul> </div><!-- entry-content -->
+                <header> <h2 class="entry-title"><a href="https://ragnraok.github.io/try_android_implement_pbr_thery_direct_light.html" rel="bookmark" title="Permalink to 尝试在Android中实现PBR管线——基本原理以及直接光照明">尝试在Android中实现PBR管线——基本原理以及直接光照明</a></h2> </header>
+                <div class="entry-content"> <p>从本个世代起，基于物理的渲染（Physically Based Rendering，简称PBR）基本上就成为了事实上当下3A大作的渲染标准，自从迪士尼在在SIGGRAPH 2012上提出的著名的“迪士尼原则的BRDF”以及 …</p> </div><!-- entry-content -->
         </article>
         <article class="hentry">
-                <header> <h2 class="entry-title"><a href="http://ragnraok.github.io/surface_display_lag.html" rel="bookmark" title="Permalink to 浅谈Android中Surface显示延迟处理">浅谈Android中Surface显示延迟处理</a></h2> </header>
-                <div class="entry-content"> <p>最近在使用GLES在Surface上渲染结果的时候，遇到了一个显示延迟的问题，当渲染时间过长，同时帧率要求比较高的时候，如果不加控制，就会造成显示的延迟，如果界面没有交互，倒是不会看出什么问题，如果是强交互的场景，这种情况下就会造成可感知的用户使用延迟了。处理这种情况的其中一种方式是给渲染的一帧赋予一个时间戳，用于给SurfaceFlinger进行对应的丢帧控制，具体什么原理呢，让我们一步一步来说明一下</p>
-<h3>Surface是什么？</h3>
-<hr>
-<p>从原来上讲，Android的 <a href="https://developer.android.com/reference/android/view/Surface">Surface</a> 可以认为是目前图形架构中，作为 <a href="https://source.android.com/devices/graphics/arch-bq-gralloc">BufferQueue</a> 的生产者端，Android会首先把内容渲染到Surface上，填充数据到GraphicBuffer上。而作为消费者端则为系统的<a href="https://source.android.com/devices/graphics/arch-sf-hwc">SurfaceFlinger</a> ，取出BufferQueue中的GraphicBuffer，并配合vysnc将数据送给HWC合成到屏幕上。</p>
-<p>一般来说，Android会把所有可见的View渲染到一个由SurfaceFlinger创建的Surface上，但是这个Surface并不能由开发者直接操作，从App的开发角度来看，大部分情况下我们直接操作的Surface一般会从以下两个地方获取</p>
-<ul>
-<li>
-<p><a href="https://developer.android.com/reference/android/view/SurfaceView">SurfaceView</a> / <a href="https://kapeli.com/dash_share?docset_file=Android&amp;docset_name=Android&amp;path=developer.android.com/reference/android/opengl/GLSurfaceView.html&amp;platform=android&amp;repo=Main&amp;source=https://developer.android.com/reference/android/opengl/GLSurfaceView.html&amp;version=8.1.0">GLSurfaceView</a></p>
-<p>这两个组件是结合了Surface跟View的实现，特别的是，这两个view系统为其单独提供一层了Surface，并直接由SurfaceFlinger进行管理合成，因此实际显示在屏幕上的时候，并没有完全从属在当前的View的布局层次上，在布局对应的位置上，只是一个透明的占位符。而GLSurfaceView，则在SurfaceView的基础上提供了EGL的上下文，以便可以直接使用GLES在Surface上绘制内容</p>
-</li>
-<li>
-<p><a href="https://developer.android.com/reference/android/graphics/SurfaceTexture">SurfaceTexture</a> / <a href="https://developer.android.com/reference/android/view/TextureView">TextureView</a></p>
-<p>SurfaceTexture是从Android 3 …</p></li></ul> </div><!-- entry-content -->
+                <header> <h2 class="entry-title"><a href="https://ragnraok.github.io/surface_display_lag.html" rel="bookmark" title="Permalink to 浅谈Android中Surface显示延迟处理">浅谈Android中Surface显示延迟处理</a></h2> </header>
+                <div class="entry-content"> <p>最近在使用GLES在Surface上渲染结果的时候，遇到了一个显示延迟的问题，当渲染时间过长，同时帧率要求比较高的时候，如果不加控制，就会造成显示的 …</p> </div><!-- entry-content -->
         </article>
         <article class="hentry">
-                <header> <h2 class="entry-title"><a href="http://ragnraok.github.io/android_video_record.html" rel="bookmark" title="Permalink to 谈谈关于Android视频编码的那些坑">谈谈关于Android视频编码的那些坑</a></h2> </header>
-                <div class="entry-content"> <p>Android的视频相关的开发，大概一直是整个Android生态，以及Android API中，最为分裂以及兼容性问题最为突出的一部分。摄像头，以及视频编码相关的API，Google一直对这方面的控制力非常差，导致不同厂商对这两个API的实现有不少差异，而且从API的设计来看，一直以来优化也相当有限，甚至有人认为这是“Android上最难用的API之一”</p>
-<p>以微信为例，我们录制一个540p的mp4文件，对于Android来说，大体上是遵循这么一个流程：</p>
-<hr>
-<p><img alt="" src="static/images/encoderProcess.png"></p>
-<hr>
-<p>大体上就是从摄像头输出的YUV帧经过预处理之后，送入编码器，获得编码好的h264视频流。</p>
-<p>上面只是针对视频流的编码，另外还需要对音频流单独录制，最后再将视频流和音频流进行合成出最终视频。</p>
-<p>这篇文章主要将会对视频流的编码中两个常见问题进行分析：</p>
-<ol>
-<li>视频编码器的选择（硬编 or 软编）？</li>
-<li>如何对摄像头输出的YUV帧进行快速预处理（镜像，缩放，旋转）？</li>
-</ol>
-<hr>
-<h3>视频编码器的选择</h3>
-<p>对于录制视频的需求，不少app都需要对每一帧数据进行单独处理，因此很少会直接用到<code>MediaRecorder</code>来直接录取视频，一般来说，会有这么两个选择</p>
-<ul>
-<li>MediaCodec</li>
-<li>FFMpeg+x264/openh264</li>
-</ul>
-<p>我们来逐个解析一下</p>
-<hr>
-<h4>MediaCodec</h4>
-<p>MediaCodec是API 16之后Google推出的用于音视频编解码的一套偏底层的API，可以直接利用硬件加速进行视频的编解码。调用的时候需要先初始化MediaCodec作为视频的编码器 …</p> </div><!-- entry-content -->
+                <header> <h2 class="entry-title"><a href="https://ragnraok.github.io/android_video_record.html" rel="bookmark" title="Permalink to 谈谈关于Android视频编码的那些坑">谈谈关于Android视频编码的那些坑</a></h2> </header>
+                <div class="entry-content"> <p>Android的视频相关的开发，大概一直是整个Android生态，以及Android API中，最为分裂以及兼容性问题最为突出的一部分。摄像头，以及视频编码相关的API，Google一直对这方面的控制力非常差，导致不同 …</p> </div><!-- entry-content -->
         </article>
 <div class="pager">
       <ul>
                         <li class="previous disabled"><a>← Previous</a></li>
-						<li class="next"><a href="http://ragnraok.github.io/index2.html">Next →</a></li>
+						<li class="next"><a href="https://ragnraok.github.io/index2.html">Next →</a></li>
       </ul>
     </div>
 </section><!-- content -->
             <footer id="contentinfo" class="footer">
                     <nav class="pull-right bottom-nav">
-                        <a href="http://ragnraok.github.io/feeds/atom.xml">RSS</a>
+                        <a href="https://ragnraok.github.io/feeds/atom.xml">RSS</a>
                     </nav>
                     <address id="about" class="vcard body">
-                    &copy; <a href="http://ragnraok.github.io">Ragnarok Note</a> Proudly powered by <a href="http://getpelican.com/">Pelican</a>
+                    &copy; <a href="https://ragnraok.github.io">Ragnarok Note</a> Proudly powered by <a href="http://getpelican.com/">Pelican</a>
                     </address><!-- /#about -->
             </footer><!-- /#contentinfo -->
         </div><!-- container -->

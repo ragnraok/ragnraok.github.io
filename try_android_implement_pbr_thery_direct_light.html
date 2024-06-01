@@ -4,25 +4,25 @@
         <title>尝试在Android中实现PBR管线——基本原理以及直接光照明 - Ragnarok Note</title>
         <meta charset="utf-8" />
         <link href="//netdna.bootstrapcdn.com/bootstrap/3.0.0/css/bootstrap.min.css" rel="stylesheet" />
-        <link href="http://ragnraok.github.io/theme/static/css/style.css" rel="stylesheet" />
+        <link href="https://ragnraok.github.io/theme/static/css/style.css" rel="stylesheet" />
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-        <link href="http://ragnraok.github.io/feeds/atom.xml" type="application/atom+xml" rel="alternate" title="Ragnarok Note Full Atom Feed" />
+        <link href="https://ragnraok.github.io/feeds/atom.xml" type="application/atom+xml" rel="alternate" title="Ragnarok Note Full Atom Feed" />
     </head>
 
     <body id="index" class="archive">
         <div class="container">
             <div class="header">
                 <ul class="nav nav-pills pull-right">
-                    <li class=""><a href="http://ragnraok.github.io">Home</a></li>
-                    <li><a href="http://ragnraok.github.io/archives.html">Archives</a></li>
+                    <li class=""><a href="https://ragnraok.github.io">Home</a></li>
+                    <li><a href="https://ragnraok.github.io/archives.html">Archives</a></li>
                 </ul>
-                <h3 class="text-muted"><a href="http://ragnraok.github.io">Ragnarok Note</a></h3>
+                <h3 class="text-muted"><a href="https://ragnraok.github.io">Ragnarok Note</a></h3>
 				<h2 class="text-muted"></h2>
              </div>
 <section id="content" class="article content">
   <header>
     <h2 class="entry-title">
-      <a href="http://ragnraok.github.io/try_android_implement_pbr_thery_direct_light.html" rel="bookmark"
+      <a href="https://ragnraok.github.io/try_android_implement_pbr_thery_direct_light.html" rel="bookmark"
          title="Permalink to 尝试在Android中实现PBR管线——基本原理以及直接光照明">尝试在Android中实现PBR管线——基本原理以及直接光照明</a></h2>
  
   </header>
@@ -36,23 +36,23 @@
 <p>首先我们来看看，在PBR出现之前，传统的Blinn-Phong光照是怎么做的，我们先来看看渲染方程：</p>
 <!-- ![](static/images/Blinn_Phong.png) -->
 
-<div class="math">$$L=Diffuse\ast N\cdot L+Specular+(N\cdot L)^{shiness}$$</div>
+<p>$$L=Diffuse\ast N\cdot L+Specular+(N\cdot L)^{shiness}$$</p>
 <p>我们可以看到，光照颜色的输出，主要有两部分构成，<strong>漫反射</strong>项以及<strong>高光项</strong>，在渲染方程中：</p>
 <ul>
 <li>
-<p><span class="math">\(Diffuse\)</span>是漫反射颜色</p>
+<p>$Diffuse$是漫反射颜色</p>
 </li>
 <li>
-<p><span class="math">\(Specular\)</span>是高光颜色，或者叫做镜面反射的颜色</p>
+<p>$Specular$是高光颜色，或者叫做镜面反射的颜色</p>
 </li>
 <li>
-<p><span class="math">\(N\cdot L\)</span> 是表面法向量跟光线方向向量的点乘</p>
+<p>$N\cdot L$ 是表面法向量跟光线方向向量的点乘</p>
 </li>
 <li>
-<p><span class="math">\(N\cdot H\)</span> 是表面法向量跟半程向量（光线方向向量跟视角向量的中间向量）的点乘</p>
+<p>$N\cdot H$ 是表面法向量跟半程向量（光线方向向量跟视角向量的中间向量）的点乘</p>
 </li>
 <li>
-<p><span class="math">\(shiness\)</span>是高光度的反光度参数，值越大，高光点越集中</p>
+<p>$shiness$是高光度的反光度参数，值越大，高光点越集中</p>
 </li>
 </ul>
 <p>这个是经典的Blinn-Phong光照模型的，除了这个基本公式以外，后续也有针对这个模型一些改进项，使其更加符合物理上的直觉效果</p>
@@ -80,25 +80,24 @@
 </ul>
 <p>对于非金属物质来说，光线射进物体都会产生折射跟反射部分，而对于金属物质来说，微平面理论认为金属表面不会显示出漫反射部分，所有光线都会被处理成镜面高光</p>
 <p>而能量守恒的要求，则是要求漫反射+高光部分占比加起来为1，实际实现中，我们往往先算出高光部分占比，然后在算出漫反射部分占比：</p>
-<div class="highlight"><pre><span></span>  <span class="k">float</span> <span class="n">kS</span> <span class="o">=</span> <span class="n">calculateSpecularComponent</span><span class="p">();</span> <span class="c1">// 反射/镜面 部分</span>
-  <span class="k">float</span> <span class="n">kD</span> <span class="o">=</span> <span class="mf">1.0</span> <span class="o">-</span> <span class="n">ks</span><span class="p">;</span> <span class="c1">// 折射/漫反射 部分</span>
-</pre></div>
-
+<div class="highlight"><pre><span></span><code><span class="w">  </span><span class="kt">float</span><span class="w"> </span><span class="n">kS</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">calculateSpecularComponent</span><span class="p">();</span><span class="w"> </span><span class="c1">// 反射/镜面 部分</span>
+<span class="w">  </span><span class="kt">float</span><span class="w"> </span><span class="n">kD</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mf">1.0</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">ks</span><span class="p">;</span><span class="w"> </span><span class="c1">// 折射/漫反射 部分</span>
+</code></pre></div>
 
 <p>对比传统的Blinn-Phong模型，由于起没有考虑能量守恒，所以往往很难得出令人信服的效果</p>
 <h3>基于物理的BRDF</h3>
 <p>BRDF（Bidirectional Reflectance Distribution Function），即为双向反射分布函数，是整个PBR管线中最为重要的函数之一，可以用来求出每条光线对了一个给定材质属性的表面上，最终反射出来的光线的贡献程度。类比Blinn-Phong模型来说，我们拿漫反射项颜色乘以NdotL，其实也是一种BRDF计算方式，只是没有基于物理理论来建模，所以没有办法得出令人信服的效果。</p>
 <p>类似Blinn-Phong模型，PBR的BRDF也是接受入射光方向Wi，反射光方向Wo，以及一个跟微平面理论相关的物理参数粗糙度（Roughness），实际实现中，最为常用的则是被称为Cook-Torrance的BRDF模型，同时兼具漫反射以及镜面反射两部分：</p>
-<div class="math">$$L=K_{d}f_{lambert} + K_{s}f_{cook-torrance}$$</div>
+<p>$$L=K_{d}f_{lambert} + K_{s}f_{cook-torrance}$$</p>
 <ul>
 <li>其中Kd表示漫反射光照的能量占比，Ks则表示镜面反射的能量占比，两项加起来为1，而对于漫反射中的Lambert项，我们经常用这个公式计算：</li>
 </ul>
-<div class="math">$$f_{lambert}=\frac{diffuse}{\pi}$$</div>
+<p>$$f_{lambert}=\frac{diffuse}{\pi}$$</p>
 <p>我们将漫反射颜色除以PI，作为BRDF公式的漫反射部分。这部分并没有什么特别的，实际上在Blinn-Phong模型的改进版本中，也有将漫反射颜色除以PI的做法，用于得到更加真实的效果</p>
 <ul>
 <li>而BRDF公式的镜面高光部分则比较复杂：</li>
 </ul>
-<div class="math">$$f_{cook-torrance}=\frac{DFG}{4(W_{o}\cdot n)(W_{i}\cdot n)}$$</div>
+<p>$$f_{cook-torrance}=\frac{DFG}{4(W_{o}\cdot n)(W_{i}\cdot n)}$$</p>
 <p>这里包含了三个主要的参数，D/F/G分别代表三种不同种类的函数，分别用来模拟反射的不同部分的特性，分母则为一个配平参数用来作为标准化因子。D/F/G三个函数则分别为：</p>
 <ul>
 <li>法线分布函数（Normal Distribution Function）：用于估算在收到表面粗糙度的影响下，取向方向与半程向量一致的微平面向量</li>
@@ -114,168 +113,160 @@
 <p><img alt="" src="static/images/ndf.png"></p>
 <p>可以看到到NDF返回值越小，镜面高光区域越小</p>
 <p>实际渲染中，我们所使用的NDF方程为Trowbridge-Reitz GGX分布：</p>
-<div class="math">$$NDF(n,h,a)=\frac{a^{2}}{\pi((n\cdot h)^{2}(a^{2}-1)+1)^{2}}$$</div>
+<p>$$NDF(n,h,a)=\frac{a^{2}}{\pi((n\cdot h)^{2}(a^{2}-1)+1)^{2}}$$</p>
 <p>这里参数a取为粗糙度的平方</p>
 <p>使用glsl的实现则如下：</p>
-<div class="highlight"><pre><span></span><span class="k">float</span> <span class="n">DistributionGGX</span><span class="p">(</span><span class="k">vec3</span> <span class="n">N</span><span class="p">,</span> <span class="k">vec3</span> <span class="n">H</span><span class="p">,</span> <span class="k">float</span> <span class="n">roughness</span><span class="p">)</span>
+<div class="highlight"><pre><span></span><code><span class="kt">float</span><span class="w"> </span><span class="n">DistributionGGX</span><span class="p">(</span><span class="kt">vec3</span><span class="w"> </span><span class="n">N</span><span class="p">,</span><span class="w"> </span><span class="kt">vec3</span><span class="w"> </span><span class="n">H</span><span class="p">,</span><span class="w"> </span><span class="kt">float</span><span class="w"> </span><span class="n">roughness</span><span class="p">)</span>
 <span class="p">{</span>
-  <span class="k">float</span> <span class="n">a</span> <span class="o">=</span> <span class="n">roughness</span><span class="o">*</span><span class="n">roughness</span><span class="p">;</span>
-  <span class="k">float</span> <span class="n">a2</span> <span class="o">=</span> <span class="n">a</span><span class="o">*</span><span class="n">a</span><span class="p">;</span>
-  <span class="k">float</span> <span class="n">NdotH</span> <span class="o">=</span> <span class="n">max</span><span class="p">(</span><span class="n">dot</span><span class="p">(</span><span class="n">N</span><span class="p">,</span> <span class="n">H</span><span class="p">),</span> <span class="mf">0.0</span><span class="p">);</span>
-  <span class="k">float</span> <span class="n">NdotH2</span> <span class="o">=</span> <span class="n">NdotH</span><span class="o">*</span><span class="n">NdotH</span><span class="p">;</span>
+<span class="w">  </span><span class="kt">float</span><span class="w"> </span><span class="n">a</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">roughness</span><span class="o">*</span><span class="n">roughness</span><span class="p">;</span>
+<span class="w">  </span><span class="kt">float</span><span class="w"> </span><span class="n">a2</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">a</span><span class="o">*</span><span class="n">a</span><span class="p">;</span>
+<span class="w">  </span><span class="kt">float</span><span class="w"> </span><span class="n">NdotH</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">max</span><span class="p">(</span><span class="n">dot</span><span class="p">(</span><span class="n">N</span><span class="p">,</span><span class="w"> </span><span class="n">H</span><span class="p">),</span><span class="w"> </span><span class="mf">0.0</span><span class="p">);</span>
+<span class="w">  </span><span class="kt">float</span><span class="w"> </span><span class="n">NdotH2</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">NdotH</span><span class="o">*</span><span class="n">NdotH</span><span class="p">;</span>
 
-  <span class="k">float</span> <span class="n">nom</span>   <span class="o">=</span> <span class="n">a2</span><span class="p">;</span>
-  <span class="k">float</span> <span class="n">denom</span> <span class="o">=</span> <span class="p">(</span><span class="n">NdotH2</span> <span class="o">*</span> <span class="p">(</span><span class="n">a2</span> <span class="o">-</span> <span class="mf">1.0</span><span class="p">)</span> <span class="o">+</span> <span class="mf">1.0</span><span class="p">);</span>
-  <span class="n">denom</span> <span class="o">=</span> <span class="n">PI</span> <span class="o">*</span> <span class="n">denom</span> <span class="o">*</span> <span class="n">denom</span><span class="p">;</span>
+<span class="w">  </span><span class="kt">float</span><span class="w"> </span><span class="n">nom</span><span class="w">   </span><span class="o">=</span><span class="w"> </span><span class="n">a2</span><span class="p">;</span>
+<span class="w">  </span><span class="kt">float</span><span class="w"> </span><span class="n">denom</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="n">NdotH2</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="p">(</span><span class="n">a2</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="mf">1.0</span><span class="p">)</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mf">1.0</span><span class="p">);</span>
+<span class="w">  </span><span class="n">denom</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">PI</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">denom</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">denom</span><span class="p">;</span>
 
-  <span class="k">return</span> <span class="n">saturateMediump</span><span class="p">(</span><span class="n">nom</span> <span class="o">/</span> <span class="n">denom</span><span class="p">);</span>
+<span class="w">  </span><span class="k">return</span><span class="w"> </span><span class="n">saturateMediump</span><span class="p">(</span><span class="n">nom</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="n">denom</span><span class="p">);</span>
 <span class="p">}</span>
-</pre></div>
-
+</code></pre></div>
 
 <p><br/></p>
 <h4>几何函数（Geometry Function）的近似</h4>
 <p>几何函数描述了微平面中互相被遮蔽的比率，跟法线分布函数类似，都是从统计学的角度描述了微平面的属性：</p>
 <p><img alt="" src="static/images/geometry_shadowing.png"></p>
 <p>这里我们使用的几何函数为Schlick-GGX近似：</p>
-<div class="math">$$G(n,v,k)=\frac{n\cdot v}{(n\cdot v)(1-k)+k)}$$</div>
+<p>$$G(n,v,k)=\frac{n\cdot v}{(n\cdot v)(1-k)+k)}$$</p>
 <p>其中参数k在计算直接光的时候为：</p>
-<div class="math">$$k=\frac{(a+1)^{2}}{8}$$</div>
+<p>$$k=\frac{(a+1)^{2}}{8}$$</p>
 <p>这里参数a同样也是取为粗糙度的平方</p>
 <p>而在实际渲染中，我们还将需要光线的方向向量来将两者纳入其中：</p>
-<div class="math">$$G_{smith}=G(n,v,k)G(n,l,k)$$</div>
+<p>$$G_{smith}=G(n,v,k)G(n,l,k)$$</p>
 <p>通过以上公式，在不同的粗糙度下可以得到如下的效果：</p>
 <p><img alt="" src="static/images/geometry.png"></p>
 <p>以上方程使用glsl的实现如下：</p>
-<div class="highlight"><pre><span></span><span class="k">float</span> <span class="n">GeometrySchlickGGX</span><span class="p">(</span><span class="k">float</span> <span class="n">NdotV</span><span class="p">,</span> <span class="k">float</span> <span class="n">roughness</span><span class="p">)</span>
+<div class="highlight"><pre><span></span><code><span class="kt">float</span><span class="w"> </span><span class="n">GeometrySchlickGGX</span><span class="p">(</span><span class="kt">float</span><span class="w"> </span><span class="n">NdotV</span><span class="p">,</span><span class="w"> </span><span class="kt">float</span><span class="w"> </span><span class="n">roughness</span><span class="p">)</span>
 <span class="p">{</span>
-  <span class="k">float</span> <span class="n">r</span> <span class="o">=</span> <span class="p">(</span><span class="n">roughness</span> <span class="o">+</span> <span class="mf">1.0</span><span class="p">);</span>
-  <span class="k">float</span> <span class="n">k</span> <span class="o">=</span> <span class="p">(</span><span class="n">r</span><span class="o">*</span><span class="n">r</span><span class="p">)</span> <span class="o">/</span> <span class="mf">8.0</span><span class="p">;</span>
+<span class="w">  </span><span class="kt">float</span><span class="w"> </span><span class="n">r</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="n">roughness</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mf">1.0</span><span class="p">);</span>
+<span class="w">  </span><span class="kt">float</span><span class="w"> </span><span class="n">k</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="n">r</span><span class="o">*</span><span class="n">r</span><span class="p">)</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="mf">8.0</span><span class="p">;</span>
 
-  <span class="k">float</span> <span class="n">nom</span>   <span class="o">=</span> <span class="n">NdotV</span><span class="p">;</span>
-  <span class="k">float</span> <span class="n">denom</span> <span class="o">=</span> <span class="n">NdotV</span> <span class="o">*</span> <span class="p">(</span><span class="mf">1.0</span> <span class="o">-</span> <span class="n">k</span><span class="p">)</span> <span class="o">+</span> <span class="n">k</span><span class="p">;</span>
+<span class="w">  </span><span class="kt">float</span><span class="w"> </span><span class="n">nom</span><span class="w">   </span><span class="o">=</span><span class="w"> </span><span class="n">NdotV</span><span class="p">;</span>
+<span class="w">  </span><span class="kt">float</span><span class="w"> </span><span class="n">denom</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">NdotV</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="p">(</span><span class="mf">1.0</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">k</span><span class="p">)</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">k</span><span class="p">;</span>
 
-  <span class="k">return</span> <span class="n">saturateMediump</span><span class="p">(</span><span class="n">nom</span> <span class="o">/</span> <span class="n">denom</span><span class="p">);</span>
+<span class="w">  </span><span class="k">return</span><span class="w"> </span><span class="n">saturateMediump</span><span class="p">(</span><span class="n">nom</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="n">denom</span><span class="p">);</span>
 <span class="p">}</span>
 <span class="c1">// ----------------------------------------------------------------------------</span>
-<span class="k">float</span> <span class="n">GeometrySmith</span><span class="p">(</span><span class="k">vec3</span> <span class="n">N</span><span class="p">,</span> <span class="k">vec3</span> <span class="n">V</span><span class="p">,</span> <span class="k">vec3</span> <span class="n">L</span><span class="p">,</span> <span class="k">float</span> <span class="n">roughness</span><span class="p">)</span>
+<span class="kt">float</span><span class="w"> </span><span class="n">GeometrySmith</span><span class="p">(</span><span class="kt">vec3</span><span class="w"> </span><span class="n">N</span><span class="p">,</span><span class="w"> </span><span class="kt">vec3</span><span class="w"> </span><span class="n">V</span><span class="p">,</span><span class="w"> </span><span class="kt">vec3</span><span class="w"> </span><span class="n">L</span><span class="p">,</span><span class="w"> </span><span class="kt">float</span><span class="w"> </span><span class="n">roughness</span><span class="p">)</span>
 <span class="p">{</span>
-  <span class="k">float</span> <span class="n">NdotV</span> <span class="o">=</span> <span class="n">max</span><span class="p">(</span><span class="n">dot</span><span class="p">(</span><span class="n">N</span><span class="p">,</span> <span class="n">V</span><span class="p">),</span> <span class="mf">0.0</span><span class="p">);</span>
-  <span class="k">float</span> <span class="n">NdotL</span> <span class="o">=</span> <span class="n">max</span><span class="p">(</span><span class="n">dot</span><span class="p">(</span><span class="n">N</span><span class="p">,</span> <span class="n">L</span><span class="p">),</span> <span class="mf">0.0</span><span class="p">);</span>
-  <span class="k">float</span> <span class="n">ggx2</span> <span class="o">=</span> <span class="n">GeometrySchlickGGX</span><span class="p">(</span><span class="n">NdotV</span><span class="p">,</span> <span class="n">roughness</span><span class="p">);</span>
-  <span class="k">float</span> <span class="n">ggx1</span> <span class="o">=</span> <span class="n">GeometrySchlickGGX</span><span class="p">(</span><span class="n">NdotL</span><span class="p">,</span> <span class="n">roughness</span><span class="p">);</span>
+<span class="w">  </span><span class="kt">float</span><span class="w"> </span><span class="n">NdotV</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">max</span><span class="p">(</span><span class="n">dot</span><span class="p">(</span><span class="n">N</span><span class="p">,</span><span class="w"> </span><span class="n">V</span><span class="p">),</span><span class="w"> </span><span class="mf">0.0</span><span class="p">);</span>
+<span class="w">  </span><span class="kt">float</span><span class="w"> </span><span class="n">NdotL</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">max</span><span class="p">(</span><span class="n">dot</span><span class="p">(</span><span class="n">N</span><span class="p">,</span><span class="w"> </span><span class="n">L</span><span class="p">),</span><span class="w"> </span><span class="mf">0.0</span><span class="p">);</span>
+<span class="w">  </span><span class="kt">float</span><span class="w"> </span><span class="n">ggx2</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">GeometrySchlickGGX</span><span class="p">(</span><span class="n">NdotV</span><span class="p">,</span><span class="w"> </span><span class="n">roughness</span><span class="p">);</span>
+<span class="w">  </span><span class="kt">float</span><span class="w"> </span><span class="n">ggx1</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">GeometrySchlickGGX</span><span class="p">(</span><span class="n">NdotL</span><span class="p">,</span><span class="w"> </span><span class="n">roughness</span><span class="p">);</span>
 
-  <span class="k">return</span> <span class="n">saturateMediump</span><span class="p">(</span><span class="n">ggx1</span> <span class="o">*</span> <span class="n">ggx2</span><span class="p">);</span>
+<span class="w">  </span><span class="k">return</span><span class="w"> </span><span class="n">saturateMediump</span><span class="p">(</span><span class="n">ggx1</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">ggx2</span><span class="p">);</span>
 <span class="p">}</span>
-</pre></div>
-
+</code></pre></div>
 
 <p><br/></p>
 <h4>菲涅尔方程（Fresnel Rquation）的近似</h4>
 <p>菲涅尔方程描述了光线被反射部分的比率，因而会受到观察方向的影响，结合能量守恒，我们可以得出剩下的漫反射的比率。而要计算出菲涅尔方程，我们需要一个基础反射率（F0）的参数，描述的是在表面的掠射角方向望过去（此时表面法线跟视线方向成90度），不同材料的表面反射率都不太一样：</p>
 <p><img alt="" src="static/images/brdf_f_f0.jpg"></p>
 <p>我们这里取0.04作为近似的基础反射率，另外，这里我们还需要额外引入一个叫做金属度（Metallic）的参数，结合F0，一般我们这样子来计算出材质的真实F0：</p>
-<div class="highlight"><pre><span></span><span class="k">vec3</span> <span class="n">F0</span> <span class="o">=</span> <span class="k">vec3</span><span class="p">(</span><span class="mf">0.04</span><span class="p">);</span>
-<span class="n">F0</span> <span class="o">=</span> <span class="n">mix</span><span class="p">(</span><span class="n">F0</span><span class="p">,</span> <span class="n">albedo</span><span class="p">,</span> <span class="n">metallic</span><span class="p">);</span>
-</pre></div>
-
+<div class="highlight"><pre><span></span><code><span class="kt">vec3</span><span class="w"> </span><span class="n">F0</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kt">vec3</span><span class="p">(</span><span class="mf">0.04</span><span class="p">);</span>
+<span class="n">F0</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">mix</span><span class="p">(</span><span class="n">F0</span><span class="p">,</span><span class="w"> </span><span class="n">albedo</span><span class="p">,</span><span class="w"> </span><span class="n">metallic</span><span class="p">);</span>
+</code></pre></div>
 
 <p>有了F0之后，我们使用Fresnel-Schlick近似来计算菲涅尔方程的近似：</p>
-<div class="math">$$F(h,v,F_{0})=F_{0}+(1-F_{0})(1-h\cdot v)^{5}$$</div>
+<p>$$F(h,v,F_{0})=F_{0}+(1-F_{0})(1-h\cdot v)^{5}$$</p>
 <p>在glsl中的实现则为：</p>
-<div class="highlight"><pre><span></span><span class="k">vec3</span> <span class="n">fresnelSchlick</span><span class="p">(</span><span class="k">float</span> <span class="n">cosTheta</span><span class="p">,</span> <span class="k">vec3</span> <span class="n">F0</span><span class="p">)</span>
+<div class="highlight"><pre><span></span><code><span class="kt">vec3</span><span class="w"> </span><span class="n">fresnelSchlick</span><span class="p">(</span><span class="kt">float</span><span class="w"> </span><span class="n">cosTheta</span><span class="p">,</span><span class="w"> </span><span class="kt">vec3</span><span class="w"> </span><span class="n">F0</span><span class="p">)</span>
 <span class="p">{</span>
-  <span class="k">return</span> <span class="n">F0</span> <span class="o">+</span> <span class="p">(</span><span class="mf">1.0</span> <span class="o">-</span> <span class="n">F0</span><span class="p">)</span> <span class="o">*</span> <span class="n">pow</span><span class="p">(</span><span class="mf">1.0</span> <span class="o">-</span> <span class="n">cosTheta</span><span class="p">,</span> <span class="mf">5.0</span><span class="p">);</span>
+<span class="w">  </span><span class="k">return</span><span class="w"> </span><span class="n">F0</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="p">(</span><span class="mf">1.0</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">F0</span><span class="p">)</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">pow</span><span class="p">(</span><span class="mf">1.0</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">cosTheta</span><span class="p">,</span><span class="w"> </span><span class="mf">5.0</span><span class="p">);</span>
 <span class="p">}</span>
-</pre></div>
-
+</code></pre></div>
 
 <p>其中cosTheta则为HdotV</p>
 <p>终于，我们计算出了BRDF公式中的所有近似项，并且，我们有了两项粗糙度（Roughness）以及金属度（Metallic）两项额外的参数可以用于调整渲染效果，这两个参数的取值范围均为[0, 1]</p>
 <hr>
 <h2>直接光照明</h2>
 <p>接下来，在得到了BRDF的真实公式之后，我们尝试基于公式直接计算直接光的照明，我们会在场景中添加若干个点光源，以及一个方向光源，首先我们定义光源的一些基本变量：</p>
-<div class="highlight"><pre><span></span><span class="cp">#define POINT_LIGHT_NUMBER ${PointLightPositions.size}</span>
+<div class="highlight"><pre><span></span><code><span class="cp">#define POINT_LIGHT_NUMBER ${PointLightPositions.size}</span>
 <span class="c1">// lights</span>
-<span class="k">uniform</span> <span class="k">vec3</span> <span class="n">pointLightPositions</span><span class="p">[</span><span class="n">POINT_LIGHT_NUMBER</span><span class="p">];</span>
-<span class="k">uniform</span> <span class="k">vec3</span> <span class="n">pointLightColors</span><span class="p">[</span><span class="n">POINT_LIGHT_NUMBER</span><span class="p">];</span>
+<span class="k">uniform</span><span class="w"> </span><span class="kt">vec3</span><span class="w"> </span><span class="n">pointLightPositions</span><span class="p">[</span><span class="n">POINT_LIGHT_NUMBER</span><span class="p">];</span>
+<span class="k">uniform</span><span class="w"> </span><span class="kt">vec3</span><span class="w"> </span><span class="n">pointLightColors</span><span class="p">[</span><span class="n">POINT_LIGHT_NUMBER</span><span class="p">];</span>
 
-<span class="k">uniform</span> <span class="k">vec3</span> <span class="n">directionLightDir</span><span class="p">;</span>
-<span class="k">uniform</span> <span class="k">vec3</span> <span class="n">directionLightColor</span><span class="p">;</span>
-</pre></div>
-
+<span class="k">uniform</span><span class="w"> </span><span class="kt">vec3</span><span class="w"> </span><span class="n">directionLightDir</span><span class="p">;</span>
+<span class="k">uniform</span><span class="w"> </span><span class="kt">vec3</span><span class="w"> </span><span class="n">directionLightColor</span><span class="p">;</span>
+</code></pre></div>
 
 <p>我们将点光源的位置以及颜色分别存储在数组中，而对于方向光源，则分别需要声明起方向以及颜色，而实际在光照计算，我们需要对遍历每一个光源，分别使用BRDF函数计算其最终反射的颜色并相加起来</p>
 <p>我们首先来看下点光源的计算，由于点光源强度会随着距离而进行衰减，这里我们使用<a href="https://learnopengl-cn.github.io/02%20Lighting/05%20Light%20casters/#_3">这里教程</a>介绍到的平方衰减函数，单个点光源的完整计算逻辑如下</p>
-<div class="highlight"><pre><span></span><span class="c1">// calculate per-light radiance</span>
-<span class="k">vec3</span> <span class="n">L</span> <span class="o">=</span> <span class="n">normalize</span><span class="p">(</span><span class="n">pointLightPositions</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">-</span> <span class="n">WorldPos</span><span class="p">);</span>
-<span class="k">vec3</span> <span class="n">H</span> <span class="o">=</span> <span class="n">normalize</span><span class="p">(</span><span class="n">V</span> <span class="o">+</span> <span class="n">L</span><span class="p">);</span>
-<span class="k">float</span> <span class="n">distance</span> <span class="o">=</span> <span class="n">length</span><span class="p">(</span><span class="n">pointLightPositions</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">-</span> <span class="n">WorldPos</span><span class="p">);</span>
-<span class="k">float</span> <span class="n">attenuation</span> <span class="o">=</span> <span class="mf">1.0</span> <span class="o">/</span> <span class="p">(</span><span class="n">distance</span> <span class="o">*</span> <span class="n">distance</span><span class="p">);</span>
-<span class="k">vec3</span> <span class="n">radiance</span> <span class="o">=</span> <span class="n">pointLightColors</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">*</span> <span class="n">attenuation</span><span class="p">;</span>
+<div class="highlight"><pre><span></span><code><span class="c1">// calculate per-light radiance</span>
+<span class="kt">vec3</span><span class="w"> </span><span class="n">L</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">normalize</span><span class="p">(</span><span class="n">pointLightPositions</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">WorldPos</span><span class="p">);</span>
+<span class="kt">vec3</span><span class="w"> </span><span class="n">H</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">normalize</span><span class="p">(</span><span class="n">V</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">L</span><span class="p">);</span>
+<span class="kt">float</span><span class="w"> </span><span class="n">distance</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">length</span><span class="p">(</span><span class="n">pointLightPositions</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">WorldPos</span><span class="p">);</span>
+<span class="kt">float</span><span class="w"> </span><span class="n">attenuation</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mf">1.0</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="p">(</span><span class="n">distance</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">distance</span><span class="p">);</span>
+<span class="kt">vec3</span><span class="w"> </span><span class="n">radiance</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">pointLightColors</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">attenuation</span><span class="p">;</span>
 <span class="c1">// Cook-Torrance BRDF</span>
-<span class="k">float</span> <span class="n">NDF</span> <span class="o">=</span> <span class="n">DistributionGGX</span><span class="p">(</span><span class="n">N</span><span class="p">,</span> <span class="n">H</span><span class="p">,</span> <span class="n">roughness</span><span class="p">);</span>
-<span class="k">float</span> <span class="n">G</span>   <span class="o">=</span> <span class="n">GeometrySmith</span><span class="p">(</span><span class="n">N</span><span class="p">,</span> <span class="n">V</span><span class="p">,</span> <span class="n">L</span><span class="p">,</span> <span class="n">roughness</span><span class="p">);</span>
-<span class="k">vec3</span> <span class="n">F</span>    <span class="o">=</span> <span class="n">fresnelSchlick</span><span class="p">(</span><span class="n">clamp</span><span class="p">(</span><span class="n">dot</span><span class="p">(</span><span class="n">H</span><span class="p">,</span> <span class="n">V</span><span class="p">),</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">),</span> <span class="n">F0</span><span class="p">);</span>
-<span class="k">vec3</span> <span class="n">nominator</span>    <span class="o">=</span> <span class="n">NDF</span> <span class="o">*</span> <span class="n">G</span> <span class="o">*</span> <span class="n">F</span><span class="p">;</span>
-<span class="k">float</span> <span class="n">denominator</span> <span class="o">=</span> <span class="mf">4.0</span> <span class="o">*</span> <span class="n">max</span><span class="p">(</span><span class="n">dot</span><span class="p">(</span><span class="n">N</span><span class="p">,</span> <span class="n">V</span><span class="p">),</span> <span class="mf">0.0</span><span class="p">)</span> <span class="o">*</span> <span class="n">max</span><span class="p">(</span><span class="n">dot</span><span class="p">(</span><span class="n">N</span><span class="p">,</span> <span class="n">L</span><span class="p">),</span> <span class="mf">0.0</span><span class="p">);</span>
-<span class="k">vec3</span> <span class="n">specular</span> <span class="o">=</span> <span class="n">nominator</span> <span class="o">/</span> <span class="n">max</span><span class="p">(</span><span class="n">denominator</span><span class="p">,</span> <span class="mf">0.001</span><span class="p">);</span> <span class="c1">// prevent divide by zero for NdotV=0.0 or NdotL=0.0</span>
+<span class="kt">float</span><span class="w"> </span><span class="n">NDF</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">DistributionGGX</span><span class="p">(</span><span class="n">N</span><span class="p">,</span><span class="w"> </span><span class="n">H</span><span class="p">,</span><span class="w"> </span><span class="n">roughness</span><span class="p">);</span>
+<span class="kt">float</span><span class="w"> </span><span class="n">G</span><span class="w">   </span><span class="o">=</span><span class="w"> </span><span class="n">GeometrySmith</span><span class="p">(</span><span class="n">N</span><span class="p">,</span><span class="w"> </span><span class="n">V</span><span class="p">,</span><span class="w"> </span><span class="n">L</span><span class="p">,</span><span class="w"> </span><span class="n">roughness</span><span class="p">);</span>
+<span class="kt">vec3</span><span class="w"> </span><span class="n">F</span><span class="w">    </span><span class="o">=</span><span class="w"> </span><span class="n">fresnelSchlick</span><span class="p">(</span><span class="n">clamp</span><span class="p">(</span><span class="n">dot</span><span class="p">(</span><span class="n">H</span><span class="p">,</span><span class="w"> </span><span class="n">V</span><span class="p">),</span><span class="w"> </span><span class="mf">0.0</span><span class="p">,</span><span class="w"> </span><span class="mf">1.0</span><span class="p">),</span><span class="w"> </span><span class="n">F0</span><span class="p">);</span>
+<span class="kt">vec3</span><span class="w"> </span><span class="n">nominator</span><span class="w">    </span><span class="o">=</span><span class="w"> </span><span class="n">NDF</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">G</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">F</span><span class="p">;</span>
+<span class="kt">float</span><span class="w"> </span><span class="n">denominator</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mf">4.0</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">max</span><span class="p">(</span><span class="n">dot</span><span class="p">(</span><span class="n">N</span><span class="p">,</span><span class="w"> </span><span class="n">V</span><span class="p">),</span><span class="w"> </span><span class="mf">0.0</span><span class="p">)</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">max</span><span class="p">(</span><span class="n">dot</span><span class="p">(</span><span class="n">N</span><span class="p">,</span><span class="w"> </span><span class="n">L</span><span class="p">),</span><span class="w"> </span><span class="mf">0.0</span><span class="p">);</span>
+<span class="kt">vec3</span><span class="w"> </span><span class="n">specular</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">nominator</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="n">max</span><span class="p">(</span><span class="n">denominator</span><span class="p">,</span><span class="w"> </span><span class="mf">0.001</span><span class="p">);</span><span class="w"> </span><span class="c1">// prevent divide by zero for NdotV=0.0 or NdotL=0.0</span>
 <span class="c1">// kS is equal to Fresnel</span>
-<span class="k">vec3</span> <span class="n">kS</span> <span class="o">=</span> <span class="n">F</span><span class="p">;</span>
+<span class="kt">vec3</span><span class="w"> </span><span class="n">kS</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">F</span><span class="p">;</span>
 <span class="c1">// for energy conservation, the diffuse and specular light can&#39;t</span>
 <span class="c1">// be above 1.0 (unless the surface emits light); to preserve this</span>
 <span class="c1">// relationship the diffuse component (kD) should equal 1.0 - kS.</span>
-<span class="k">vec3</span> <span class="n">kD</span> <span class="o">=</span> <span class="k">vec3</span><span class="p">(</span><span class="mf">1.0</span><span class="p">)</span> <span class="o">-</span> <span class="n">kS</span><span class="p">;</span>
+<span class="kt">vec3</span><span class="w"> </span><span class="n">kD</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kt">vec3</span><span class="p">(</span><span class="mf">1.0</span><span class="p">)</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">kS</span><span class="p">;</span>
 <span class="c1">// multiply kD by the inverse metalness such that only non-metals</span>
 <span class="c1">// have diffuse lighting, or a linear blend if partly metal (pure metals</span>
 <span class="c1">// have no diffuse light).</span>
-<span class="n">kD</span> <span class="o">*=</span> <span class="mf">1.0</span> <span class="o">-</span> <span class="n">metallic</span><span class="p">;</span>
+<span class="n">kD</span><span class="w"> </span><span class="o">*=</span><span class="w"> </span><span class="mf">1.0</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">metallic</span><span class="p">;</span>
 <span class="c1">// scale light by NdotL</span>
-<span class="k">float</span> <span class="n">NdotL</span> <span class="o">=</span> <span class="n">max</span><span class="p">(</span><span class="n">dot</span><span class="p">(</span><span class="n">N</span><span class="p">,</span> <span class="n">L</span><span class="p">),</span> <span class="mf">0.0</span><span class="p">);</span>
+<span class="kt">float</span><span class="w"> </span><span class="n">NdotL</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">max</span><span class="p">(</span><span class="n">dot</span><span class="p">(</span><span class="n">N</span><span class="p">,</span><span class="w"> </span><span class="n">L</span><span class="p">),</span><span class="w"> </span><span class="mf">0.0</span><span class="p">);</span>
 <span class="c1">// add to outgoing radiance Lo</span>
 <span class="c1">// note that we already multiplied the BRDF by the Fresnel (kS so we won&#39;t multiply by kS again</span>
-<span class="n">Lo</span> <span class="o">+=</span> <span class="p">(</span><span class="n">kD</span> <span class="o">*</span> <span class="n">albedo</span> <span class="o">/</span> <span class="n">PI</span> <span class="o">+</span> <span class="n">specular</span><span class="p">)</span> <span class="o">*</span> <span class="n">radiance</span> <span class="o">*</span> <span class="n">NdotL</span><span class="p">;</span>
-</pre></div>
-
+<span class="n">Lo</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="p">(</span><span class="n">kD</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">albedo</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="n">PI</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">specular</span><span class="p">)</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">radiance</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">NdotL</span><span class="p">;</span>
+</code></pre></div>
 
 <p>可以看出来实现基本上就是直接对着公式翻译了一遍，注意在计算kD的时候，我们最后还乘以了（1.0-metallic），这说明在表面材质完全是金属的时候，将不会有漫反射</p>
 <p>对于方向光源，我们也是类似这样子计算：</p>
-<div class="highlight"><pre><span></span><span class="k">vec3</span> <span class="n">L</span> <span class="o">=</span> <span class="n">normalize</span><span class="p">(</span><span class="o">-</span><span class="n">directionLightDir</span><span class="p">);</span>
-<span class="k">vec3</span> <span class="n">H</span> <span class="o">=</span> <span class="n">normalize</span><span class="p">(</span><span class="n">V</span> <span class="o">+</span> <span class="n">L</span><span class="p">);</span>
-<span class="k">vec3</span> <span class="n">radiance</span> <span class="o">=</span> <span class="n">directionLightColor</span><span class="p">;</span>
+<div class="highlight"><pre><span></span><code><span class="kt">vec3</span><span class="w"> </span><span class="n">L</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">normalize</span><span class="p">(</span><span class="o">-</span><span class="n">directionLightDir</span><span class="p">);</span>
+<span class="kt">vec3</span><span class="w"> </span><span class="n">H</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">normalize</span><span class="p">(</span><span class="n">V</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">L</span><span class="p">);</span>
+<span class="kt">vec3</span><span class="w"> </span><span class="n">radiance</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">directionLightColor</span><span class="p">;</span>
 <span class="c1">// Cook-Torrance BRDF</span>
-<span class="k">float</span> <span class="n">NDF</span> <span class="o">=</span> <span class="n">DistributionGGX</span><span class="p">(</span><span class="n">N</span><span class="p">,</span> <span class="n">H</span><span class="p">,</span> <span class="n">roughness</span><span class="p">);</span>
-<span class="k">float</span> <span class="n">G</span>   <span class="o">=</span> <span class="n">GeometrySmith</span><span class="p">(</span><span class="n">N</span><span class="p">,</span> <span class="n">V</span><span class="p">,</span> <span class="n">L</span><span class="p">,</span> <span class="n">roughness</span><span class="p">);</span>
-<span class="k">vec3</span> <span class="n">F</span>    <span class="o">=</span> <span class="n">fresnelSchlick</span><span class="p">(</span><span class="n">clamp</span><span class="p">(</span><span class="n">dot</span><span class="p">(</span><span class="n">H</span><span class="p">,</span> <span class="n">V</span><span class="p">),</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">),</span> <span class="n">F0</span><span class="p">);</span>
-<span class="k">vec3</span> <span class="n">nominator</span>    <span class="o">=</span> <span class="n">NDF</span> <span class="o">*</span> <span class="n">G</span> <span class="o">*</span> <span class="n">F</span><span class="p">;</span>
-<span class="k">float</span> <span class="n">denominator</span> <span class="o">=</span> <span class="mf">4.0</span> <span class="o">*</span> <span class="n">max</span><span class="p">(</span><span class="n">dot</span><span class="p">(</span><span class="n">N</span><span class="p">,</span> <span class="n">V</span><span class="p">),</span> <span class="mf">0.0</span><span class="p">)</span> <span class="o">*</span> <span class="n">max</span><span class="p">(</span><span class="n">dot</span><span class="p">(</span><span class="n">N</span><span class="p">,</span> <span class="n">L</span><span class="p">),</span> <span class="mf">0.0</span><span class="p">);</span>
-<span class="k">vec3</span> <span class="n">specular</span> <span class="o">=</span> <span class="n">nominator</span> <span class="o">/</span> <span class="n">max</span><span class="p">(</span><span class="n">denominator</span><span class="p">,</span> <span class="mf">0.001</span><span class="p">);</span> <span class="c1">// prevent divide by zero for NdotV=0.0 or NdotL=0.0</span>
+<span class="kt">float</span><span class="w"> </span><span class="n">NDF</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">DistributionGGX</span><span class="p">(</span><span class="n">N</span><span class="p">,</span><span class="w"> </span><span class="n">H</span><span class="p">,</span><span class="w"> </span><span class="n">roughness</span><span class="p">);</span>
+<span class="kt">float</span><span class="w"> </span><span class="n">G</span><span class="w">   </span><span class="o">=</span><span class="w"> </span><span class="n">GeometrySmith</span><span class="p">(</span><span class="n">N</span><span class="p">,</span><span class="w"> </span><span class="n">V</span><span class="p">,</span><span class="w"> </span><span class="n">L</span><span class="p">,</span><span class="w"> </span><span class="n">roughness</span><span class="p">);</span>
+<span class="kt">vec3</span><span class="w"> </span><span class="n">F</span><span class="w">    </span><span class="o">=</span><span class="w"> </span><span class="n">fresnelSchlick</span><span class="p">(</span><span class="n">clamp</span><span class="p">(</span><span class="n">dot</span><span class="p">(</span><span class="n">H</span><span class="p">,</span><span class="w"> </span><span class="n">V</span><span class="p">),</span><span class="w"> </span><span class="mf">0.0</span><span class="p">,</span><span class="w"> </span><span class="mf">1.0</span><span class="p">),</span><span class="w"> </span><span class="n">F0</span><span class="p">);</span>
+<span class="kt">vec3</span><span class="w"> </span><span class="n">nominator</span><span class="w">    </span><span class="o">=</span><span class="w"> </span><span class="n">NDF</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">G</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">F</span><span class="p">;</span>
+<span class="kt">float</span><span class="w"> </span><span class="n">denominator</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mf">4.0</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">max</span><span class="p">(</span><span class="n">dot</span><span class="p">(</span><span class="n">N</span><span class="p">,</span><span class="w"> </span><span class="n">V</span><span class="p">),</span><span class="w"> </span><span class="mf">0.0</span><span class="p">)</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">max</span><span class="p">(</span><span class="n">dot</span><span class="p">(</span><span class="n">N</span><span class="p">,</span><span class="w"> </span><span class="n">L</span><span class="p">),</span><span class="w"> </span><span class="mf">0.0</span><span class="p">);</span>
+<span class="kt">vec3</span><span class="w"> </span><span class="n">specular</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">nominator</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="n">max</span><span class="p">(</span><span class="n">denominator</span><span class="p">,</span><span class="w"> </span><span class="mf">0.001</span><span class="p">);</span><span class="w"> </span><span class="c1">// prevent divide by zero for NdotV=0.0 or NdotL=0.0</span>
 <span class="c1">// kS is equal to Fresnel</span>
-<span class="k">vec3</span> <span class="n">kS</span> <span class="o">=</span> <span class="n">F</span><span class="p">;</span>
+<span class="kt">vec3</span><span class="w"> </span><span class="n">kS</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">F</span><span class="p">;</span>
 <span class="c1">// for energy conservation, the diffuse and specular light can&#39;t</span>
 <span class="c1">// be above 1.0 (unless the surface emits light); to preserve this</span>
 <span class="c1">// relationship the diffuse component (kD) should equal 1.0 - kS.</span>
-<span class="k">vec3</span> <span class="n">kD</span> <span class="o">=</span> <span class="k">vec3</span><span class="p">(</span><span class="mf">1.0</span><span class="p">)</span> <span class="o">-</span> <span class="n">kS</span><span class="p">;</span>
+<span class="kt">vec3</span><span class="w"> </span><span class="n">kD</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kt">vec3</span><span class="p">(</span><span class="mf">1.0</span><span class="p">)</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">kS</span><span class="p">;</span>
 <span class="c1">// multiply kD by the inverse metalness such that only non-metals</span>
 <span class="c1">// have diffuse lighting, or a linear blend if partly metal (pure metals</span>
 <span class="c1">// have no diffuse light).</span>
-<span class="n">kD</span> <span class="o">*=</span> <span class="mf">1.0</span> <span class="o">-</span> <span class="n">metallic</span><span class="p">;</span>
+<span class="n">kD</span><span class="w"> </span><span class="o">*=</span><span class="w"> </span><span class="mf">1.0</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">metallic</span><span class="p">;</span>
 <span class="c1">// scale light by NdotL</span>
-<span class="k">float</span> <span class="n">NdotL</span> <span class="o">=</span> <span class="n">max</span><span class="p">(</span><span class="n">dot</span><span class="p">(</span><span class="n">N</span><span class="p">,</span> <span class="n">L</span><span class="p">),</span> <span class="mf">0.0</span><span class="p">);</span>
+<span class="kt">float</span><span class="w"> </span><span class="n">NdotL</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">max</span><span class="p">(</span><span class="n">dot</span><span class="p">(</span><span class="n">N</span><span class="p">,</span><span class="w"> </span><span class="n">L</span><span class="p">),</span><span class="w"> </span><span class="mf">0.0</span><span class="p">);</span>
 <span class="c1">// add to outgoing radiance Lo</span>
 <span class="c1">// note that we already multiplied the BRDF by the Fresnel (kS) so we won&#39;t multiply by kS again</span>
-<span class="n">Lo</span> <span class="o">+=</span> <span class="p">(</span><span class="n">kD</span> <span class="o">*</span> <span class="n">albedo</span> <span class="o">+</span> <span class="n">specular</span><span class="p">)</span> <span class="o">*</span> <span class="n">radiance</span> <span class="o">*</span> <span class="n">NdotL</span><span class="p">;</span>
-</pre></div>
-
+<span class="n">Lo</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="p">(</span><span class="n">kD</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">albedo</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">specular</span><span class="p">)</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">radiance</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">NdotL</span><span class="p">;</span>
+</code></pre></div>
 
 <p>注意跟点光源计算不同，我们在计算的时候并没有根据距离来衰减光照能量</p>
 <p>最后，在计算出光照颜色之后，由于我们整个计算过程都是在线性空间中计算，并且没有对输出颜色归一，所以最后我们还需要进行Gamma校正以及色调映射（Tone Mapping）:</p>
-<div class="highlight"><pre><span></span><span class="c1">// HDR tonemapping</span>
-<span class="n">color</span> <span class="o">=</span> <span class="n">color</span> <span class="o">/</span> <span class="p">(</span><span class="n">color</span> <span class="o">+</span> <span class="k">vec3</span><span class="p">(</span><span class="mf">1.0</span><span class="p">));</span>
+<div class="highlight"><pre><span></span><code><span class="c1">// HDR tonemapping</span>
+<span class="n">color</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">color</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="p">(</span><span class="n">color</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="kt">vec3</span><span class="p">(</span><span class="mf">1.0</span><span class="p">));</span>
 <span class="c1">// gamma correct</span>
-<span class="n">color</span> <span class="o">=</span> <span class="n">pow</span><span class="p">(</span><span class="n">color</span><span class="p">,</span> <span class="k">vec3</span><span class="p">(</span><span class="mf">1.0</span><span class="o">/</span><span class="mf">2.2</span><span class="p">));</span>
-</pre></div>
-
+<span class="n">color</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">pow</span><span class="p">(</span><span class="n">color</span><span class="p">,</span><span class="w"> </span><span class="kt">vec3</span><span class="p">(</span><span class="mf">1.0</span><span class="o">/</span><span class="mf">2.2</span><span class="p">));</span>
+</code></pre></div>
 
 <p>下图便是在Android中，在不同的粗糙度下的渲染结果：</p>
 <p><img alt="" src="static/images/android_pbr_direct_light_render_roughness.jpg"></p>
@@ -287,76 +278,14 @@
 <li>PBR直接光照明实现: <a href="https://learnopengl-cn.github.io/07%20PBR/02%20Lighting/">https://learnopengl-cn.github.io/07%20PBR/02%20Lighting/</a></li>
 <li>PBR白皮书: <a href="https://zhuanlan.zhihu.com/p/53086060">https://zhuanlan.zhihu.com/p/53086060</a></li>
 </ul>
-<script type="text/javascript">if (!document.getElementById('mathjaxscript_pelican_#%@#$@#')) {
-    var align = "center",
-        indent = "0em",
-        linebreak = "false";
-
-    if (true) {
-        align = (screen.width < 768) ? "left" : align;
-        indent = (screen.width < 768) ? "0em" : indent;
-        linebreak = (screen.width < 768) ? 'true' : linebreak;
-    }
-
-    var mathjaxscript = document.createElement('script');
-    mathjaxscript.id = 'mathjaxscript_pelican_#%@#$@#';
-    mathjaxscript.type = 'text/javascript';
-    mathjaxscript.src = 'https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.3/latest.js?config=TeX-AMS-MML_HTMLorMML';
-
-    var configscript = document.createElement('script');
-    configscript.type = 'text/x-mathjax-config';
-    configscript[(window.opera ? "innerHTML" : "text")] =
-        "MathJax.Hub.Config({" +
-        "    config: ['MMLorHTML.js']," +
-        "    TeX: { extensions: ['AMSmath.js','AMSsymbols.js','noErrors.js','noUndefined.js'], equationNumbers: { autoNumber: 'none' } }," +
-        "    jax: ['input/TeX','input/MathML','output/HTML-CSS']," +
-        "    extensions: ['tex2jax.js','mml2jax.js','MathMenu.js','MathZoom.js']," +
-        "    displayAlign: '"+ align +"'," +
-        "    displayIndent: '"+ indent +"'," +
-        "    showMathMenu: true," +
-        "    messageStyle: 'normal'," +
-        "    tex2jax: { " +
-        "        inlineMath: [ ['\\\\(','\\\\)'] ], " +
-        "        displayMath: [ ['$$','$$'] ]," +
-        "        processEscapes: true," +
-        "        preview: 'TeX'," +
-        "    }, " +
-        "    'HTML-CSS': { " +
-        "        availableFonts: ['STIX', 'TeX']," +
-        "        preferredFont: 'STIX'," +
-        "        styles: { '.MathJax_Display, .MathJax .mo, .MathJax .mi, .MathJax .mn': {color: 'inherit ! important'} }," +
-        "        linebreaks: { automatic: "+ linebreak +", width: '90% container' }," +
-        "    }, " +
-        "}); " +
-        "if ('default' !== 'default') {" +
-            "MathJax.Hub.Register.StartupHook('HTML-CSS Jax Ready',function () {" +
-                "var VARIANT = MathJax.OutputJax['HTML-CSS'].FONTDATA.VARIANT;" +
-                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
-                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
-                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
-                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
-            "});" +
-            "MathJax.Hub.Register.StartupHook('SVG Jax Ready',function () {" +
-                "var VARIANT = MathJax.OutputJax.SVG.FONTDATA.VARIANT;" +
-                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
-                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
-                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
-                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
-            "});" +
-        "}";
-
-    (document.body || document.getElementsByTagName('head')[0]).appendChild(configscript);
-    (document.body || document.getElementsByTagName('head')[0]).appendChild(mathjaxscript);
-}
-</script>
   </div><!-- /.entry-content -->
    <footer class="post-info text-muted">
     Posted on <abbr class="published" title="2019-08-18T00:00:00+08:00">
       日 18 八月 2019
     </abbr>
     <address class="vcard author">
-      by <a class="url fn" href="http://ragnraok.github.io/author/ragnarok-zhou.html">Ragnarok Zhou</a>
-    </address> in <a href="http://ragnraok.github.io/category/android.html">Android</a> Tagged   </footer><!-- /.post-info -->
+      by <a class="url fn" href="https://ragnraok.github.io/author/ragnarok-zhou.html">Ragnarok Zhou</a>
+    </address> in <a href="https://ragnraok.github.io/category/android.html">Android</a> Tagged   </footer><!-- /.post-info -->
 </section>
     <div class="comment">
         <div id="disqus_thread"></div> <!-- comment app container -->
@@ -368,7 +297,7 @@
         /* * * DON'T EDIT BELOW THIS LINE * * */
         (function() {
             var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
-            dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+            dsq.src = 'https://' + disqus_shortname + '.disqus.com/embed.js';
             (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
         })();
     </script>
@@ -376,10 +305,10 @@
      <!-- Comment END -->
             <footer id="contentinfo" class="footer">
                     <nav class="pull-right bottom-nav">
-                        <a href="http://ragnraok.github.io/feeds/atom.xml">RSS</a>
+                        <a href="https://ragnraok.github.io/feeds/atom.xml">RSS</a>
                     </nav>
                     <address id="about" class="vcard body">
-                    &copy; <a href="http://ragnraok.github.io">Ragnarok Note</a> Proudly powered by <a href="http://getpelican.com/">Pelican</a>
+                    &copy; <a href="https://ragnraok.github.io">Ragnarok Note</a> Proudly powered by <a href="http://getpelican.com/">Pelican</a>
                     </address><!-- /#about -->
             </footer><!-- /#contentinfo -->
         </div><!-- container -->

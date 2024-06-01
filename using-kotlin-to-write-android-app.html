@@ -4,25 +4,25 @@
         <title>使用Kotlin进行Android开发 - Ragnarok Note</title>
         <meta charset="utf-8" />
         <link href="//netdna.bootstrapcdn.com/bootstrap/3.0.0/css/bootstrap.min.css" rel="stylesheet" />
-        <link href="http://ragnraok.github.io/theme/static/css/style.css" rel="stylesheet" />
+        <link href="https://ragnraok.github.io/theme/static/css/style.css" rel="stylesheet" />
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-        <link href="http://ragnraok.github.io/feeds/atom.xml" type="application/atom+xml" rel="alternate" title="Ragnarok Note Full Atom Feed" />
+        <link href="https://ragnraok.github.io/feeds/atom.xml" type="application/atom+xml" rel="alternate" title="Ragnarok Note Full Atom Feed" />
     </head>
 
     <body id="index" class="archive">
         <div class="container">
             <div class="header">
                 <ul class="nav nav-pills pull-right">
-                    <li class=""><a href="http://ragnraok.github.io">Home</a></li>
-                    <li><a href="http://ragnraok.github.io/archives.html">Archives</a></li>
+                    <li class=""><a href="https://ragnraok.github.io">Home</a></li>
+                    <li><a href="https://ragnraok.github.io/archives.html">Archives</a></li>
                 </ul>
-                <h3 class="text-muted"><a href="http://ragnraok.github.io">Ragnarok Note</a></h3>
+                <h3 class="text-muted"><a href="https://ragnraok.github.io">Ragnarok Note</a></h3>
 				<h2 class="text-muted"></h2>
              </div>
 <section id="content" class="article content">
   <header>
     <h2 class="entry-title">
-      <a href="http://ragnraok.github.io/using-kotlin-to-write-android-app.html" rel="bookmark"
+      <a href="https://ragnraok.github.io/using-kotlin-to-write-android-app.html" rel="bookmark"
          title="Permalink to 使用Kotlin进行Android开发">使用Kotlin进行Android开发</a></h2>
  
   </header>
@@ -36,77 +36,69 @@
 <h3>基本语法介绍</h3>
 <p>Kotlin的语法非常简洁，熟悉Java或者Scala的人都可以快速上手：</p>
 <h4>函数声明：</h4>
-<div class="highlight"><pre><span></span>fun foo(va: Int): Int {
-    return 1
+<div class="highlight"><pre><span></span><code><span class="nv">fun</span><span class="w"> </span><span class="nv">foo</span><span class="ss">(</span><span class="nv">va</span>:<span class="w"> </span><span class="nv">Int</span><span class="ss">)</span>:<span class="w"> </span><span class="nv">Int</span><span class="w"> </span>{
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="mi">1</span>
 }
-</pre></div>
-
+</code></pre></div>
 
 <p>也可以单行声明：</p>
-<div class="highlight"><pre><span></span>fun foo(va: Int): Int = 1
-</pre></div>
-
+<div class="highlight"><pre><span></span><code>fun foo(va: Int): Int = 1
+</code></pre></div>
 
 <p>lambda当然也是支持的：</p>
-<div class="highlight"><pre><span></span>var c = {foo: Int -&gt; println(foo)}
-</pre></div>
-
+<div class="highlight"><pre><span></span><code><span class="k">var</span><span class="w"> </span><span class="n">c</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="n">foo</span><span class="p">:</span><span class="w"> </span><span class="n">Int</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="n">println</span><span class="p">(</span><span class="n">foo</span><span class="p">)}</span>
+</code></pre></div>
 
 <p>Kotlin中的函数是一等对象，自然支持高阶函数：</p>
-<div class="highlight"><pre><span></span>var c = {foo: Int -&gt; println(foo)}
-fun fooTest(func: (Int)-&gt;()) = println(&quot;I&#39;m Groot&quot;)    
-fooTest(c)
-</pre></div>
-
+<div class="highlight"><pre><span></span><code><span class="k">var</span><span class="w"> </span><span class="n">c</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="n">foo</span><span class="p">:</span><span class="w"> </span><span class="n">Int</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="n">println</span><span class="p">(</span><span class="n">foo</span><span class="p">)}</span>
+<span class="n">fun</span><span class="w"> </span><span class="n">fooTest</span><span class="p">(</span><span class="k">func</span><span class="p">:</span><span class="w"> </span><span class="p">(</span><span class="n">Int</span><span class="p">)</span><span class="o">-&gt;</span><span class="p">())</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">println</span><span class="p">(</span><span class="s2">&quot;I&#39;m Groot&quot;</span><span class="p">)</span><span class="w">    </span>
+<span class="n">fooTest</span><span class="p">(</span><span class="n">c</span><span class="p">)</span>
+</code></pre></div>
 
 <p><br /></p>
 <h4>类与接口</h4>
 <p>类可以这样进行声明：</p>
-<div class="highlight"><pre><span></span><span class="kr">class</span> <span class="nx">Bar</span><span class="p">(</span><span class="kd">var</span> <span class="nx">b</span>: <span class="kt">Int</span><span class="p">)</span><span class="o">:</span> <span class="nx">Foo() {</span>
-    <span class="kd">var</span> <span class="nx">c</span> <span class="o">=</span> <span class="mi">1</span>
-    <span class="nx">init</span> <span class="p">{</span>
-        <span class="nx">println</span><span class="p">(</span><span class="s2">&quot;class initializer&quot;</span><span class="p">)</span>
-    <span class="p">}</span>
+<div class="highlight"><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="n">Bar</span><span class="p">(</span><span class="k">var</span><span class="w"> </span><span class="n">b</span><span class="p">:</span><span class="w"> </span><span class="n">Int</span><span class="p">):</span><span class="w"> </span><span class="n">Foo</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">var</span><span class="w"> </span><span class="n">c</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span>
+<span class="w">    </span><span class="n">init</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="n">println</span><span class="p">(</span><span class="s2">&quot;class initializer&quot;</span><span class="p">)</span>
+<span class="w">    </span><span class="p">}</span>
 
-    <span class="kr">constructor</span><span class="p">()</span><span class="o">:</span> <span class="k">this</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="p">{</span>
-        <span class="nx">println</span><span class="p">(</span><span class="s2">&quot;secondary constructor&quot;</span><span class="p">)</span>
-    <span class="p">}</span>
+<span class="w">    </span><span class="n">constructor</span><span class="p">():</span><span class="w"> </span><span class="n">this</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="n">println</span><span class="p">(</span><span class="s2">&quot;secondary constructor&quot;</span><span class="p">)</span>
+<span class="w">    </span><span class="p">}</span>
 <span class="p">}</span>
-</pre></div>
-
+</code></pre></div>
 
 <p>Bar类在这里继承了Foo类，Bar类有两个构造函数，直接在Bar类头的是primary constructor，另外一个构造函数使用<code>constructor</code>关键字定义，注意必须要先调用primary constructor，另外，<code>init</code>标明的是class initializer，每个构造函数都会首先调用class initializer里面的代码，再调用构造函数</p>
 <p><br /></p>
 <h5>Inner class:</h5>
-<div class="highlight"><pre><span></span><span class="kr">class</span> <span class="nx">Outer</span> <span class="p">{</span>
-    <span class="kr">class</span> <span class="nx">Inner</span> <span class="p">{</span>      
-    <span class="p">}</span>
-<span class="p">}</span>
-</pre></div>
-
+<div class="highlight"><pre><span></span><code><span class="k">class</span> <span class="n">Outer</span> {
+    <span class="k">class</span> <span class="n">Inner</span> {      
+    }
+}
+</code></pre></div>
 
 <p>Kotlin同样支持嵌套的内部类，不过和Java不一样的是，Kotlin的内部类不会默认包含一个指向外部类对象的引用，也就是说，Kotlin中所有的内部类默认就是<strong>静态</strong>的，这样可以减少很多内存泄露的问题。另外，如果需要在内部类中引用外部类对象，可以在Inner类的声明前加上<code>inner</code>关键字，然后在Inner类中使用标记的<code>this</code>：<code>this@Outer</code>来指向外部类对象</p>
 <p><br /></p>
 <h5>Singleton:</h5>
-<div class="highlight"><pre><span></span>object Single {
-    var c = 1
+<div class="highlight"><pre><span></span><code><span class="n">object</span><span class="w"> </span><span class="n">Single</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">var</span><span class="w"> </span><span class="n">c</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span>
 
-    fun foo() = println(&quot;foo&quot;)
-}
-</pre></div>
-
+<span class="w">    </span><span class="n">fun</span><span class="w"> </span><span class="n">foo</span><span class="p">()</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">println</span><span class="p">(</span><span class="s2">&quot;foo&quot;</span><span class="p">)</span>
+<span class="p">}</span>
+</code></pre></div>
 
 <p>Kotlin中使用<code>object</code>关键字声明一个singleton对象，后面这里的方法就可以直接使用<code>Single.foo()</code>来调用了</p>
 <p><br /></p>
 <h5>Interface:</h5>
-<div class="highlight"><pre><span></span><span class="kr">interface</span> <span class="nx">Interface</span> <span class="p">{</span>
-    <span class="nx">fun</span> <span class="nx">foo() {</span>
-        <span class="nx">println</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
-    <span class="p">}</span>
-    <span class="nx">fun</span> <span class="nx">bar</span><span class="p">()</span>
-<span class="p">}</span>
-</pre></div>
-
+<div class="highlight"><pre><span></span><code>interface Interface {
+    fun foo() {
+        println(1)
+    }
+    fun bar()
+}
+</code></pre></div>
 
 <p>Kotlin中的interface，跟其他语言的<code>trait</code>非常像，而且也可以带有默认的实现方法，并且不允许通过属性来维护状态。事实上，在上个版本中，interface的原来名称是<code>trait</code>，而在M12现在这个版本中又改成了interface而已</p>
 <p><br /></p>
@@ -114,82 +106,72 @@ fooTest(c)
 <h5>Null safe:</h5>
 <p>在Kotlin中，严格区分了nullable和非nullable对象，甚至在编译期解决了不少潜在的空指针问题:</p>
 <p>我们先来看下普通的变量声明</p>
-<div class="highlight"><pre><span></span>var c: String = &quot;12123&quot;
-</pre></div>
-
+<div class="highlight"><pre><span></span><code><span class="k">var</span><span class="w"> </span><span class="n">c</span><span class="p">:</span><span class="w"> </span><span class="nb nb-Type">String</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;12123&quot;</span>
+</code></pre></div>
 
 <p>这里声明了一个String对象，其值为"12123"，我们可以正常的使用这个对象的成员方法：<code>c.length()</code></p>
 <p>但是，如果在初始化的时候，变量c为空的话，这样声明就是错误的，会编译不过：</p>
-<div class="highlight"><pre><span></span>var c: String = null
-</pre></div>
-
+<div class="highlight"><pre><span></span><code><span class="k">var</span><span class="w"> </span><span class="n">c</span><span class="p">:</span><span class="w"> </span><span class="nb nb-Type">String</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb nb-Type">null</span>
+</code></pre></div>
 
 <p>正确的声明应该是这样：</p>
-<div class="highlight"><pre><span></span>var c: String? = null
-</pre></div>
-
+<div class="highlight"><pre><span></span><code><span class="k">var</span><span class="w"> </span><span class="n">c</span><span class="p">:</span><span class="w"> </span><span class="nb nb-Type">String</span><span class="err">?</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb nb-Type">null</span>
+</code></pre></div>
 
 <p>这里在<code>String</code>后面加多了一个问号，表明这里是一个<strong>Nullable</strong>的对象，说明这个变量在使用的过程中<strong>可能为空</strong>，而且，在调用这个变量的成员的时候，必须要使用这种语法：<code>c?.length()</code>，在调用的时候添加了一个问号，表明，如果<code>c</code>为空的时候，<code>length()</code>这个方法就不会调用。coffe-script也有类似的，这种语法糖减少了很多平时用到的Null-checked，简化了代码，而且从编译器开始介入null-checked，大大减少了潜在的<code>NullPointerException</code>，而事实上，null的确也是一个<strong><a href="http://www.infoq.com/presentations/Null-References-The-Billion-Dollar-Mistake-Tony-Hoare">billion dollar mistake</a></strong></p>
 <p>常年进行如此的调用语法常常会很恼人，因此在你进行显式的Null-checked的时候，Kotlin的编译器会认为后续的调用已经无需进行Null-checked，可以直接调用了：</p>
-<div class="highlight"><pre><span></span>if (c != null) {
-    c.length()
+<div class="highlight"><pre><span></span><code><span class="k">if</span><span class="w"> </span><span class="ss">(</span><span class="nv">c</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="nv">null</span><span class="ss">)</span><span class="w"> </span>{
+<span class="w">    </span><span class="nv">c</span>.<span class="nv">length</span><span class="ss">()</span>
 }
-</pre></div>
-
+</code></pre></div>
 
 <p><br /></p>
 <h5>Smart type cast</h5>
 <p>在Kotlin中，进行强制类型转换可以使用<code>as</code>关键字，但有可能会抛出异常，因此，Kotlin引入了smart type cast:</p>
-<div class="highlight"><pre><span></span>if (c is String) {
-    c.length()
+<div class="highlight"><pre><span></span><code><span class="k">if</span><span class="w"> </span><span class="ss">(</span><span class="nv">c</span><span class="w"> </span><span class="nv">is</span><span class="w"> </span><span class="nv">String</span><span class="ss">)</span><span class="w"> </span>{
+<span class="w">    </span><span class="nv">c</span>.<span class="nv">length</span><span class="ss">()</span>
 }
-</pre></div>
-
+</code></pre></div>
 
 <p>在上面的例子中，如果<code>c</code>是一个String对象，则在if块中，可以直接使用String的方法，编译器会智能的帮你识别出c在if-blcok里面是一个String对象</p>
 <p><br /></p>
 <h4>Pattern Matching</h4>
 <p>Kotlin在一定程度上支持了一些FP的特性，包括强大的Pattern Matching，在Kotlin中可以使用<code>when</code>关键字：</p>
-<div class="highlight"><pre><span></span>var x = 3
-when (x) {
-    1 -&gt; print(&quot;x == 1&quot;)
-    2 -&gt; print(&quot;x == 2&quot;)
-    in 1..10 -&gt; print(&quot;x is in the range&quot;)
-    !in 10..20 -&gt; print(&quot;x is outside the range&quot;)
-    is Int -&gt; println(&quot;is int&quot;)
-    else -&gt; { // Note the block
-      print(&quot;x is neither 1 nor 2&quot;)
-    }
-}
-</pre></div>
-
+<div class="highlight"><pre><span></span><code><span class="k">var</span><span class="w"> </span><span class="n">x</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">3</span>
+<span class="n">when</span><span class="w"> </span><span class="p">(</span><span class="n">x</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="mi">1</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="nb">print</span><span class="p">(</span><span class="s2">&quot;x == 1&quot;</span><span class="p">)</span>
+<span class="w">    </span><span class="mi">2</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="nb">print</span><span class="p">(</span><span class="s2">&quot;x == 2&quot;</span><span class="p">)</span>
+<span class="w">    </span><span class="ow">in</span><span class="w"> </span><span class="mf">1.</span><span class="o">.</span><span class="mi">10</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="nb">print</span><span class="p">(</span><span class="s2">&quot;x is in the range&quot;</span><span class="p">)</span>
+<span class="w">    </span><span class="o">!</span><span class="ow">in</span><span class="w"> </span><span class="mf">10.</span><span class="o">.</span><span class="mi">20</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="nb">print</span><span class="p">(</span><span class="s2">&quot;x is outside the range&quot;</span><span class="p">)</span>
+<span class="w">    </span><span class="k">is</span><span class="w"> </span><span class="n">Int</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="n">println</span><span class="p">(</span><span class="s2">&quot;is int&quot;</span><span class="p">)</span>
+<span class="w">    </span><span class="k">else</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="o">//</span><span class="w"> </span><span class="n">Note</span><span class="w"> </span><span class="n">the</span><span class="w"> </span><span class="n">block</span>
+<span class="w">      </span><span class="nb">print</span><span class="p">(</span><span class="s2">&quot;x is neither 1 nor 2&quot;</span><span class="p">)</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
 
 <p><br /></p>
 <h4>Function Extension</h4>
 <p>在Java中我们经常需要给系统的类添加一些实用的方法，但苦于不能直接扩展，于是就有了各种的xxxUtils类，导致代码非常恶心，但是在Kotlin中，我们可以直接扩展库里面类的方法，通过function extension:</p>
-<div class="highlight"><pre><span></span>fun String.fucker() {
+<div class="highlight"><pre><span></span><code>fun String.fucker() {
     println(&quot;a fucker&quot;)
 }
-</pre></div>
-
+</code></pre></div>
 
 <p>上面给<code>String</code>类添加了一个fucker方法，我们可以直接使用：</p>
-<div class="highlight"><pre><span></span>&quot;123123&quot;.fucker()
-</pre></div>
-
+<div class="highlight"><pre><span></span><code>&quot;123123&quot;.fucker()
+</code></pre></div>
 
 <p>这大大的减少了我们写xxxUtils类的必要性</p>
 <hr>
 <h3>配置使用Kotlin进行Android开发</h3>
 <p>使用Kotlin开发Android app的配置非常简单，按照<a href="http://kotlinlang.org/docs/tutorials/kotlin-android.html">官方给出的配置即可</a>，直接在Gradle的配置文件build.gradle中添加一个依赖：</p>
-<div class="highlight"><pre><span></span>compile &quot;org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version&quot;
-</pre></div>
-
+<div class="highlight"><pre><span></span><code>compile &quot;org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version&quot;
+</code></pre></div>
 
 <p>然后添加Kotlin插件的使用：</p>
-<div class="highlight"><pre><span></span>apply plugin: &#39;kotlin-android&#39;
-</pre></div>
-
+<div class="highlight"><pre><span></span><code>apply plugin: &#39;kotlin-android&#39;
+</code></pre></div>
 
 <p>进行一次Gradle Sync之后，就可以直接在项目使用Kotlin编写代码了，另外，如果安装了Intellij的Kotlin插件，可以选择
 <code>Tools-&gt;Kotlin-&gt;Configure Kotlin in Project</code>，就可以自动进行上述的配置，一步到位</p>
@@ -223,40 +205,39 @@ when (x) {
 <hr>
 <h3>Project Anko</h3>
 <p><a href="https://github.com/JetBrains/anko">Anko</a> 是JetBrains推出的一个简化Android开发的库，同样由Kotlin来编写，主要的革命在于，声明UI的方式，完全抛弃了xml的使用，使用Anko，声明UI是这样做的：</p>
-<div class="highlight"><pre><span></span>override fun onCreate(savedInstanceState: Bundle?) {
-    super.onCreate(savedInstanceState)
-    val customStyle = { v: Any -&gt;
-        when (v) {
-            is Button -&gt; v.textSize = 26f
-            is EditText -&gt; v.textSize = 24f
-        }
-    }
+<div class="highlight"><pre><span></span><code><span class="n">override</span><span class="w"> </span><span class="n">fun</span><span class="w"> </span><span class="n">onCreate</span><span class="p">(</span><span class="n">savedInstanceState</span><span class="o">:</span><span class="w"> </span><span class="n">Bundle</span><span class="o">?</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">super</span><span class="p">.</span><span class="n">onCreate</span><span class="p">(</span><span class="n">savedInstanceState</span><span class="p">)</span>
+<span class="w">    </span><span class="n">val</span><span class="w"> </span><span class="n">customStyle</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="n">v</span><span class="o">:</span><span class="w"> </span><span class="kr">Any</span><span class="w"> </span><span class="o">-&gt;</span>
+<span class="w">        </span><span class="kr">when</span><span class="w"> </span><span class="p">(</span><span class="n">v</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="n">is</span><span class="w"> </span><span class="n">Button</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="n">v</span><span class="p">.</span><span class="n">textSize</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mf">26f</span>
+<span class="w">            </span><span class="n">is</span><span class="w"> </span><span class="n">EditText</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="n">v</span><span class="p">.</span><span class="n">textSize</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mf">24f</span>
+<span class="w">        </span><span class="p">}</span>
+<span class="w">    </span><span class="p">}</span>
 
-    verticalLayout {
+<span class="w">    </span><span class="n">verticalLayout</span><span class="w"> </span><span class="p">{</span>
 
-        padding = dip(34)
-        imageView(android.R.drawable.ic_menu_manage).layoutParams {
-            margin = dip(16)
-            gravity = Gravity.CENTER
-        }
+<span class="w">        </span><span class="n">padding</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">dip</span><span class="p">(</span><span class="mi">34</span><span class="p">)</span>
+<span class="w">        </span><span class="n">imageView</span><span class="p">(</span><span class="n">android</span><span class="p">.</span><span class="n">R</span><span class="p">.</span><span class="n">drawable</span><span class="p">.</span><span class="n">ic_menu_manage</span><span class="p">).</span><span class="n">layoutParams</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="n">margin</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">dip</span><span class="p">(</span><span class="mi">16</span><span class="p">)</span>
+<span class="w">            </span><span class="n">gravity</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Gravity</span><span class="p">.</span><span class="n">CENTER</span>
+<span class="w">        </span><span class="p">}</span>
 
-         val name = editText {
-             hintResource = R.string.name
-        }
-        val password = editText {
-            hintResource = R.string.password
-            inputType = TYPE_CLASS_TEXT or TYPE_TEXT_VARIATION_PASSWORD
-        }
+<span class="w">         </span><span class="n">val</span><span class="w"> </span><span class="n">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">editText</span><span class="w"> </span><span class="p">{</span>
+<span class="w">             </span><span class="n">hintResource</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">R</span><span class="p">.</span><span class="n">string</span><span class="p">.</span><span class="n">name</span>
+<span class="w">        </span><span class="p">}</span>
+<span class="w">        </span><span class="n">val</span><span class="w"> </span><span class="n">password</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">editText</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="n">hintResource</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">R</span><span class="p">.</span><span class="n">string</span><span class="p">.</span><span class="n">password</span>
+<span class="w">            </span><span class="n">inputType</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">TYPE_CLASS_TEXT</span><span class="w"> </span><span class="kr">or</span><span class="w"> </span><span class="n">TYPE_TEXT_VARIATION_PASSWORD</span>
+<span class="w">        </span><span class="p">}</span>
 
-        button(&quot;Log in&quot;) {
-            onClick {
-                tryLogin(name.text, password.text)
-            }
-        }
-    }.style(customStyle)
-}
-</pre></div>
-
+<span class="w">        </span><span class="n">button</span><span class="p">(</span><span class="s">&quot;Log in&quot;</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="n">onClick</span><span class="w"> </span><span class="p">{</span>
+<span class="w">                </span><span class="n">tryLogin</span><span class="p">(</span><span class="n">name</span><span class="p">.</span><span class="n">text</span><span class="p">,</span><span class="w"> </span><span class="n">password</span><span class="p">.</span><span class="n">text</span><span class="p">)</span>
+<span class="w">            </span><span class="p">}</span>
+<span class="w">        </span><span class="p">}</span>
+<span class="w">    </span><span class="p">}.</span><span class="n">style</span><span class="p">(</span><span class="n">customStyle</span><span class="p">)</span>
+<span class="p">}</span>
+</code></pre></div>
 
 <p>你没看错，的确是在Activity类的onCreate方法中直接声明UI的布局。</p>
 <p>Anko看起来像是使用了一种类似DSL的方式声明了界面的UI，这里主要是使用了Kotlin的其中两个特性：</p>
@@ -282,8 +263,8 @@ when (x) {
       三 24 六月 2015
     </abbr>
     <address class="vcard author">
-      by <a class="url fn" href="http://ragnraok.github.io/author/ragnarok-zhou.html">Ragnarok Zhou</a>
-    </address> in <a href="http://ragnraok.github.io/category/android.html">Android</a> Tagged   </footer><!-- /.post-info -->
+      by <a class="url fn" href="https://ragnraok.github.io/author/ragnarok-zhou.html">Ragnarok Zhou</a>
+    </address> in <a href="https://ragnraok.github.io/category/android.html">Android</a> Tagged   </footer><!-- /.post-info -->
 </section>
     <div class="comment">
         <div id="disqus_thread"></div> <!-- comment app container -->
@@ -295,7 +276,7 @@ when (x) {
         /* * * DON'T EDIT BELOW THIS LINE * * */
         (function() {
             var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
-            dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+            dsq.src = 'https://' + disqus_shortname + '.disqus.com/embed.js';
             (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
         })();
     </script>
@@ -303,10 +284,10 @@ when (x) {
      <!-- Comment END -->
             <footer id="contentinfo" class="footer">
                     <nav class="pull-right bottom-nav">
-                        <a href="http://ragnraok.github.io/feeds/atom.xml">RSS</a>
+                        <a href="https://ragnraok.github.io/feeds/atom.xml">RSS</a>
                     </nav>
                     <address id="about" class="vcard body">
-                    &copy; <a href="http://ragnraok.github.io">Ragnarok Note</a> Proudly powered by <a href="http://getpelican.com/">Pelican</a>
+                    &copy; <a href="https://ragnraok.github.io">Ragnarok Note</a> Proudly powered by <a href="http://getpelican.com/">Pelican</a>
                     </address><!-- /#about -->
             </footer><!-- /#contentinfo -->
         </div><!-- container -->
