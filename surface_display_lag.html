@@ -1,35 +1,36 @@
 <!DOCTYPE html>
-<html>
-    <head>
-        <title>浅谈Android中Surface显示延迟处理 - Ragnarok Note</title>
+<html lang="zh">
+<head>
+          <title>Ragnarok Note - 浅谈Android中Surface显示延迟处理</title>
         <meta charset="utf-8" />
-        <link href="//netdna.bootstrapcdn.com/bootstrap/3.0.0/css/bootstrap.min.css" rel="stylesheet" />
-        <link href="https://ragnraok.github.io/theme/static/css/style.css" rel="stylesheet" />
-        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+        <meta name="generator" content="Pelican" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <link href="https://ragnraok.github.io/feeds/atom.xml" type="application/atom+xml" rel="alternate" title="Ragnarok Note Full Atom Feed" />
-    </head>
 
-    <body id="index" class="archive">
-        <div class="container">
-            <div class="header">
-                <ul class="nav nav-pills pull-right">
-                    <li class=""><a href="https://ragnraok.github.io">Home</a></li>
-                    <li><a href="https://ragnraok.github.io/archives.html">Archives</a></li>
-                </ul>
-                <h3 class="text-muted"><a href="https://ragnraok.github.io">Ragnarok Note</a></h3>
-				<h2 class="text-muted"></h2>
-             </div>
-<section id="content" class="article content">
+
+
+
+
+</head>
+
+<body>
+        <header>
+              <hgroup><h1><a href="https://ragnraok.github.io/">Ragnarok Note</a></h1></hgroup>
+        <nav><ul>
+            <li><a href="https://ragnraok.github.io/category/android.html"  aria-current="page" >Android</a></li>
+            <li><a href="https://ragnraok.github.io/category/hack.html" >Hack</a></li>
+            <li><a href="https://ragnraok.github.io/category/living.html" >Living</a></li>
+        </ul></nav>
+        </header>
+        <main>
+<article>
   <header>
-    <h2 class="entry-title">
+    <h2>
       <a href="https://ragnraok.github.io/surface_display_lag.html" rel="bookmark"
          title="Permalink to 浅谈Android中Surface显示延迟处理">浅谈Android中Surface显示延迟处理</a></h2>
  
   </header>
-  
-     
-  <div class="entry-content">
-    <p>最近在使用GLES在Surface上渲染结果的时候，遇到了一个显示延迟的问题，当渲染时间过长，同时帧率要求比较高的时候，如果不加控制，就会造成显示的延迟，如果界面没有交互，倒是不会看出什么问题，如果是强交互的场景，这种情况下就会造成可感知的用户使用延迟了。处理这种情况的其中一种方式是给渲染的一帧赋予一个时间戳，用于给SurfaceFlinger进行对应的丢帧控制，具体什么原理呢，让我们一步一步来说明一下</p>
+  <p>最近在使用GLES在Surface上渲染结果的时候，遇到了一个显示延迟的问题，当渲染时间过长，同时帧率要求比较高的时候，如果不加控制，就会造成显示的延迟，如果界面没有交互，倒是不会看出什么问题，如果是强交互的场景，这种情况下就会造成可感知的用户使用延迟了。处理这种情况的其中一种方式是给渲染的一帧赋予一个时间戳，用于给SurfaceFlinger进行对应的丢帧控制，具体什么原理呢，让我们一步一步来说明一下</p>
 <h3>Surface是什么？</h3>
 <hr>
 <p>从原来上讲，Android的 <a href="https://developer.android.com/reference/android/view/Surface">Surface</a> 可以认为是目前图形架构中，作为 <a href="https://source.android.com/devices/graphics/arch-bq-gralloc">BufferQueue</a> 的生产者端，Android会首先把内容渲染到Surface上，填充数据到GraphicBuffer上。而作为消费者端则为系统的<a href="https://source.android.com/devices/graphics/arch-sf-hwc">SurfaceFlinger</a> ，取出BufferQueue中的GraphicBuffer，并配合vysnc将数据送给HWC合成到屏幕上。</p>
@@ -148,39 +149,24 @@
 <p><a href="https://bigflake.com/mediacodec/">Android MediaCodec Stuff</a>````</p>
 </li>
 </ul>
-  </div><!-- /.entry-content -->
-   <footer class="post-info text-muted">
-    Posted on <abbr class="published" title="2018-06-20T00:00:00+08:00">
+  <footer>
+    <p>Published: <time datetime="2018-06-20T00:00:00+08:00">
       三 20 六月 2018
-    </abbr>
-    <address class="vcard author">
-      by <a class="url fn" href="https://ragnraok.github.io/author/ragnarok-zhou.html">Ragnarok Zhou</a>
-    </address> in <a href="https://ragnraok.github.io/category/android.html">Android</a> Tagged   </footer><!-- /.post-info -->
-</section>
-    <div class="comment">
-        <div id="disqus_thread"></div> <!-- comment app container -->
-    </div>
-	<!-- Comment BEGIN -->
-    <script type="text/javascript">
-        var disqus_shortname = 'ragnaroknote'; // required: replace example with your forum shortname
-
-        /* * * DON'T EDIT BELOW THIS LINE * * */
-        (function() {
-            var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
-            dsq.src = 'https://' + disqus_shortname + '.disqus.com/embed.js';
-            (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
-        })();
-    </script>
-    <noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
-     <!-- Comment END -->
-            <footer id="contentinfo" class="footer">
-                    <nav class="pull-right bottom-nav">
-                        <a href="https://ragnraok.github.io/feeds/atom.xml">RSS</a>
-                    </nav>
-                    <address id="about" class="vcard body">
-                    &copy; <a href="https://ragnraok.github.io">Ragnarok Note</a> Proudly powered by <a href="http://getpelican.com/">Pelican</a>
-                    </address><!-- /#about -->
-            </footer><!-- /#contentinfo -->
-        </div><!-- container -->
-    </body>
+    </time></p>
+    <address>
+      By           <a href="https://ragnraok.github.io/author/ragnarok-zhou.html">Ragnarok Zhou</a>
+    </address>
+    <p>
+        Category: <a href="https://ragnraok.github.io/category/android.html">Android</a>
+    </p>
+  </footer>
+  </article>
+        </main>
+        <footer>
+                <address>
+                Proudly powered by <a rel="nofollow" href="https://getpelican.com/">Pelican</a>,
+                which takes great advantage of <a rel="nofollow" href="https://www.python.org/">Python</a>.
+                </address>
+        </footer>
+</body>
 </html>

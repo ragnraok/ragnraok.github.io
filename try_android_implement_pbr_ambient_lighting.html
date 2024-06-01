@@ -1,35 +1,36 @@
 <!DOCTYPE html>
-<html>
-    <head>
-        <title>尝试在Android中实现PBR管线——环境光照明 - Ragnarok Note</title>
+<html lang="zh">
+<head>
+          <title>Ragnarok Note - 尝试在Android中实现PBR管线——环境光照明</title>
         <meta charset="utf-8" />
-        <link href="//netdna.bootstrapcdn.com/bootstrap/3.0.0/css/bootstrap.min.css" rel="stylesheet" />
-        <link href="https://ragnraok.github.io/theme/static/css/style.css" rel="stylesheet" />
-        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+        <meta name="generator" content="Pelican" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <link href="https://ragnraok.github.io/feeds/atom.xml" type="application/atom+xml" rel="alternate" title="Ragnarok Note Full Atom Feed" />
-    </head>
 
-    <body id="index" class="archive">
-        <div class="container">
-            <div class="header">
-                <ul class="nav nav-pills pull-right">
-                    <li class=""><a href="https://ragnraok.github.io">Home</a></li>
-                    <li><a href="https://ragnraok.github.io/archives.html">Archives</a></li>
-                </ul>
-                <h3 class="text-muted"><a href="https://ragnraok.github.io">Ragnarok Note</a></h3>
-				<h2 class="text-muted"></h2>
-             </div>
-<section id="content" class="article content">
+
+
+
+
+</head>
+
+<body>
+        <header>
+              <hgroup><h1><a href="https://ragnraok.github.io/">Ragnarok Note</a></h1></hgroup>
+        <nav><ul>
+            <li><a href="https://ragnraok.github.io/category/android.html"  aria-current="page" >Android</a></li>
+            <li><a href="https://ragnraok.github.io/category/hack.html" >Hack</a></li>
+            <li><a href="https://ragnraok.github.io/category/living.html" >Living</a></li>
+        </ul></nav>
+        </header>
+        <main>
+<article>
   <header>
-    <h2 class="entry-title">
+    <h2>
       <a href="https://ragnraok.github.io/try_android_implement_pbr_ambient_lighting.html" rel="bookmark"
          title="Permalink to 尝试在Android中实现PBR管线——环境光照明">尝试在Android中实现PBR管线——环境光照明</a></h2>
  
   </header>
-  
-     
-  <div class="entry-content">
-    <p>在上一篇文章中，我们讨论了PBR管线的基础理论，以及实现了场景中直接光（点光源/方向光源）照明的计算，对比与Blinn-Phong模型，PBR使用了微平面理论来对现实世界建模，而在BRDF项计算中，使用了法线分布函数/几何函数/菲涅尔方程构成的BRDF方程来计算光线对某种材质最终输出光照的影响。</p>
+  <p>在上一篇文章中，我们讨论了PBR管线的基础理论，以及实现了场景中直接光（点光源/方向光源）照明的计算，对比与Blinn-Phong模型，PBR使用了微平面理论来对现实世界建模，而在BRDF项计算中，使用了法线分布函数/几何函数/菲涅尔方程构成的BRDF方程来计算光线对某种材质最终输出光照的影响。</p>
 <p>但单纯看直接光照明，PBR管线似乎跟上一个世代的效果差不多，真正让PBR得到超越上一个世代效果的，是其环境光照明部分，所谓的<strong>动态全局光照</strong>的实体</p>
 <p>首先我们来重新看下，在直接光照明下，我们的渲染方程：</p>
 <p>$$L=(K_{d}f_{lambert} + K_{s}f_{cook-torrance})L_{i}(w_{i}\cdot n)$$</p>
@@ -359,39 +360,24 @@ $$L(p, w_{o})=K_{d}\frac{\pi c}{N_{1}N_{2}} L_{i}cos(\theta <em i>{i})sin(\theta
 <li><a href="https://zhuanlan.zhihu.com/p/41150563">https://zhuanlan.zhihu.com/p/41150563</a></li>
 <li><a href="https://zhuanlan.zhihu.com/p/21489591">https://zhuanlan.zhihu.com/p/21489591</a></li>
 </ul>
-  </div><!-- /.entry-content -->
-   <footer class="post-info text-muted">
-    Posted on <abbr class="published" title="2019-08-28T00:00:00+08:00">
+  <footer>
+    <p>Published: <time datetime="2019-08-28T00:00:00+08:00">
       三 28 八月 2019
-    </abbr>
-    <address class="vcard author">
-      by <a class="url fn" href="https://ragnraok.github.io/author/ragnarok-zhou.html">Ragnarok Zhou</a>
-    </address> in <a href="https://ragnraok.github.io/category/android.html">Android</a> Tagged   </footer><!-- /.post-info -->
-</section>
-    <div class="comment">
-        <div id="disqus_thread"></div> <!-- comment app container -->
-    </div>
-	<!-- Comment BEGIN -->
-    <script type="text/javascript">
-        var disqus_shortname = 'ragnaroknote'; // required: replace example with your forum shortname
-
-        /* * * DON'T EDIT BELOW THIS LINE * * */
-        (function() {
-            var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
-            dsq.src = 'https://' + disqus_shortname + '.disqus.com/embed.js';
-            (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
-        })();
-    </script>
-    <noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
-     <!-- Comment END -->
-            <footer id="contentinfo" class="footer">
-                    <nav class="pull-right bottom-nav">
-                        <a href="https://ragnraok.github.io/feeds/atom.xml">RSS</a>
-                    </nav>
-                    <address id="about" class="vcard body">
-                    &copy; <a href="https://ragnraok.github.io">Ragnarok Note</a> Proudly powered by <a href="http://getpelican.com/">Pelican</a>
-                    </address><!-- /#about -->
-            </footer><!-- /#contentinfo -->
-        </div><!-- container -->
-    </body>
+    </time></p>
+    <address>
+      By           <a href="https://ragnraok.github.io/author/ragnarok-zhou.html">Ragnarok Zhou</a>
+    </address>
+    <p>
+        Category: <a href="https://ragnraok.github.io/category/android.html">Android</a>
+    </p>
+  </footer>
+  </article>
+        </main>
+        <footer>
+                <address>
+                Proudly powered by <a rel="nofollow" href="https://getpelican.com/">Pelican</a>,
+                which takes great advantage of <a rel="nofollow" href="https://www.python.org/">Python</a>.
+                </address>
+        </footer>
+</body>
 </html>

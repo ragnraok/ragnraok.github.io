@@ -1,35 +1,36 @@
 <!DOCTYPE html>
-<html>
-    <head>
-        <title>如何获取Android系统中申请对象的信息 - Ragnarok Note</title>
+<html lang="zh">
+<head>
+          <title>Ragnarok Note - 如何获取Android系统中申请对象的信息</title>
         <meta charset="utf-8" />
-        <link href="//netdna.bootstrapcdn.com/bootstrap/3.0.0/css/bootstrap.min.css" rel="stylesheet" />
-        <link href="https://ragnraok.github.io/theme/static/css/style.css" rel="stylesheet" />
-        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+        <meta name="generator" content="Pelican" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <link href="https://ragnraok.github.io/feeds/atom.xml" type="application/atom+xml" rel="alternate" title="Ragnarok Note Full Atom Feed" />
-    </head>
 
-    <body id="index" class="archive">
-        <div class="container">
-            <div class="header">
-                <ul class="nav nav-pills pull-right">
-                    <li class=""><a href="https://ragnraok.github.io">Home</a></li>
-                    <li><a href="https://ragnraok.github.io/archives.html">Archives</a></li>
-                </ul>
-                <h3 class="text-muted"><a href="https://ragnraok.github.io">Ragnarok Note</a></h3>
-				<h2 class="text-muted"></h2>
-             </div>
-<section id="content" class="article content">
+
+
+
+
+</head>
+
+<body>
+        <header>
+              <hgroup><h1><a href="https://ragnraok.github.io/">Ragnarok Note</a></h1></hgroup>
+        <nav><ul>
+            <li><a href="https://ragnraok.github.io/category/android.html"  aria-current="page" >Android</a></li>
+            <li><a href="https://ragnraok.github.io/category/hack.html" >Hack</a></li>
+            <li><a href="https://ragnraok.github.io/category/living.html" >Living</a></li>
+        </ul></nav>
+        </header>
+        <main>
+<article>
   <header>
-    <h2 class="entry-title">
+    <h2>
       <a href="https://ragnraok.github.io/get_android_alloc_object_info.html" rel="bookmark"
          title="Permalink to 如何获取Android系统中申请对象的信息">如何获取Android系统中申请对象的信息</a></h2>
  
   </header>
-  
-     
-  <div class="entry-content">
-    <p>最近一直在做有关内存方面的优化工作，在做优化的过程，除了关注内存的申请量以及GC的情况之外，我们经常需要想方法找出是那些对象占用了大量内存，以及他们是如何导致GC的，这意味着我们需要获取对象申请的信息（大小，类型，堆栈等），我们这篇文章来介绍下几种获取对象申请信息的方法</p>
+  <p>最近一直在做有关内存方面的优化工作，在做优化的过程，除了关注内存的申请量以及GC的情况之外，我们经常需要想方法找出是那些对象占用了大量内存，以及他们是如何导致GC的，这意味着我们需要获取对象申请的信息（大小，类型，堆栈等），我们这篇文章来介绍下几种获取对象申请信息的方法</p>
 <h3>Allocation Tracker</h3>
 <p>Allocation Tracker是android studio自带的一个功能，我们可以在MemoryMonitor中打开使用：</p>
 <p><img alt="" src="static/images/memorymonitor_1.jpeg"></p>
@@ -410,39 +411,24 @@
 <li>关于Allocation Tracker在JVM层的响应，目前暂时只有Dalvik的分析，而ART对Allocation Tracker的处理似乎更加复杂，尚在研究中</li>
 <li>这篇文章中的示例代码，可以从<a href="https://github.com/ragnraok/AllocRecordDemo">这里</a>拿到</li>
 </ol>
-  </div><!-- /.entry-content -->
-   <footer class="post-info text-muted">
-    Posted on <abbr class="published" title="2016-05-30T00:00:00+08:00">
+  <footer>
+    <p>Published: <time datetime="2016-05-30T00:00:00+08:00">
       一 30 五月 2016
-    </abbr>
-    <address class="vcard author">
-      by <a class="url fn" href="https://ragnraok.github.io/author/ragnarok-zhou.html">Ragnarok Zhou</a>
-    </address> in <a href="https://ragnraok.github.io/category/android.html">Android</a> Tagged   </footer><!-- /.post-info -->
-</section>
-    <div class="comment">
-        <div id="disqus_thread"></div> <!-- comment app container -->
-    </div>
-	<!-- Comment BEGIN -->
-    <script type="text/javascript">
-        var disqus_shortname = 'ragnaroknote'; // required: replace example with your forum shortname
-
-        /* * * DON'T EDIT BELOW THIS LINE * * */
-        (function() {
-            var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
-            dsq.src = 'https://' + disqus_shortname + '.disqus.com/embed.js';
-            (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
-        })();
-    </script>
-    <noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
-     <!-- Comment END -->
-            <footer id="contentinfo" class="footer">
-                    <nav class="pull-right bottom-nav">
-                        <a href="https://ragnraok.github.io/feeds/atom.xml">RSS</a>
-                    </nav>
-                    <address id="about" class="vcard body">
-                    &copy; <a href="https://ragnraok.github.io">Ragnarok Note</a> Proudly powered by <a href="http://getpelican.com/">Pelican</a>
-                    </address><!-- /#about -->
-            </footer><!-- /#contentinfo -->
-        </div><!-- container -->
-    </body>
+    </time></p>
+    <address>
+      By           <a href="https://ragnraok.github.io/author/ragnarok-zhou.html">Ragnarok Zhou</a>
+    </address>
+    <p>
+        Category: <a href="https://ragnraok.github.io/category/android.html">Android</a>
+    </p>
+  </footer>
+  </article>
+        </main>
+        <footer>
+                <address>
+                Proudly powered by <a rel="nofollow" href="https://getpelican.com/">Pelican</a>,
+                which takes great advantage of <a rel="nofollow" href="https://www.python.org/">Python</a>.
+                </address>
+        </footer>
+</body>
 </html>
