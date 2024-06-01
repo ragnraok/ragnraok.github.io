@@ -1,35 +1,36 @@
 <!DOCTYPE html>
-<html>
-    <head>
-        <title>尝试在Android中实现实时光线追踪 - Ragnarok Note</title>
+<html lang="zh">
+<head>
+          <title>Ragnarok Note - 尝试在Android中实现实时光线追踪</title>
         <meta charset="utf-8" />
-        <link href="//netdna.bootstrapcdn.com/bootstrap/3.0.0/css/bootstrap.min.css" rel="stylesheet" />
-        <link href="https://ragnraok.github.io/theme/static/css/style.css" rel="stylesheet" />
-        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+        <meta name="generator" content="Pelican" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <link href="https://ragnraok.github.io/feeds/atom.xml" type="application/atom+xml" rel="alternate" title="Ragnarok Note Full Atom Feed" />
-    </head>
 
-    <body id="index" class="archive">
-        <div class="container">
-            <div class="header">
-                <ul class="nav nav-pills pull-right">
-                    <li class=""><a href="https://ragnraok.github.io">Home</a></li>
-                    <li><a href="https://ragnraok.github.io/archives.html">Archives</a></li>
-                </ul>
-                <h3 class="text-muted"><a href="https://ragnraok.github.io">Ragnarok Note</a></h3>
-				<h2 class="text-muted"></h2>
-             </div>
-<section id="content" class="article content">
+
+
+
+
+</head>
+
+<body>
+        <header>
+              <hgroup><h1><a href="https://ragnraok.github.io/">Ragnarok Note</a></h1></hgroup>
+        <nav><ul>
+            <li><a href="https://ragnraok.github.io/category/android.html"  aria-current="page" >Android</a></li>
+            <li><a href="https://ragnraok.github.io/category/hack.html" >Hack</a></li>
+            <li><a href="https://ragnraok.github.io/category/living.html" >Living</a></li>
+        </ul></nav>
+        </header>
+        <main>
+<article>
   <header>
-    <h2 class="entry-title">
+    <h2>
       <a href="https://ragnraok.github.io/try_android_implement_path_tracer.html" rel="bookmark"
          title="Permalink to 尝试在Android中实现实时光线追踪">尝试在Android中实现实时光线追踪</a></h2>
  
   </header>
-  
-     
-  <div class="entry-content">
-    <p>最近索尼跟微软都已经发布下世代游戏主机的硬件信息，随着NVDIA/AMD开始发布各自的硬件光线追踪管线，特别是微软的DXR发布，可以预见下一世代开始会有越来越多光线追踪的游戏发布。而光线追踪实际上是一个很古老的算法了，但是囿于计算成本非常高，虽然天然适合并行化，但在之前世代还是无法完全在实时场景中使用，而应用了光线追踪之后，对比原先实时渲染的各种对环境光反射的各种hack，光线追踪渲染的场景会对场景的光照质量提升明显一个档次：</p>
+  <p>最近索尼跟微软都已经发布下世代游戏主机的硬件信息，随着NVDIA/AMD开始发布各自的硬件光线追踪管线，特别是微软的DXR发布，可以预见下一世代开始会有越来越多光线追踪的游戏发布。而光线追踪实际上是一个很古老的算法了，但是囿于计算成本非常高，虽然天然适合并行化，但在之前世代还是无法完全在实时场景中使用，而应用了光线追踪之后，对比原先实时渲染的各种对环境光反射的各种hack，光线追踪渲染的场景会对场景的光照质量提升明显一个档次：</p>
 <p><img alt="" src="static/images/raytracing_diff.png"></p>
 <p>可以看出来在使用了光线追踪之后，地板上更加真实的反射了场景中其他物体的光照，令整个场景显得更加真实</p>
 <p>光线追踪算法本身并不复杂，大概原理可以用下面这张图来展示：</p>
@@ -358,39 +359,24 @@ $$G_{smith}=G(n,v,k)G(n,l,k)$$</p>
 <li><a href="https://learnopengl-cn.github.io/07%20PBR/03%20IBL/01%20Diffuse%20irradiance/">https://learnopengl-cn.github.io/07%20PBR/03%20IBL/01%20Diffuse%20irradiance/</a></li>
 <li><a href="https://learnopengl-cn.github.io/07%20PBR/03%20IBL/02%20Specular%20IBL/">https://learnopengl-cn.github.io/07%20PBR/03%20IBL/02%20Specular%20IBL/</a></li>
 </ul>
-  </div><!-- /.entry-content -->
-   <footer class="post-info text-muted">
-    Posted on <abbr class="published" title="2020-04-18T00:00:00+08:00">
+  <footer>
+    <p>Published: <time datetime="2020-04-18T00:00:00+08:00">
       六 18 四月 2020
-    </abbr>
-    <address class="vcard author">
-      by <a class="url fn" href="https://ragnraok.github.io/author/ragnarok-zhou.html">Ragnarok Zhou</a>
-    </address> in <a href="https://ragnraok.github.io/category/android.html">Android</a> Tagged   </footer><!-- /.post-info -->
-</section>
-    <div class="comment">
-        <div id="disqus_thread"></div> <!-- comment app container -->
-    </div>
-	<!-- Comment BEGIN -->
-    <script type="text/javascript">
-        var disqus_shortname = 'ragnaroknote'; // required: replace example with your forum shortname
-
-        /* * * DON'T EDIT BELOW THIS LINE * * */
-        (function() {
-            var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
-            dsq.src = 'https://' + disqus_shortname + '.disqus.com/embed.js';
-            (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
-        })();
-    </script>
-    <noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
-     <!-- Comment END -->
-            <footer id="contentinfo" class="footer">
-                    <nav class="pull-right bottom-nav">
-                        <a href="https://ragnraok.github.io/feeds/atom.xml">RSS</a>
-                    </nav>
-                    <address id="about" class="vcard body">
-                    &copy; <a href="https://ragnraok.github.io">Ragnarok Note</a> Proudly powered by <a href="http://getpelican.com/">Pelican</a>
-                    </address><!-- /#about -->
-            </footer><!-- /#contentinfo -->
-        </div><!-- container -->
-    </body>
+    </time></p>
+    <address>
+      By           <a href="https://ragnraok.github.io/author/ragnarok-zhou.html">Ragnarok Zhou</a>
+    </address>
+    <p>
+        Category: <a href="https://ragnraok.github.io/category/android.html">Android</a>
+    </p>
+  </footer>
+  </article>
+        </main>
+        <footer>
+                <address>
+                Proudly powered by <a rel="nofollow" href="https://getpelican.com/">Pelican</a>,
+                which takes great advantage of <a rel="nofollow" href="https://www.python.org/">Python</a>.
+                </address>
+        </footer>
+</body>
 </html>

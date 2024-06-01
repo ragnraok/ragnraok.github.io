@@ -1,35 +1,36 @@
 <!DOCTYPE html>
-<html>
-    <head>
-        <title>谈谈关于Android视频编码的那些坑 - Ragnarok Note</title>
+<html lang="zh">
+<head>
+          <title>Ragnarok Note - 谈谈关于Android视频编码的那些坑</title>
         <meta charset="utf-8" />
-        <link href="//netdna.bootstrapcdn.com/bootstrap/3.0.0/css/bootstrap.min.css" rel="stylesheet" />
-        <link href="https://ragnraok.github.io/theme/static/css/style.css" rel="stylesheet" />
-        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+        <meta name="generator" content="Pelican" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <link href="https://ragnraok.github.io/feeds/atom.xml" type="application/atom+xml" rel="alternate" title="Ragnarok Note Full Atom Feed" />
-    </head>
 
-    <body id="index" class="archive">
-        <div class="container">
-            <div class="header">
-                <ul class="nav nav-pills pull-right">
-                    <li class=""><a href="https://ragnraok.github.io">Home</a></li>
-                    <li><a href="https://ragnraok.github.io/archives.html">Archives</a></li>
-                </ul>
-                <h3 class="text-muted"><a href="https://ragnraok.github.io">Ragnarok Note</a></h3>
-				<h2 class="text-muted"></h2>
-             </div>
-<section id="content" class="article content">
+
+
+
+
+</head>
+
+<body>
+        <header>
+              <hgroup><h1><a href="https://ragnraok.github.io/">Ragnarok Note</a></h1></hgroup>
+        <nav><ul>
+            <li><a href="https://ragnraok.github.io/category/android.html"  aria-current="page" >Android</a></li>
+            <li><a href="https://ragnraok.github.io/category/hack.html" >Hack</a></li>
+            <li><a href="https://ragnraok.github.io/category/living.html" >Living</a></li>
+        </ul></nav>
+        </header>
+        <main>
+<article>
   <header>
-    <h2 class="entry-title">
+    <h2>
       <a href="https://ragnraok.github.io/android_video_record.html" rel="bookmark"
          title="Permalink to 谈谈关于Android视频编码的那些坑">谈谈关于Android视频编码的那些坑</a></h2>
  
   </header>
-  
-     
-  <div class="entry-content">
-    <p>Android的视频相关的开发，大概一直是整个Android生态，以及Android API中，最为分裂以及兼容性问题最为突出的一部分。摄像头，以及视频编码相关的API，Google一直对这方面的控制力非常差，导致不同厂商对这两个API的实现有不少差异，而且从API的设计来看，一直以来优化也相当有限，甚至有人认为这是“Android上最难用的API之一”</p>
+  <p>Android的视频相关的开发，大概一直是整个Android生态，以及Android API中，最为分裂以及兼容性问题最为突出的一部分。摄像头，以及视频编码相关的API，Google一直对这方面的控制力非常差，导致不同厂商对这两个API的实现有不少差异，而且从API的设计来看，一直以来优化也相当有限，甚至有人认为这是“Android上最难用的API之一”</p>
 <p>以微信为例，我们录制一个540p的mp4文件，对于Android来说，大体上是遵循这么一个流程：</p>
 <hr>
 <p><img alt="" src="static/images/encoderProcess.png"></p>
@@ -247,39 +248,24 @@ MediaFormat.KEY_LEVEL
 <li><a href="https://community.arm.com/processors/b/blog/posts/coding-for-neon---part-1-load-and-stores">Coding for NEON</a>，一个系列教程，讲述了一些常用Neon指令使用方法。上面在介绍缩放的时候使用到了Neon，事实上大部分音视频处理过程都会使用到，以YUV帧处理为例，缩放，旋转，镜像翻转都可以使用neon来做优化</li>
 <li><a href="https://chromium.googlesource.com/libyuv/libyuv/">libyuv</a>，Google开源的一个YUV处理库，上面只针对1080p-&gt;540p视频帧缩放的算法，而对于通用的压缩处理，可以直接使用这里的实现，对比起ffmpeg的速度快上不少</li>
 </ol>
-  </div><!-- /.entry-content -->
-   <footer class="post-info text-muted">
-    Posted on <abbr class="published" title="2017-08-27T00:00:00+08:00">
+  <footer>
+    <p>Published: <time datetime="2017-08-27T00:00:00+08:00">
       日 27 八月 2017
-    </abbr>
-    <address class="vcard author">
-      by <a class="url fn" href="https://ragnraok.github.io/author/ragnarok-zhou.html">Ragnarok Zhou</a>
-    </address> in <a href="https://ragnraok.github.io/category/android.html">Android</a> Tagged   </footer><!-- /.post-info -->
-</section>
-    <div class="comment">
-        <div id="disqus_thread"></div> <!-- comment app container -->
-    </div>
-	<!-- Comment BEGIN -->
-    <script type="text/javascript">
-        var disqus_shortname = 'ragnaroknote'; // required: replace example with your forum shortname
-
-        /* * * DON'T EDIT BELOW THIS LINE * * */
-        (function() {
-            var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
-            dsq.src = 'https://' + disqus_shortname + '.disqus.com/embed.js';
-            (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
-        })();
-    </script>
-    <noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
-     <!-- Comment END -->
-            <footer id="contentinfo" class="footer">
-                    <nav class="pull-right bottom-nav">
-                        <a href="https://ragnraok.github.io/feeds/atom.xml">RSS</a>
-                    </nav>
-                    <address id="about" class="vcard body">
-                    &copy; <a href="https://ragnraok.github.io">Ragnarok Note</a> Proudly powered by <a href="http://getpelican.com/">Pelican</a>
-                    </address><!-- /#about -->
-            </footer><!-- /#contentinfo -->
-        </div><!-- container -->
-    </body>
+    </time></p>
+    <address>
+      By           <a href="https://ragnraok.github.io/author/ragnarok-zhou.html">Ragnarok Zhou</a>
+    </address>
+    <p>
+        Category: <a href="https://ragnraok.github.io/category/android.html">Android</a>
+    </p>
+  </footer>
+  </article>
+        </main>
+        <footer>
+                <address>
+                Proudly powered by <a rel="nofollow" href="https://getpelican.com/">Pelican</a>,
+                which takes great advantage of <a rel="nofollow" href="https://www.python.org/">Python</a>.
+                </address>
+        </footer>
+</body>
 </html>
