@@ -1,98 +1,227 @@
 <!DOCTYPE html>
 <html lang="zh">
+
 <head>
-        <title>Ragnarok Note - Android category</title>
-        <meta charset="utf-8" />
-        <meta name="generator" content="Pelican" />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <link href="https://ragnraok.github.io/feeds/atom.xml" type="application/atom+xml" rel="alternate" title="Ragnarok Note Full Atom Feed" />
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="description" content="">
+        <meta name="author" content="">
+
+        <title>Ragnarok Note - Articles in the Android category</title>
+
+            <link href="https://ragnraok.github.io/feeds/atom.xml" type="application/atom+xml" rel="alternate" title="Ragnarok Note Full Atom Feed" />
+
+        <!-- Bootstrap Core CSS -->
+        <link href="https://ragnraok.github.io/theme/css/bootstrap.min.css" rel="stylesheet">
+
+        <!-- Custom CSS -->
+        <link href="https://ragnraok.github.io/theme/css/clean-blog.min.css" rel="stylesheet">
+
+        <!-- Code highlight color scheme -->
+            <link href="https://ragnraok.github.io/theme/css/code_blocks/darkly.css" rel="stylesheet">
+
+        <!-- Custom Fonts -->
+        <link href="http://maxcdn.bootstrapcdn.com/font-awesome/4.1.0/css/font-awesome.min.css" rel="stylesheet" type="text/css">
+        <link href='http://fonts.googleapis.com/css?family=Lora:400,700,400italic,700italic' rel='stylesheet' type='text/css'>
+        <link href='http://fonts.googleapis.com/css?family=Open+Sans:300italic,400italic,600italic,700italic,800italic,400,300,600,700,800' rel='stylesheet' type='text/css'>
+
+        <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+        <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+        <!--[if lt IE 9]>
+            <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+            <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+        <![endif]-->
+
+		<meta property="og:locale" content="zh">
+		<meta property="og:site_name" content="Ragnarok Note">
 </head>
 
 <body>
-        <header>
-              <hgroup><h1><a href="https://ragnraok.github.io/">Ragnarok Note</a></h1></hgroup>
-        <nav><ul>
-            <li><a href="https://ragnraok.github.io/category/android.html"  aria-current="page" >Android</a></li>
-            <li><a href="https://ragnraok.github.io/category/hack.html" >Hack</a></li>
-            <li><a href="https://ragnraok.github.io/category/living.html" >Living</a></li>
-        </ul></nav>
-        </header>
-        <main>
-<h2>Articles in the Android category</h2>
 
+    <!-- Navigation -->
+    <nav class="navbar navbar-default navbar-custom navbar-fixed-top">
+        <div class="container-fluid">
+            <!-- Brand and toggle get grouped for better mobile display -->
+            <div class="navbar-header page-scroll">
+                <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#bs-example-navbar-collapse-1">
+                    <span class="sr-only">Toggle navigation</span>
+                    <span class="icon-bar"></span>
+                    <span class="icon-bar"></span>
+                    <span class="icon-bar"></span>
+                </button>
+                <a class="navbar-brand" href="https://ragnraok.github.io/">Ragnarok Note</a>
+            </div>
 
-        <article>
-                <header> <h2><a href="https://ragnraok.github.io/get_android_alloc_object_info.html" rel="bookmark" title="Permalink to 如何获取Android系统中申请对象的信息">如何获取Android系统中申请对象的信息</a></h2> </header>
-                <section><p>最近一直在做有关内存方面的优化工作，在做优化的过程，除了关注内存的申请量以及GC的情况之外，我们经常需要想方法找出是那 …</p></section>
-                <footer>
-                    <p>Published: <time datetime="2016-05-30T00:00:00+08:00"> 一 30 五月 2016 </time></p>
-                    <address>By
-                        <a href="https://ragnraok.github.io/author/ragnarok-zhou.html">Ragnarok Zhou</a>
-                    </address>
-                </footer>
-        </article>
-        <article>
-                <header> <h2><a href="https://ragnraok.github.io/tricking-android-memoryfile.html" rel="bookmark" title="Permalink to Tricking Android MemoryFile">Tricking Android MemoryFile</a></h2> </header>
-                <section><p>之前在做一个内存优化的时候，使用到了MemoryFile，由此发现了MemoryFile的一些特性以及一个非常trickly的使用方法，因此在这里记录一下</p>
-<h3>What is it</h3>
-<p>MemoryFile是android在最开始就引入的一套框架，其内部实际上是封装了android特有的内存共享机制<a href="http://elinux.org/Android_Kernel_Features#ashmem">Ashmem</a>匿 …</p></section>
-                <footer>
-                    <p>Published: <time datetime="2016-01-10T00:00:00+08:00"> 日 10 一月 2016 </time></p>
-                    <address>By
-                        <a href="https://ragnraok.github.io/author/ragnarok-zhou.html">Ragnarok Zhou</a>
-                    </address>
-                </footer>
-        </article>
-        <article>
-                <header> <h2><a href="https://ragnraok.github.io/rxcamera-introduce.html" rel="bookmark" title="Permalink to RxCamera, 一个RxJava风格的android camera封装">RxCamera,  一个RxJava风格的android camera封装</a></h2> </header>
-                <section><p>事实上这个库写了已经有一段时间了，由于最近工作上比较忙，所以现在才写一篇文章来总结</p>
+            <!-- Collect the nav links, forms, and other content for toggling -->
+            <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
+                <ul class="nav navbar-nav navbar-right">
+
+                </ul>
+            </div>
+            <!-- /.navbar-collapse -->
+        </div>
+        <!-- /.container -->
+    </nav>
+
+    <!-- Page Header -->
+        <header class="intro-header" style="background-image: url('https://ragnraok.github.io/theme/images/home-bg.jpg')">
+        <div class="container">
+            <div class="row">
+                <div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1">
+                    <div class="post-heading">
+                        <h1>Articles in the Android category</h1>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <div class="container">
+        <div class="row">
+            <div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1">
+        <div class="post-preview">
+            <a href="https://ragnraok.github.io/get_android_alloc_object_info.html" rel="bookmark" title="Permalink to 如何获取Android系统中申请对象的信息">
+                <h2 class="post-title">
+                    如何获取Android系统中申请对象的信息
+                </h2>
+            </a>
+                <p>最近一直在做有关内存方面的优化工作，在做优化的过程，除了关注内存的申请量以及GC的情况之外，我们经常需要想方法找出是那 …</p>
+            <p class="post-meta">Posted by
+                    <a href="https://ragnraok.github.io/author/ragnarok-zhou.html">Ragnarok Zhou</a>
+                 on 一 30 五月 2016
+<p>There are <a href="https://ragnraok.github.io/get_android_alloc_object_info.html#disqus_thread">comments</a>.</p>            </p>
+        </div>
+        <hr>
+        <div class="post-preview">
+            <a href="https://ragnraok.github.io/tricking-android-memoryfile.html" rel="bookmark" title="Permalink to Tricking Android MemoryFile">
+                <h2 class="post-title">
+                    Tricking Android MemoryFile
+                </h2>
+            </a>
+                <p>之前在做一个内存优化的时候，使用到了MemoryFile，由此发现了MemoryFile的一些特性以及一个非常trickly的使用方法，因此在这里记录一下</p>
+<h3>What is...
+            <p class="post-meta">Posted by
+                    <a href="https://ragnraok.github.io/author/ragnarok-zhou.html">Ragnarok Zhou</a>
+                 on 日 10 一月 2016
+<p>There are <a href="https://ragnraok.github.io/tricking-android-memoryfile.html#disqus_thread">comments</a>.</p>            </p>
+        </div>
+        <hr>
+        <div class="post-preview">
+            <a href="https://ragnraok.github.io/rxcamera-introduce.html" rel="bookmark" title="Permalink to RxCamera, 一个RxJava风格的android camera封装">
+                <h2 class="post-title">
+                    RxCamera,  一个RxJava风格的android camera封装
+                </h2>
+            </a>
+                <p>事实上这个库写了已经有一段时间了，由于最近工作上比较忙，所以现在才写一篇文章来总结</p>
 <h3>What's this</h3>
-<p>正如标题所说，<a href="https://github.com/ragnraok/RxCamera">RxCamera</a>是一 …</p></section>
-                <footer>
-                    <p>Published: <time datetime="2015-12-20T00:00:00+08:00"> 日 20 十二月 2015 </time></p>
-                    <address>By
-                        <a href="https://ragnraok.github.io/author/ragnarok-zhou.html">Ragnarok Zhou</a>
-                    </address>
-                </footer>
-        </article>
-        <article>
-                <header> <h2><a href="https://ragnraok.github.io/textview-pre-render-research.html" rel="bookmark" title="Permalink to TextView预渲染研究">TextView预渲染研究</a></h2> </header>
-                <section><p>Android中的TextView是整个framework中最复杂的控件之一，负责Android中显示文本的大部分工作，framwork中的许多控件也直接或者间接的继承于TextView，例如Button，EditText等。其内部实现也相当复杂，单论代码行数来说，android-22中TextView有足足9509行，另外，TextView中许多操作都非常繁重，例如<code>setText</code>操作，需要设置SpanWatcher，或者需要重现创建一 …</p></section>
-                <footer>
-                    <p>Published: <time datetime="2015-07-26T00:00:00+08:00"> 日 26 七月 2015 </time></p>
-                    <address>By
-                        <a href="https://ragnraok.github.io/author/ragnarok-zhou.html">Ragnarok Zhou</a>
-                    </address>
-                </footer>
-        </article>
-        <article>
-                <header> <h2><a href="https://ragnraok.github.io/using-kotlin-to-write-android-app.html" rel="bookmark" title="Permalink to 使用Kotlin进行Android开发">使用Kotlin进行Android开发</a></h2> </header>
-                <section><h3>What is Kotlin</h3>
-<p>Kotlin，原意是在俄罗斯的一个<a href="https://zh.wikipedia.org/wiki/%E7%A7%91%E7%89%B9%E6%9E%97%E5%B3%B6">小岛</a>，JetBrain在2011年推出了以这个来命名的一个运行在JVM上的语言， 看上去有点类似C#和Scala的结合，并且同为静态类型，作为一门JVM上的语言，可以轻松兼容Java，并且整 …</p></section>
-                <footer>
-                    <p>Published: <time datetime="2015-06-24T00:00:00+08:00"> 三 24 六月 2015 </time></p>
-                    <address>By
-                        <a href="https://ragnraok.github.io/author/ragnarok-zhou.html">Ragnarok Zhou</a>
-                    </address>
-                </footer>
-        </article>
+<p>正如标题所说，<a...
+            <p class="post-meta">Posted by
+                    <a href="https://ragnraok.github.io/author/ragnarok-zhou.html">Ragnarok Zhou</a>
+                 on 日 20 十二月 2015
+<p>There are <a href="https://ragnraok.github.io/rxcamera-introduce.html#disqus_thread">comments</a>.</p>            </p>
+        </div>
+        <hr>
+        <div class="post-preview">
+            <a href="https://ragnraok.github.io/textview-pre-render-research.html" rel="bookmark" title="Permalink to TextView预渲染研究">
+                <h2 class="post-title">
+                    TextView预渲染研究
+                </h2>
+            </a>
+                <p>Android中的TextView是整个framework中最复杂的控件之一，负责Android中显示文本的大部分工作，framwork中的许多控件也直接或者间接的继承于TextView，例如Button，EditText等。其内部实现也相当复杂，单论代码行数来说，a...
+            <p class="post-meta">Posted by
+                    <a href="https://ragnraok.github.io/author/ragnarok-zhou.html">Ragnarok Zhou</a>
+                 on 日 26 七月 2015
+<p>There are <a href="https://ragnraok.github.io/textview-pre-render-research.html#disqus_thread">comments</a>.</p>            </p>
+        </div>
+        <hr>
+        <div class="post-preview">
+            <a href="https://ragnraok.github.io/using-kotlin-to-write-android-app.html" rel="bookmark" title="Permalink to 使用Kotlin进行Android开发">
+                <h2 class="post-title">
+                    使用Kotlin进行Android开发
+                </h2>
+            </a>
+                <h3>What is Kotlin</h3>
+<p>Kotlin，原意是在俄罗斯的一个<a...
+            <p class="post-meta">Posted by
+                    <a href="https://ragnraok.github.io/author/ragnarok-zhou.html">Ragnarok Zhou</a>
+                 on 三 24 六月 2015
+<p>There are <a href="https://ragnraok.github.io/using-kotlin-to-write-android-app.html#disqus_thread">comments</a>.</p>            </p>
+        </div>
+        <hr>
 
-<nav>
-  <ul>
-        <li><a href="https://ragnraok.github.io/category/android.html">&Lang;</a></li>
-        <li><a href="https://ragnraok.github.io/category/android.html">&lang;</a></li>
-    <li>Page 2 / 3</li>
-        <li><a href="https://ragnraok.github.io/category/android3.html">&rang;</a></li>
-        <li><a href="https://ragnraok.github.io/category/android3.html">&Rang;</a></li>
-  </ul>
-</nav>
+    <!-- Pager -->
+    <ul class="pager">
+        <li class="next">
+                <a href="https://ragnraok.github.io/category/android.html">Newest Posts &rarr;</a>
+                <a href="https://ragnraok.github.io/category/android3.html">Older Posts &rarr;</a>
+        </li>
+    </ul>
+    Page 2 / 3
+    <hr>
+            </div>
+        </div>
+    </div>
 
-        </main>
-        <footer>
-                <address>
-                Proudly powered by <a rel="nofollow" href="https://getpelican.com/">Pelican</a>,
-                which takes great advantage of <a rel="nofollow" href="https://www.python.org/">Python</a>.
-                </address>
-        </footer>
+    <hr>
+
+    <!-- Footer -->
+    <footer>
+        <div class="container">
+            <div class="row">
+                <div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1">
+                    <ul class="list-inline text-center">
+                        <li>
+                            <a href="">
+                                <span class="fa-stack fa-lg">
+                                    <i class="fa fa-circle fa-stack-2x"></i>
+                                    <i class="fa fa-twitter fa-stack-1x fa-inverse"></i>
+                                </span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="">
+                                <span class="fa-stack fa-lg">
+                                    <i class="fa fa-circle fa-stack-2x"></i>
+                                    <i class="fa fa-facebook fa-stack-1x fa-inverse"></i>
+                                </span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="">
+                                <span class="fa-stack fa-lg">
+                                    <i class="fa fa-circle fa-stack-2x"></i>
+                                    <i class="fa fa-github fa-stack-1x fa-inverse"></i>
+                                </span>
+                            </a>
+                        </li>
+                    </ul>
+                    <p class="copyright text-muted">Blog powered by <a href="http://getpelican.com">Pelican</a>,
+                which takes great advantage of <a href="http://python.org">Python</a>.</p>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- jQuery -->
+    <script src="https://ragnraok.github.io/theme/js/jquery.js"></script>
+
+    <!-- Bootstrap Core JavaScript -->
+    <script src="https://ragnraok.github.io/theme/js/bootstrap.min.js"></script>
+
+    <!-- Custom Theme JavaScript -->
+    <script src="https://ragnraok.github.io/theme/js/clean-blog.min.js"></script>
+
+<script type="text/javascript">
+    var disqus_shortname = 'ragnaroknote';
+    (function () {
+        var s = document.createElement('script'); s.async = true;
+        s.type = 'text/javascript';
+        s.src = '//' + disqus_shortname + '.disqus.com/count.js';
+        (document.getElementsByTagName('HEAD')[0] || document.getElementsByTagName('BODY')[0]).appendChild(s);
+    }());
+</script>
 </body>
+
 </html>

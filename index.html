@@ -1,91 +1,225 @@
 <!DOCTYPE html>
 <html lang="zh">
+
 <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="description" content="">
+        <meta name="author" content="">
+
         <title>Ragnarok Note</title>
-        <meta charset="utf-8" />
-        <meta name="generator" content="Pelican" />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <link href="https://ragnraok.github.io/feeds/atom.xml" type="application/atom+xml" rel="alternate" title="Ragnarok Note Full Atom Feed" />
+
+            <link href="https://ragnraok.github.io/feeds/atom.xml" type="application/atom+xml" rel="alternate" title="Ragnarok Note Full Atom Feed" />
+
+        <!-- Bootstrap Core CSS -->
+        <link href="https://ragnraok.github.io/theme/css/bootstrap.min.css" rel="stylesheet">
+
+        <!-- Custom CSS -->
+        <link href="https://ragnraok.github.io/theme/css/clean-blog.min.css" rel="stylesheet">
+
+        <!-- Code highlight color scheme -->
+            <link href="https://ragnraok.github.io/theme/css/code_blocks/darkly.css" rel="stylesheet">
+
+        <!-- Custom Fonts -->
+        <link href="http://maxcdn.bootstrapcdn.com/font-awesome/4.1.0/css/font-awesome.min.css" rel="stylesheet" type="text/css">
+        <link href='http://fonts.googleapis.com/css?family=Lora:400,700,400italic,700italic' rel='stylesheet' type='text/css'>
+        <link href='http://fonts.googleapis.com/css?family=Open+Sans:300italic,400italic,600italic,700italic,800italic,400,300,600,700,800' rel='stylesheet' type='text/css'>
+
+        <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+        <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+        <!--[if lt IE 9]>
+            <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+            <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+        <![endif]-->
+
+		<meta property="og:locale" content="zh">
+		<meta property="og:site_name" content="Ragnarok Note">
 </head>
 
 <body>
-        <header>
-              <hgroup><h1><a href="https://ragnraok.github.io/">Ragnarok Note</a></h1></hgroup>
-        <nav><ul>
-            <li><a href="https://ragnraok.github.io/category/android.html" >Android</a></li>
-            <li><a href="https://ragnraok.github.io/category/hack.html" >Hack</a></li>
-            <li><a href="https://ragnraok.github.io/category/living.html" >Living</a></li>
-        </ul></nav>
-        </header>
-        <main>
-<h2>All articles</h2>
 
+    <!-- Navigation -->
+    <nav class="navbar navbar-default navbar-custom navbar-fixed-top">
+        <div class="container-fluid">
+            <!-- Brand and toggle get grouped for better mobile display -->
+            <div class="navbar-header page-scroll">
+                <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#bs-example-navbar-collapse-1">
+                    <span class="sr-only">Toggle navigation</span>
+                    <span class="icon-bar"></span>
+                    <span class="icon-bar"></span>
+                    <span class="icon-bar"></span>
+                </button>
+                <a class="navbar-brand" href="https://ragnraok.github.io/">Ragnarok Note</a>
+            </div>
 
-        <article>
-                <header> <h2><a href="https://ragnraok.github.io/try_android_implement_path_tracer.html" rel="bookmark" title="Permalink to 尝试在Android中实现实时光线追踪">尝试在Android中实现实时光线追踪</a></h2> </header>
-                <section><p>最近索尼跟微软都已经发布下世代游戏主机的硬件信息，随着NVDIA/AMD开始发布各自的硬件光线追踪管线，特别是微软的DXR发布，可以预见下一世代开始会有越来越 …</p></section>
-                <footer>
-                    <p>Published: <time datetime="2020-04-18T00:00:00+08:00"> 六 18 四月 2020 </time></p>
-                    <address>By
-                        <a href="https://ragnraok.github.io/author/ragnarok-zhou.html">Ragnarok Zhou</a>
-                    </address>
-                </footer>
-        </article>
-        <article>
-                <header> <h2><a href="https://ragnraok.github.io/try_android_implement_pbr_ambient_lighting.html" rel="bookmark" title="Permalink to 尝试在Android中实现PBR管线——环境光照明">尝试在Android中实现PBR管线——环境光照明</a></h2> </header>
-                <section><p>在上一篇文章中，我们讨论了PBR管线的基础理论，以及实现了场景中直接光（点光源/方向光源）照明的计算，对比与Blinn-Phong模型，PBR使用了微平面理论来对现实世界建模，而在BRDF项计算中，使用了法线分 …</p></section>
-                <footer>
-                    <p>Published: <time datetime="2019-08-28T00:00:00+08:00"> 三 28 八月 2019 </time></p>
-                    <address>By
-                        <a href="https://ragnraok.github.io/author/ragnarok-zhou.html">Ragnarok Zhou</a>
-                    </address>
-                </footer>
-        </article>
-        <article>
-                <header> <h2><a href="https://ragnraok.github.io/try_android_implement_pbr_thery_direct_light.html" rel="bookmark" title="Permalink to 尝试在Android中实现PBR管线——基本原理以及直接光照明">尝试在Android中实现PBR管线——基本原理以及直接光照明</a></h2> </header>
-                <section><p>从本个世代起，基于物理的渲染（Physically Based Rendering，简称PBR）基本上就成为了事实上当下3A大作的渲染标准，自从迪士尼在在SIGGRAPH 2012上提出的著名的“迪士尼原则的BRDF”以及 …</p></section>
-                <footer>
-                    <p>Published: <time datetime="2019-08-18T00:00:00+08:00"> 日 18 八月 2019 </time></p>
-                    <address>By
-                        <a href="https://ragnraok.github.io/author/ragnarok-zhou.html">Ragnarok Zhou</a>
-                    </address>
-                </footer>
-        </article>
-        <article>
-                <header> <h2><a href="https://ragnraok.github.io/surface_display_lag.html" rel="bookmark" title="Permalink to 浅谈Android中Surface显示延迟处理">浅谈Android中Surface显示延迟处理</a></h2> </header>
-                <section><p>最近在使用GLES在Surface上渲染结果的时候，遇到了一个显示延迟的问题，当渲染时间过长，同时帧率要求比较高的时候，如果不加控制，就会造成显示的 …</p></section>
-                <footer>
-                    <p>Published: <time datetime="2018-06-20T00:00:00+08:00"> 三 20 六月 2018 </time></p>
-                    <address>By
-                        <a href="https://ragnraok.github.io/author/ragnarok-zhou.html">Ragnarok Zhou</a>
-                    </address>
-                </footer>
-        </article>
-        <article>
-                <header> <h2><a href="https://ragnraok.github.io/android_video_record.html" rel="bookmark" title="Permalink to 谈谈关于Android视频编码的那些坑">谈谈关于Android视频编码的那些坑</a></h2> </header>
-                <section><p>Android的视频相关的开发，大概一直是整个Android生态，以及Android API中，最为分裂以及兼容性问题最为突出的一部分。摄像头，以及视频编码相关的API，Google一直对这方面的控制力非常差，导致不同 …</p></section>
-                <footer>
-                    <p>Published: <time datetime="2017-08-27T00:00:00+08:00"> 日 27 八月 2017 </time></p>
-                    <address>By
-                        <a href="https://ragnraok.github.io/author/ragnarok-zhou.html">Ragnarok Zhou</a>
-                    </address>
-                </footer>
-        </article>
+            <!-- Collect the nav links, forms, and other content for toggling -->
+            <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
+                <ul class="nav navbar-nav navbar-right">
 
-<nav>
-  <ul>
-    <li>Page 1 / 3</li>
-        <li><a href="https://ragnraok.github.io/index2.html">&rang;</a></li>
-        <li><a href="https://ragnraok.github.io/index3.html">&Rang;</a></li>
-  </ul>
-</nav>
+                </ul>
+            </div>
+            <!-- /.navbar-collapse -->
+        </div>
+        <!-- /.container -->
+    </nav>
 
-        </main>
-        <footer>
-                <address>
-                Proudly powered by <a rel="nofollow" href="https://getpelican.com/">Pelican</a>,
-                which takes great advantage of <a rel="nofollow" href="https://www.python.org/">Python</a>.
-                </address>
-        </footer>
+    <!-- Page Header -->
+    <!-- Set your background image for this header on the line below. -->
+        <header class="intro-header" style="background-image: url('https://ragnraok.github.io/theme/images/home-bg.jpg')">
+        <div class="container">
+            <div class="row">
+                <div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1">
+                    <div class="page-heading">
+                        <h1>Ragnarok Note</h1>
+                        <hr class="small">
+                        <span class="subheading"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <div class="container">
+        <div class="row">
+            <div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1">
+        <div class="post-preview">
+            <a href="https://ragnraok.github.io/try_android_implement_path_tracer.html" rel="bookmark" title="Permalink to 尝试在Android中实现实时光线追踪">
+                <h2 class="post-title">
+                    尝试在Android中实现实时光线追踪
+                </h2>
+            </a>
+                <p>最近索尼跟微软都已经发布下世代游戏主机的硬件信息，随着NVDIA/AMD开始发布各自的硬件光线追踪管线，特别是微软的DXR发布，可以预见下一世代开始会有越来越 …</p>
+            <p class="post-meta">Posted by
+                    <a href="https://ragnraok.github.io/author/ragnarok-zhou.html">Ragnarok Zhou</a>
+                 on 六 18 四月 2020
+<p>There are <a href="https://ragnraok.github.io/try_android_implement_path_tracer.html#disqus_thread">comments</a>.</p>            </p>
+        </div>
+        <hr>
+        <div class="post-preview">
+            <a href="https://ragnraok.github.io/try_android_implement_pbr_ambient_lighting.html" rel="bookmark" title="Permalink to 尝试在Android中实现PBR管线——环境光照明">
+                <h2 class="post-title">
+                    尝试在Android中实现PBR管线——环境光照明
+                </h2>
+            </a>
+                <p>在上一篇文章中，我们讨论了PBR管线的基础理论，以及实现了场景中直接光（点光源/方向光源）照明的计算，对比与Blinn-Phong模型，PBR使用了微平面理论来对现实世界建模，而在BRDF项计算中，使用了法线分 …</p>
+            <p class="post-meta">Posted by
+                    <a href="https://ragnraok.github.io/author/ragnarok-zhou.html">Ragnarok Zhou</a>
+                 on 三 28 八月 2019
+<p>There are <a href="https://ragnraok.github.io/try_android_implement_pbr_ambient_lighting.html#disqus_thread">comments</a>.</p>            </p>
+        </div>
+        <hr>
+        <div class="post-preview">
+            <a href="https://ragnraok.github.io/try_android_implement_pbr_thery_direct_light.html" rel="bookmark" title="Permalink to 尝试在Android中实现PBR管线——基本原理以及直接光照明">
+                <h2 class="post-title">
+                    尝试在Android中实现PBR管线——基本原理以及直接光照明
+                </h2>
+            </a>
+                <p>从本个世代起，基于物理的渲染（Physically Based Rendering，简称PBR）基本上就成为了事实上当下3A大作的渲染标准，自从迪士尼在在SIGGRAPH 2012上提出的著名的“迪士尼原则的BRDF”以及 …</p>
+            <p class="post-meta">Posted by
+                    <a href="https://ragnraok.github.io/author/ragnarok-zhou.html">Ragnarok Zhou</a>
+                 on 日 18 八月 2019
+<p>There are <a href="https://ragnraok.github.io/try_android_implement_pbr_thery_direct_light.html#disqus_thread">comments</a>.</p>            </p>
+        </div>
+        <hr>
+        <div class="post-preview">
+            <a href="https://ragnraok.github.io/surface_display_lag.html" rel="bookmark" title="Permalink to 浅谈Android中Surface显示延迟处理">
+                <h2 class="post-title">
+                    浅谈Android中Surface显示延迟处理
+                </h2>
+            </a>
+                <p>最近在使用GLES在Surface上渲染结果的时候，遇到了一个显示延迟的问题，当渲染时间过长，同时帧率要求比较高的时候，如果不加控制，就会造成显示的 …</p>
+            <p class="post-meta">Posted by
+                    <a href="https://ragnraok.github.io/author/ragnarok-zhou.html">Ragnarok Zhou</a>
+                 on 三 20 六月 2018
+<p>There are <a href="https://ragnraok.github.io/surface_display_lag.html#disqus_thread">comments</a>.</p>            </p>
+        </div>
+        <hr>
+        <div class="post-preview">
+            <a href="https://ragnraok.github.io/android_video_record.html" rel="bookmark" title="Permalink to 谈谈关于Android视频编码的那些坑">
+                <h2 class="post-title">
+                    谈谈关于Android视频编码的那些坑
+                </h2>
+            </a>
+                <p>Android的视频相关的开发，大概一直是整个Android生态，以及Android API中，最为分裂以及兼容性问题最为突出的一部分。摄像头，以及视频编码相关的API，Google一直对这方面的控制力非常差，导致不同 …</p>
+            <p class="post-meta">Posted by
+                    <a href="https://ragnraok.github.io/author/ragnarok-zhou.html">Ragnarok Zhou</a>
+                 on 日 27 八月 2017
+<p>There are <a href="https://ragnraok.github.io/android_video_record.html#disqus_thread">comments</a>.</p>            </p>
+        </div>
+        <hr>
+
+    <!-- Pager -->
+    <ul class="pager">
+        <li class="next">
+                <a href="https://ragnraok.github.io/index2.html">Older Posts &rarr;</a>
+        </li>
+    </ul>
+    Page 1 / 3
+    <hr>
+            </div>
+        </div>
+    </div>
+
+    <hr>
+
+    <!-- Footer -->
+    <footer>
+        <div class="container">
+            <div class="row">
+                <div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1">
+                    <ul class="list-inline text-center">
+                        <li>
+                            <a href="">
+                                <span class="fa-stack fa-lg">
+                                    <i class="fa fa-circle fa-stack-2x"></i>
+                                    <i class="fa fa-twitter fa-stack-1x fa-inverse"></i>
+                                </span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="">
+                                <span class="fa-stack fa-lg">
+                                    <i class="fa fa-circle fa-stack-2x"></i>
+                                    <i class="fa fa-facebook fa-stack-1x fa-inverse"></i>
+                                </span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="">
+                                <span class="fa-stack fa-lg">
+                                    <i class="fa fa-circle fa-stack-2x"></i>
+                                    <i class="fa fa-github fa-stack-1x fa-inverse"></i>
+                                </span>
+                            </a>
+                        </li>
+                    </ul>
+                    <p class="copyright text-muted">Blog powered by <a href="http://getpelican.com">Pelican</a>,
+                which takes great advantage of <a href="http://python.org">Python</a>.</p>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- jQuery -->
+    <script src="https://ragnraok.github.io/theme/js/jquery.js"></script>
+
+    <!-- Bootstrap Core JavaScript -->
+    <script src="https://ragnraok.github.io/theme/js/bootstrap.min.js"></script>
+
+    <!-- Custom Theme JavaScript -->
+    <script src="https://ragnraok.github.io/theme/js/clean-blog.min.js"></script>
+
+<script type="text/javascript">
+    var disqus_shortname = 'ragnaroknote';
+    (function () {
+        var s = document.createElement('script'); s.async = true;
+        s.type = 'text/javascript';
+        s.src = '//' + disqus_shortname + '.disqus.com/count.js';
+        (document.getElementsByTagName('HEAD')[0] || document.getElementsByTagName('BODY')[0]).appendChild(s);
+    }());
+</script>
 </body>
+
 </html>

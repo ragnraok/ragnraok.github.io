@@ -1,36 +1,107 @@
 <!DOCTYPE html>
 <html lang="zh">
+
 <head>
-          <title>Ragnarok Note - RxCamera, 一个RxJava风格的android camera封装</title>
-        <meta charset="utf-8" />
-        <meta name="generator" content="Pelican" />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <link href="https://ragnraok.github.io/feeds/atom.xml" type="application/atom+xml" rel="alternate" title="Ragnarok Note Full Atom Feed" />
+            <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="description" content="">
+        <meta name="author" content="">
+
+        <title>Ragnarok Note</title>
+
+            <link href="https://ragnraok.github.io/feeds/atom.xml" type="application/atom+xml" rel="alternate" title="Ragnarok Note Full Atom Feed" />
+
+        <!-- Bootstrap Core CSS -->
+        <link href="https://ragnraok.github.io/theme/css/bootstrap.min.css" rel="stylesheet">
+
+        <!-- Custom CSS -->
+        <link href="https://ragnraok.github.io/theme/css/clean-blog.min.css" rel="stylesheet">
+
+        <!-- Code highlight color scheme -->
+            <link href="https://ragnraok.github.io/theme/css/code_blocks/darkly.css" rel="stylesheet">
+
+        <!-- Custom Fonts -->
+        <link href="http://maxcdn.bootstrapcdn.com/font-awesome/4.1.0/css/font-awesome.min.css" rel="stylesheet" type="text/css">
+        <link href='http://fonts.googleapis.com/css?family=Lora:400,700,400italic,700italic' rel='stylesheet' type='text/css'>
+        <link href='http://fonts.googleapis.com/css?family=Open+Sans:300italic,400italic,600italic,700italic,800italic,400,300,600,700,800' rel='stylesheet' type='text/css'>
+
+        <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+        <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+        <!--[if lt IE 9]>
+            <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+            <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+        <![endif]-->
 
 
 
 
 
+
+			<meta property="og:locale" content="zh">
+		<meta property="og:site_name" content="Ragnarok Note">
+
+	<meta property="og:type" content="article">
+	<meta property="article:author" content="">
+	<meta property="og:url" content="https://ragnraok.github.io/rxcamera-introduce.html">
+	<meta property="og:title" content="RxCamera,  一个RxJava风格的android camera封装">
+	<meta property="og:description" content="">
+	<meta property="og:image" content="https://ragnraok.github.io/">
+	<meta property="article:published_time" content="2015-12-20 00:00:00+08:00">
 </head>
 
 <body>
-        <header>
-              <hgroup><h1><a href="https://ragnraok.github.io/">Ragnarok Note</a></h1></hgroup>
-        <nav><ul>
-            <li><a href="https://ragnraok.github.io/category/android.html"  aria-current="page" >Android</a></li>
-            <li><a href="https://ragnraok.github.io/category/hack.html" >Hack</a></li>
-            <li><a href="https://ragnraok.github.io/category/living.html" >Living</a></li>
-        </ul></nav>
-        </header>
-        <main>
-<article>
-  <header>
-    <h2>
-      <a href="https://ragnraok.github.io/rxcamera-introduce.html" rel="bookmark"
-         title="Permalink to RxCamera, 一个RxJava风格的android camera封装">RxCamera,  一个RxJava风格的android camera封装</a></h2>
- 
-  </header>
-  <p>事实上这个库写了已经有一段时间了，由于最近工作上比较忙，所以现在才写一篇文章来总结</p>
+
+    <!-- Navigation -->
+    <nav class="navbar navbar-default navbar-custom navbar-fixed-top">
+        <div class="container-fluid">
+            <!-- Brand and toggle get grouped for better mobile display -->
+            <div class="navbar-header page-scroll">
+                <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#bs-example-navbar-collapse-1">
+                    <span class="sr-only">Toggle navigation</span>
+                    <span class="icon-bar"></span>
+                    <span class="icon-bar"></span>
+                    <span class="icon-bar"></span>
+                </button>
+                <a class="navbar-brand" href="https://ragnraok.github.io/">Ragnarok Note</a>
+            </div>
+
+            <!-- Collect the nav links, forms, and other content for toggling -->
+            <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
+                <ul class="nav navbar-nav navbar-right">
+
+                </ul>
+            </div>
+            <!-- /.navbar-collapse -->
+        </div>
+        <!-- /.container -->
+    </nav>
+
+    <!-- Page Header -->
+        <header class="intro-header" style="background-image: url('https://ragnraok.github.io/theme/images/post-bg.jpg')">
+        <div class="container">
+            <div class="row">
+                <div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1">
+                    <div class="post-heading">
+                        <h1>RxCamera,  一个RxJava风格的android camera封装</h1>
+                        <span class="meta">Posted by
+                                <a href="https://ragnraok.github.io/author/ragnarok-zhou.html">Ragnarok Zhou</a>
+                             on 日 20 十二月 2015
+                        </span>
+                        
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <div class="container">
+        <div class="row">
+            <div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1">
+    <!-- Post Content -->
+    <article>
+        <p>事实上这个库写了已经有一段时间了，由于最近工作上比较忙，所以现在才写一篇文章来总结</p>
 <h3>What's this</h3>
 <p>正如标题所说，<a href="https://github.com/ragnraok/RxCamera">RxCamera</a>是一个基于RxJava而构建的一套<a href="http://developer.android.com/intl/es/reference/android/hardware/Camera.html">android.hardware.camera</a>封装的库。最初写这个库的目的是为了熟悉RxJava，并且而且也看到虽然在android开发已经有不少基于RxJava的库，但是关于音视频相关却少之又少，于是就动手实现了一下。目前这个库还处于非常早期的状态，API比较简陋，并且关于camera的设置还有很多没有做</p>
 <h3>How to use</h3>
@@ -101,24 +172,87 @@
 <p>很明显这个库目前还处于非常早期的状态，API还比较简单，并且很多摄像头的参数也没有加入到进行设置，例如白平衡，闪光灯，测光等，后续这里将会逐渐完善丰富摄像头的各种设置。另外，由于是完全基于RxJava来构建的库，大部分接口都会直接返回Observable对象，这对于没有熟悉RxJava的人来说可能还是会有点距离，因此这里后续对接口的封装还是需要继续改进，对外可能不再暴露Observable对象</p>
 <h3>About camera2</h3>
 <p>熟悉android开发的人估计都已经知道在Lollipop，Google新增一套<a href="http://developer.android.com/intl/es/reference/android/hardware/camera2/package-summary.html">camera2</a>API用以取代之前的camera API，camera2提供了对摄像头更加精细化的控制，相对来说比起老的API，对摄像头的可控程度高了非常多。但我个人觉得新的API还不是特别好用，并且由于目前还是比较新，在使用新的camera2 API的时候，<a href="http://source.android.com/devices/camera/versioning.html#camera_api2_capabilities_and_support_levels">还需要查询手机上有哪些特性是有实现的</a>，目前使用起来相当麻烦。所以RxCamera暂时还不打算支持camera2</p>
-  <footer>
-    <p>Published: <time datetime="2015-12-20T00:00:00+08:00">
-      日 20 十二月 2015
-    </time></p>
-    <address>
-      By           <a href="https://ragnraok.github.io/author/ragnarok-zhou.html">Ragnarok Zhou</a>
-    </address>
-    <p>
-        Category: <a href="https://ragnraok.github.io/category/android.html">Android</a>
-    </p>
-  </footer>
-  </article>
-        </main>
-        <footer>
-                <address>
-                Proudly powered by <a rel="nofollow" href="https://getpelican.com/">Pelican</a>,
-                which takes great advantage of <a rel="nofollow" href="https://www.python.org/">Python</a>.
-                </address>
-        </footer>
+    </article>
+
+    <hr>
+
+        <div class="comments">
+            <h2>Comments !</h2>
+            <div id="disqus_thread"></div>
+            <script type="text/javascript">
+                var disqus_shortname = 'ragnaroknote';
+                var disqus_identifier = 'rxcamera-introduce.html';
+                var disqus_url = 'https://ragnraok.github.io/rxcamera-introduce.html';
+                (function() {
+                    var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+                    dsq.src = '//ragnaroknote.disqus.com/embed.js';
+                    (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+                })();
+            </script>
+            <noscript>Please enable JavaScript to view the comments.</noscript>
+        </div>
+            </div>
+        </div>
+    </div>
+
+    <hr>
+
+    <!-- Footer -->
+    <footer>
+        <div class="container">
+            <div class="row">
+                <div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1">
+                    <ul class="list-inline text-center">
+                        <li>
+                            <a href="">
+                                <span class="fa-stack fa-lg">
+                                    <i class="fa fa-circle fa-stack-2x"></i>
+                                    <i class="fa fa-twitter fa-stack-1x fa-inverse"></i>
+                                </span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="">
+                                <span class="fa-stack fa-lg">
+                                    <i class="fa fa-circle fa-stack-2x"></i>
+                                    <i class="fa fa-facebook fa-stack-1x fa-inverse"></i>
+                                </span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="">
+                                <span class="fa-stack fa-lg">
+                                    <i class="fa fa-circle fa-stack-2x"></i>
+                                    <i class="fa fa-github fa-stack-1x fa-inverse"></i>
+                                </span>
+                            </a>
+                        </li>
+                    </ul>
+                    <p class="copyright text-muted">Blog powered by <a href="http://getpelican.com">Pelican</a>,
+                which takes great advantage of <a href="http://python.org">Python</a>.</p>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- jQuery -->
+    <script src="https://ragnraok.github.io/theme/js/jquery.js"></script>
+
+    <!-- Bootstrap Core JavaScript -->
+    <script src="https://ragnraok.github.io/theme/js/bootstrap.min.js"></script>
+
+    <!-- Custom Theme JavaScript -->
+    <script src="https://ragnraok.github.io/theme/js/clean-blog.min.js"></script>
+
+<script type="text/javascript">
+    var disqus_shortname = 'ragnaroknote';
+    (function () {
+        var s = document.createElement('script'); s.async = true;
+        s.type = 'text/javascript';
+        s.src = '//' + disqus_shortname + '.disqus.com/count.js';
+        (document.getElementsByTagName('HEAD')[0] || document.getElementsByTagName('BODY')[0]).appendChild(s);
+    }());
+</script>
 </body>
+
 </html>
